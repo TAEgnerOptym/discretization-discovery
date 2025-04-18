@@ -295,20 +295,25 @@ class jy_make_input_file_no_la:
 
         for u in range(0,self.my_instance.num_cust):
             my_count=0
+            u_use=u
+            if self.jy_opt['allOneBig_init']>0.5:
+                u_use=2
             for i in self.my_dem_graph.node_list[u]:
                 self.graphName2Nodes['capGraph'].append(str(i))
                 bin_num=int(my_count/self.num_terms_per_bin)
                 if self.jy_opt['allOneBig_init']>0.5:
-                    bin_num='cap_big'
-                self.initGraphNode2AggNode['capGraph'][str(i)]='cap_'+str(u)+'_'+str(bin_num)
+                    bin_num=50
+                    #input('--')
+                self.initGraphNode2AggNode['capGraph'][str(i)]='cap_'+str(u_use)+'_'+str(bin_num)
                 my_count=my_count+1
             my_count=0
             for i in self.my_time_graph.node_list[u]:
                 self.graphName2Nodes['timeGraph'].append(str(i))
                 bin_num=int(my_count/self.num_terms_per_bin)
                 if self.jy_opt['allOneBig_init']>0.5:
-                    bin_num='time_big'
-                self.initGraphNode2AggNode['timeGraph'][str(i)]='time'+str(u)+'_'+str(bin_num)
+                    bin_num=50
+                    #input('--')
+                self.initGraphNode2AggNode['timeGraph'][str(i)]='time'+str(u_use)+'_'+str(bin_num)
                 my_count=my_count+1
 
         self.out_dict['graphName2Nodes']=self.graphName2Nodes
