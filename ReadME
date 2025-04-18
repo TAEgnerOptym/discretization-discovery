@@ -49,3 +49,33 @@ h:   timeGraph is of size:   26
 h:   capGraph is of size:   4
 prob_sizes_at_start  #sizes of the graphs for time and capacity before the the round is started 
 {'timeGraph': 31, 'capGraph': 5}
+
+#the output is provided in a term called history dictionary
+
+#it has fieleds as follows.
+#for each 
+#out_sol is a dicitonary desciring the solution 
+#out_sol[my_delta] has for each delta terms its value 
+#out_sol[my_act] has each activity term the associated value
+#out_sol[my_prim] has each primitive value 
+#there is also a dicitonary which ahs followign fields 
+
+
+self.history_dict['lblp_lower'] #lower bound at each iteraiton
+self.history_dict['prob_sizes_at_start'] #graph sizes at each iteration
+self.history_dict['did_compress'] #did compress at each iter
+self.history_dict['lp_time_compress']# LP time compress  at each iter
+self.history_dict['lp_time_project']  #LP time projection bound LP time  at each iter
+self.history_dict['lp_time_LB'] #Lower bound LP time  at each iter
+self.history_dict['ilp_time'] #ilp time at the end
+self.history_dict['lp_value_project'] #lp values for projections at each iteration
+self.history_dict['lp_value_compress']=[] #lp values for compression at each iteration
+self.history_dict['sum_lp_value_project']=[] #sum of LP valeus for projection at each iteraiton
+self.history_dict['sum_lp_time_project']=[] #sum of time at  at each iteraiton
+
+self.history_dict['ilp_objective'] #ilp objective
+self.history_dict['ilp_time'] #ilp time
+self.history_dict['final_sizes'] #final sizes after the last compression
+self.history_dict['final_graph_node_2_agg_node'] #mapping of each graph, node to tis compressed node
+        
+
