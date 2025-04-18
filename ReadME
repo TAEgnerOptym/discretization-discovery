@@ -64,14 +64,14 @@ prob_sizes_at_start  #sizes of the graphs for time and capacity before the the r
 self.history_dict['lblp_lower'] #lower bound at each iteraiton
 self.history_dict['prob_sizes_at_start'] #graph sizes at each iteration
 self.history_dict['did_compress'] #did compress at each iter
-self.history_dict['lp_time_compress']# LP time compress  at each iter
+self.history_dict['lp_time_compress'] #LP time compress  at each iter
 self.history_dict['lp_time_project']  #LP time projection bound LP time  at each iter
 self.history_dict['lp_time_LB'] #Lower bound LP time  at each iter
 self.history_dict['ilp_time'] #ilp time at the end
 self.history_dict['lp_value_project'] #lp values for projections at each iteration
-self.history_dict['lp_value_compress']=[] #lp values for compression at each iteration
-self.history_dict['sum_lp_value_project']=[] #sum of LP valeus for projection at each iteraiton
-self.history_dict['sum_lp_time_project']=[] #sum of time at  at each iteraiton
+self.history_dict['lp_value_compress'] #lp values for compression at each iteration
+self.history_dict['sum_lp_value_project'] #sum of LP valeus for projection at each iteraiton
+self.history_dict['sum_lp_time_project']#sum of time at  at each iteraiton
 
 self.history_dict['ilp_objective'] #ilp objective
 self.history_dict['ilp_time'] #ilp time
