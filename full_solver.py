@@ -78,6 +78,7 @@ class full_solver:
         self.history_dict['lp_value_compress']=[]
         self.history_dict['sum_lp_value_project']=[]
         self.history_dict['sum_lp_time_project']=[]
+        self.history_dict['history_of_graphs_by_iter']=[]
 
         #self.set_jy_options()
         self.apply_complete_algorithm()
@@ -148,6 +149,20 @@ class full_solver:
 
         with open(self.output_file_path, 'w') as file:
             json.dump(self.history_dict, file)
+
+    def augment_history_graphs(self):
+
+        new_hist=dict()
+        for h in self.all_graph_names:
+            new_hist[h]=dict()
+            for i in self.graph_node_2_agg_node[h]:
+                f=self.graph_node_2_agg_node[h][i]
+                f_str=f[:]
+                i_str=i[:]
+                new_hist[h][i_str]=f_str
+
+        self.history_dict['history_of_graphs_by_iter'].append(new_hist)
+
     def apply_complete_algorithm(self):
         incumbant_lp=-np.inf
         #self.my_lower_bound_LP=lower_bound_LP_milp(self,self.graph_node_2_agg_node,True,False)
@@ -209,7 +224,8 @@ class full_solver:
             self.history_dict['lp_value_compress'].append(compress_lp_val)
             self.history_dict['sum_lp_value_project'].append(sum(proj_objective_componentLps.values()))
             self.history_dict['sum_lp_time_project'].append(sum(proj_time_component_lps.values()))
-            
+            if self.jy_opt['save_graph_each_iter']>0.5:
+                self.augment_history_graphs()
             print('-----')
             print('-----')
             print('-----')
@@ -256,7 +272,8 @@ class full_solver:
             self.history_dict['lp_value_compress'].append(compress_lp_val)
             self.history_dict['sum_lp_value_project'].append(sum(proj_objective_componentLps.values()))
             self.history_dict['sum_lp_time_project'].append(sum(proj_time_component_lps.values()))
-            
+            if self.jy_opt['save_graph_each_iter']>0.5:
+                self.augment_history_graphs()
             
 
         self.history_dict['final_sizes']=self.count_size()
