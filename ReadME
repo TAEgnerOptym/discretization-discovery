@@ -6,3 +6,32 @@
 #output_file_path:  path to the output file
 #my_json_input_path:  Path to the location where we will store teh input file generated for the solver
 #param_file_path:  Path to the options file
+
+
+The exampel call is 
+/usr/local/bin/python3 /Users/julian/Documents/GIt_cmu_codes/discretization-discovery/main_simple.py data/jy_c102.txt duck_json yuck.json my_params.json
+
+
+The options file has the following options to play with 
+
+#epsilon:  tiny positive number used for evalution operations in the code
+my_params['epsilon']=.0001
+#weight_compress the weight associated with comrpession in the compression code 
+my_params['weight_compress']=.01	
+#num_cust_use:  this is the nubmer of custoemrs to use from the input fiel
+my_params['num_cust_use']=25
+#dem_step_sz:  finest granularity for the demand graph
+my_params['dem_step_sz']=1
+#time_step_sz:  finest granularity for the time graph
+my_params['time_step_sz']=10
+#use_compression:  turns on compression operations
+my_params['use_compression']=True
+#max_iterations_loop_compress_project:  maximum number of itterations of the loop that calls comrpession and expansion
+my_params['max_iterations_loop_compress_project']=200
+#allOneBig_init:  Set to one to put all terms (except the source and sink) in the same bin
+my_params['allOneBig_init']=True
+#num_terms_per_bin_init_construct:  has teh number of nodes that get put in a bin for a given custoemr in the itnial construction.  This is ignored if allOneBig_init is used.  
+my_params['num_terms_per_bin_init_construct']=10000
+
+#min_inc_2_compress:  minimum amount to increase the dual objective by in order to apply compression
+my_params['min_inc_2_compress']=.01
