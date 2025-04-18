@@ -12,6 +12,8 @@ import ast
 
 input_file_path='data/jy_c102.txt'
 my_params=grab_default_params()
+my_params['num_cust_use']=50
+my_params['time_step_sz']=10
 #my push
 my_json_file_path = "jy_data_end_end.json"
 my_output_path="jy_out_history.json"

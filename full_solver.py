@@ -156,7 +156,7 @@ class full_solver:
         use_compression=self.jy_opt['use_compression']
         did_compress_call=False
 
-        while True:
+        while iter<self.jy_opt['max_iterations_loop_compress_project']:
             iter=iter+1
             prob_sizes_at_start=self.count_size()
             self.my_lower_bound_LP=lower_bound_LP_milp(self,self.graph_node_2_agg_node,False,False)
@@ -229,10 +229,10 @@ class full_solver:
             #print(self.history_dict)
             #input('---')
 
-            if did_compress_call==False and did_split==False or iter>=self.jy_opt['max_iterations_loop_compress_project']:
+            if did_compress_call==False and did_split==False:
                 break
         #input('done entire call')
-        if did_compress_call==False and use_compression==True:
+        if did_compress_call==False and use_compression==True and iter>0:
             #input('here')
             self.my_lower_bound_LP=lower_bound_LP_milp(self,self.graph_node_2_agg_node,False,False)
             prob_sizes_at_start=self.count_size()

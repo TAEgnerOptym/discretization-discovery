@@ -1,0 +1,8 @@
+#ReadME
+#to run the code call 
+
+#main_simple with the following argumetns
+#input_file_path:  path to the input file
+#output_file_path:  path to the output file
+#my_json_input_path:  Path to the location where we will store teh input file generated for the solver
+#param_file_path:  Path to the options file
