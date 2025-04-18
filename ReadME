@@ -35,3 +35,17 @@ my_params['num_terms_per_bin_init_construct']=10000
 
 #min_inc_2_compress:  minimum amount to increase the dual objective by in order to apply compression
 my_params['min_inc_2_compress']=.01
+
+At every iteration  we produce the state of the code so that you can keep track currently  it looks as follows.  I put description after
+
+ITER FINISHE:  40 #iteration number 
+new_lp_value=  189.15  #current lower bound lp
+did_compress_call:  True  #did a compression call this round=True; or proejction otherwise 
+lp project time nan #times spent solving projection.  nan if this is not done this round.  
+lp compress time 0.07399201393127441 #times spent solving compression.  nan if this is not done this round.  
+lplb time 0.06635808944702148  #time spent solving the lower bound lp
+Graph Sizes (in terms of number of compressed nodes) are below: #sizes of the graphs for time and capacity af the round is done  
+h:   timeGraph is of size:   26
+h:   capGraph is of size:   4
+prob_sizes_at_start  #sizes of the graphs for time and capacity before the the round is started 
+{'timeGraph': 31, 'capGraph': 5}
