@@ -6,6 +6,7 @@ class jy_make_input_file_no_la:
         
         self.my_instance=my_instance
         self.jy_opt=my_instance.my_params
+        
         #self.my_instance.num_cust=int(self.my_instance.num_cust)
         self.my_dem_graph=my_dem_graph
         self.my_time_graph=my_time_graph
@@ -256,17 +257,23 @@ class jy_make_input_file_no_la:
         #self.h2SourceId['capGraph']='(25, 20.0, 20.0)'
         #self.h2SinkId['timeGraph']='(26, 0, 1236.0)'
         #self.h2SinkId['capGraph']='(26, 0, 20.0)'
-        sink_node=max(self.my_dem_graph.node_list.keys())
-        source_node=sink_node-1
-        print('sink_node')
-        print(sink_node)
-        print('source_node')
-        print(source_node)
+        #sink_node=max(self.my_dem_graph.node_list.keys())
+        #source_node=sink_node-1
 
-        self.h2SourceId['timeGraph']='('+str(source_node)+', 1236.0, 1236.0)'
-        self.h2SourceId['capGraph']='('+str(source_node)+', 20.0, 20.0)'
-        self.h2SinkId['timeGraph']='('+str(sink_node)+', 0, 1236.0)'
-        self.h2SinkId['capGraph']='('+str(sink_node)+', 0, 20.0)'
+        sink_cust=max(self.my_dem_graph.node_list.keys())
+        source_cust=sink_cust-1
+        
+        self.h2SourceId['timeGraph']=str(self.my_time_graph.node_list[source_cust][0])
+        self.h2SourceId['capGraph']=str(self.my_dem_graph.node_list[source_cust][0])
+        self.h2SinkId['timeGraph']=str(self.my_time_graph.node_list[sink_cust][0])
+        self.h2SinkId['capGraph']=str(self.my_dem_graph.node_list[sink_cust][0])
+        #print(self.h2SourceId['timeGraph'])
+        #print(self.h2SourceId['capGraph'])
+        #print('self.h2SinkId['timeGraph']')
+        #self.h2SourceId['timeGraph']='('+str(source_node)+', 1236.0, 1236.0)'
+        #self.h2SourceId['capGraph']='('+str(source_node)+', 20.0, 20.0)'
+        #self.h2SinkId['timeGraph']='('+str(sink_node)+', 0, 1236.0)'
+        #self.h2SinkId['capGraph']='('+str(sink_node)+', 0, 20.0)'
 
         self.out_dict['h2SourceId']=self.h2SourceId
         self.out_dict['h2sinkid']=self.h2SinkId
@@ -291,13 +298,16 @@ class jy_make_input_file_no_la:
             for i in self.my_dem_graph.node_list[u]:
                 self.graphName2Nodes['capGraph'].append(str(i))
                 bin_num=int(my_count/self.num_terms_per_bin)
+                if self.jy_opt['allOneBig_init']>0.5:
+                    bin_num='cap_big'
                 self.initGraphNode2AggNode['capGraph'][str(i)]='cap_'+str(u)+'_'+str(bin_num)
                 my_count=my_count+1
             my_count=0
             for i in self.my_time_graph.node_list[u]:
                 self.graphName2Nodes['timeGraph'].append(str(i))
                 bin_num=int(my_count/self.num_terms_per_bin)
-
+                if self.jy_opt['allOneBig_init']>0.5:
+                    bin_num='time_big'
                 self.initGraphNode2AggNode['timeGraph'][str(i)]='time'+str(u)+'_'+str(bin_num)
                 my_count=my_count+1
 

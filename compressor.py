@@ -77,6 +77,11 @@ class compressor:
         data = np.array([X[k] for k in keys]).reshape(-1, 1)
 
         # Compute the linkage matrix using SciPy's hierarchical clustering.
+        #print('data')
+        #print(data)
+        #print('h')
+        #print(h)
+        #print('--')
         Z = linkage(data, method="average")
         cluster_id_2_member = {}
         for i in range(n):

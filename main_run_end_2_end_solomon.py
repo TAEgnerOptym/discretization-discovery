@@ -10,7 +10,7 @@ import ast
 
 import ast
 
-input_file_path='data/jy_c103.txt'
+input_file_path='data/jy_c102.txt'
 my_params=grab_default_params()
 #my push
 my_json_file_path = "jy_data_end_end.json"

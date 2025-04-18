@@ -180,7 +180,7 @@ class full_solver:
             for h in self.graph_names:
                 proj_objective_componentLps[h]=np.nan
                 proj_time_component_lps[h]=np.nan
-            if incumbant_lp<new_lp_value-self.jy_opt['epsilon']: #and iter>0:
+            if incumbant_lp<new_lp_value-self.jy_opt['min_inc_2_compress']: #and iter>0:
                 #self.count_size()
                 #input('starting compression ')
                 [compress_lp_time,compress_lp_val]=self.ApplyCompresssion()
@@ -220,6 +220,8 @@ class full_solver:
             print('lp compress time '+str(self.history_dict['lp_time_compress'][-1]))
             print('lplb time '+str(self.history_dict['lp_time_LB'][-1]))
             self.count_size(False)
+            print('prob_sizes_at_start')
+            print(prob_sizes_at_start)
             print('-----')
             print('-----')
             print('-----')
