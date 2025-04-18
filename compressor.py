@@ -76,13 +76,23 @@ class compressor:
         # Create a 2-D array of scalar values (each value is a 1-D point).
         data = np.array([X[k] for k in keys]).reshape(-1, 1)
 
+        if n == 1:
+            # Create the single node clustering information.
+            cluster_id_2_member = {0: [keys[0]]}
+            member_2_cluster_id = {keys[0]: [0]}
+            
+            # The output dictionaries use tuples (h, cluster_id)
+            out_cluster_id_2_member = { (h, 0): [keys[0]] }
+            out_member_2_cluster_id = { keys[0]: [(h, 0)] }
+            
+            # Save to the corresponding attributes and exit.
+            self.H_ell_2_list_leaf[h] = out_cluster_id_2_member
+            self.H_leaf_2_list_ell[h] = out_member_2_cluster_id
+            return
+
         # Compute the linkage matrix using SciPy's hierarchical clustering.
-        #print('data')
-        #print(data)
-        #print('h')
-        #print(h)
-        #print('--')
         Z = linkage(data, method="average")
+        
         cluster_id_2_member = {}
         for i in range(n):
             cluster_id_2_member[i] = [keys[i]]
