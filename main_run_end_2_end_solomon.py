@@ -12,7 +12,7 @@ import ast
 
 input_file_path='data/jy_c103.txt'
 my_params=grab_default_params()
-
+#my push
 my_json_file_path = "jy_data_end_end.json"
 my_output_path="jy_out_history.json"
 print('Reading file and creating input')
