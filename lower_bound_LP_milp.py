@@ -447,18 +447,61 @@ class lower_bound_LP_milp:
 
         #print('done ILP call')
         #input('done ILP call')
-    
+    def solve_xpress_milp(self):
+        dict_var_name_2_obj=self.dict_var_name_2_obj
+        dict_con_name_2_LB=self.dict_con_name_2_LB
+        dict_con_name_2_eq=self.dict_con_name_2_eq
+        dict_var_con_2_lhs_exog=self.dict_var_con_2_lhs_exog
+        dict_var_con_2_lhs_eq=self.dict_var_con_2_lhs_eq
+        dict_var_name_2_is_binary=self.dict_var_name_2_is_binary
+        import xpress as xp
+        xp.init('C:/xpressmp/bin/xpauth.xpr')
+        milp_prob = xp.problem("MILP_Problem")
+
+        # Create decision variables based on the input. 
+        # If a variable is binary, declare it as such, otherwise as continuous (nonnegative).
+        var_dict = {}
+
+        for var_name, obj_coeff in dict_var_name_2_obj.items():
+            if dict_var_name_2_is_binary.get(var_name, 0):
+                var_dict[var_name] = xp.var(name=var_name, vartype=xp.binary)
+            else:
+                var_dict[var_name] = xp.var(name=var_name, lb=0)
+
+        # Define the objective function: minimize sum(objective_coefficient * variable)
+        objective = xp.Sum(dict_var_name_2_obj[var_name] * var_dict[var_name] 
+                            for var_name in dict_var_name_2_obj)
+        milp_prob.setObjective(objective, sense=xp.minimize)
+
+        # --- Add inequality constraints (of the form: expression >= lower bound) ---
+        for con_name in dict_con_name_2_LB:
+            expr = xp.Sum(dict_var_con_2_lhs_exog.get((var_name, con_name), 0) * var_dict[var_name] 
+                            for var_name in var_dict)
+            milp_prob.addConstraint(expr >= dict_con_name_2_LB[con_name], name=con_name + "_ineq")
+
+        # --- Add equality constraints ---
+        for con_name in dict_con_name_2_eq:
+            expr = xp.Sum(dict_var_con_2_lhs_eq.get((var_name, con_name), 0) * var_dict[var_name] 
+                            for var_name in var_dict)
+            milp_prob.addConstraint(expr == dict_con_name_2_eq[con_name], name=con_name + "_eq")
+
+        # --- Solve the MILP ---
+        start_time = time.time()
+        milp_prob.solve()
+        end_time = time.time()
+
+        self.milp_time = end_time - start_time
+        self.milp_prob = milp_prob
+        self.milp_solution = {var_name: var_dict[var_name].getSolution() for var_name in var_dict}
+        self.milp_solution_status = milp_prob.getProbStatus()
+        self.milp_solution_objective_value = milp_prob.getObjVal()
     def make_LP(self):
         dict_var_name_2_obj=self.dict_var_name_2_obj
         dict_var_con_2_lhs_exog=self.dict_var_con_2_lhs_exog
         dict_con_name_2_LB=self.dict_con_name_2_LB
         dict_var_con_2_lhs_eq=self.dict_var_con_2_lhs_eq
         dict_con_name_2_eq=self.dict_con_name_2_eq
-        #p#rint('dict_var_name_2_obj')
-        ##print(dict_var_name_2_obj)
-        #print('type(dict_var_name_2_obj)')
-        #print(type(dict_var_name_2_obj))
-        #input('---')
+
         debug_on=False
         if debug_on==True:
             dict_con_name_2_eq=dict()
@@ -484,38 +527,13 @@ class lower_bound_LP_milp:
             ineq_expressions.setdefault(con_name, 0)
             ineq_expressions[con_name] += coeff * var_dict[var_name]
             if con_name=='exog_min_veh_':
-                #print('coeff')
-                #print(coeff)
-                #print('[var_name]')
-                #print(var_name)
-                did_find_2=True
-            #if dict_con_name_2_LB[con_name]>-100:
 
-                #print('var_name')
-                #print(var_name)
-                #print('con_name')
-                #print(con_name)
-                #print('dict_con_name_2_LB')
-                #print(dict_con_name_2_LB[con_name])
-                #print('coeff')
-                ##print(coeff)
-                #input('---')
-        # Add each inequality constraint to the model.
-        #print('EXPRESIONs')
-        #print(dict_con_name_2_LB['exog_min_veh_'])
-        #print('did_find_2')
-        #print(did_find_2)
-        #input('---')
+                did_find_2=True
 
         did_find=False
         for con_name, expr in ineq_expressions.items():
             if con_name in dict_con_name_2_LB:
-                #print('con_name')
-                #print(con_name)
-                #print('dict_con_name_2_LB[con_name]')
-                #print(dict_con_name_2_LB[con_name])
-                #print('expr')
-                #print(expr)
+
                 if con_name=='exog_min_veh_':
                     did_find=True
                     #input('---')
@@ -552,10 +570,86 @@ class lower_bound_LP_milp:
         self.lp_dual_solution=dict()
         for con_name, constraint in lp_prob.constraints.items():
             self.lp_dual_solution[con_name]=constraint.pi
-            
-            #if con_name[0:4]=='flow':
-            #    input('ok')
-        #print('self.lp_status')
-        #print(self.lp_status)
         if self.lp_status=='Infeasible':
+            input('HOLD')
+    def make_xpress_LP(self):
+        import xpress as xp
+        xp.init('C:/xpressmp/bin/xpauth.xpr')
+        dict_var_name_2_obj = self.dict_var_name_2_obj
+        dict_var_con_2_lhs_exog = self.dict_var_con_2_lhs_exog
+        dict_con_name_2_LB = self.dict_con_name_2_LB
+        dict_var_con_2_lhs_eq = self.dict_var_con_2_lhs_eq
+        dict_con_name_2_eq = self.dict_con_name_2_eq
+
+        debug_on = False
+        if debug_on == True:
+            dict_con_name_2_eq = dict()
+            dict_var_con_2_lhs_eq = dict()
+
+        # --- Build the LP model ---
+        lp_prob = xp.problem("MyLP")
+
+        # Create decision variables (all non-negative)
+        var_dict = {}
+        for var_name, coeff in dict_var_name_2_obj.items():
+            var_dict[var_name] = xp.var(name=var_name, lb=0)
+
+        # Define the objective function (minimize sum(obj_coeff * var))
+        objective = xp.Sum(dict_var_name_2_obj[var_name] * var_dict[var_name]
+                            for var_name in dict_var_name_2_obj)
+        lp_prob.setObjective(objective, sense=xp.minimize)
+
+        # --- Add inequality constraints (>=) ---
+        # Group terms for each inequality constraint.
+        ineq_expressions = {}
+        did_find_2 = False
+        for (var_name, con_name), coeff in dict_var_con_2_lhs_exog.items():
+            if con_name not in ineq_expressions:
+                ineq_expressions[con_name] = 0
+            ineq_expressions[con_name] += coeff * var_dict[var_name]
+            if con_name == 'exog_min_veh_':
+                did_find_2 = True
+
+        did_find = False
+        for con_name, expr in ineq_expressions.items():
+            if con_name in dict_con_name_2_LB:
+                if con_name == 'exog_min_veh_':
+                    did_find = True
+                lp_prob.addConstraint(expr >= dict_con_name_2_LB[con_name], name=con_name + "_ineq")
+
+        if did_find == False:
+            input('this is odd')
+
+        # --- Add equality constraints ---
+        # Group terms for each equality constraint.
+        eq_expressions = {}
+        for (var_name, con_name), coeff in dict_var_con_2_lhs_eq.items():
+            if con_name not in eq_expressions:
+                eq_expressions[con_name] = 0
+            eq_expressions[con_name] += coeff * var_dict[var_name]
+
+        # Add each equality constraint to the model.
+        for con_name, expr in eq_expressions.items():
+            if con_name in dict_con_name_2_eq:
+                lp_prob.addConstraint(expr == dict_con_name_2_eq[con_name], name=con_name)
+
+        # --- Solve the LP ---
+        start_time = time.time()
+        lp_prob.solve()
+        end_time = time.time()
+
+        self.lp_time = end_time - start_time
+        self.lp_prob = lp_prob
+        self.lp_primal_solution = dict()
+        for var_name, var in var_dict.items():
+            self.lp_primal_solution[var_name] = var.getSolution()
+
+        self.lp_status = lp_prob.getProbStatus()
+        self.lp_objective = lp_prob.getObjVal()
+        self.lp_dual_solution = dict()
+
+        for con_name in lp_prob.getConstraints():
+            self.lp_dual_solution[con_name] = lp_prob.getDual(con_name)
+
+        if self.lp_status == 'Infeasible':
             input('HOLD')

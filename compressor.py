@@ -330,6 +330,64 @@ class compressor:
         #print('LP obejctive of comrpessor self.lp_objective')
         #print(self.lp_objective)
         #input('---')
+    def make_xpress_LP(self):
+        import xpress as xp
+        xp.init('C:/xpressmp/bin/xpauth.xpr')
+        dict_var_name_2_obj = self.dict_var_name_2_obj
+        dict_var_con_2_lhs_exog = self.dict_var_con_2_lhs_exog
+        dict_con_name_2_LB = self.dict_con_name_2_LB
+        dict_var_con_2_lhs_eq = self.dict_var_con_2_lhs_eq
+        dict_con_name_2_eq = self.dict_con_name_2_eq
+
+        # --- Build the LP model ---
+        lp_prob = xp.problem("MyLP")
+
+        # Create decision variables (all non-negative)
+        var_dict = {}
+        for var_name, coeff in dict_var_name_2_obj.items():
+            var_dict[var_name] = xp.var(name=var_name, lb=0)
+
+        # Define the objective function (minimize sum(obj_coeff * var))
+        objective = xp.Sum(dict_var_name_2_obj[var_name] * var_dict[var_name]
+                            for var_name in dict_var_name_2_obj)
+        lp_prob.setObjective(objective, sense=xp.minimize)
+
+        # --- Add inequality constraints (>=) ---
+        # Group terms for each inequality constraint.
+        for con_name in dict_con_name_2_LB:
+            expr = xp.Sum(dict_var_con_2_lhs_exog.get((var_name, con_name), 0) * var_dict[var_name]
+                            for var_name in var_dict)
+            lp_prob.addConstraint(expr >= dict_con_name_2_LB[con_name], name=con_name)
+
+        # --- Add equality constraints ---
+        for con_name in dict_con_name_2_eq:
+            expr = xp.Sum(dict_var_con_2_lhs_eq.get((var_name, con_name), 0) * var_dict[var_name]
+                            for var_name in var_dict)
+            lp_prob.addConstraint(expr == dict_con_name_2_eq[con_name], name=con_name)
+
+        # --- Solve the LP ---
+        start_time = time.time()
+        lp_prob.solve()
+        end_time = time.time()
+
+        self.lp_time = end_time - start_time
+        self.lp_prob = lp_prob
+        self.lp_primal_solution = dict()
+        for var_name, var in var_dict.items():
+            self.lp_primal_solution[var_name] = var.getSolution()
+
+        self.lp_status = lp_prob.getProbStatus()
+        if self.lp_status != 'Optimal':
+            print('self.lp_status')
+            print(self.lp_status)
+            input('error inn')
+
+        self.lp_objective = lp_prob.getObjVal()
+        self.lp_dual_solution = dict()
+
+        # Get dual values (shadow prices) for constraints
+        for con_name in lp_prob.getConstraints():
+            self.lp_dual_solution[con_name] = lp_prob.getDual(con_name)
     def get_pi_by_h_node(self):
         self.h_f_2_dual=dict()
         self.h_f_2_dual_sig_fig=dict()

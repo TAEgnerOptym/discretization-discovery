@@ -395,29 +395,82 @@ class projector:
         self.lp_primal_solution=dict()
         for var_name, var in var_dict.items():
             self.lp_primal_solution[var_name]=var.varValue
-            #if var.varValue>.00001 and var_name[0:8]=='Proj_sla':
-            #    print('var_name')
-            #    print(var_name)
-            #    print('var.varValue')
-            #    print(var.varValue)
-            #    print('----')
+
             
         
         self.lp_objective= pulp.value(lp_prob.objective)
         self.lp_dual_solution=dict()
         for con_name, constraint in lp_prob.constraints.items():
-            #if con_name not in dict_con_name_2_LB and con_name not in dict_con_name_2_eq:
-            #    print(lp_prob.constraints.keys())
-            #    print ('con_name')
-            #    print(con_name)
-            #    input('error here')
-            self.lp_dual_solution[con_name]=constraint.pi
-        #print('self.lp_status')
-        #print(self.lp_status)
-        #print('self.lp_objective')
-        #print(self.lp_objective)
-        #input('---')
 
+            self.lp_dual_solution[con_name]=constraint.pi
+
+    def make_xpress_LP(self):
+        import xpress as xp
+        xp.init('C:/xpressmp/bin/xpauth.xpr')
+        dict_var_name_2_obj = self.dict_PROJ_var_name_2_obj
+        dict_var_con_2_lhs_exog = self.dict_PROG_ineq_var_con_lhs
+        dict_con_name_2_LB = self.dict_PROJ_ineq_con_name_2_rhs
+        dict_var_con_2_lhs_eq = self.dict_PROG_eq_var_con_lhs
+        dict_con_name_2_eq = self.dict_PROJ_eq_con_name_2_rhs
+
+        # --- Build the LP model ---
+        lp_prob = xp.problem("MyLP")
+
+        # Create decision variables (all non-negative)
+        var_dict = {}
+        for var_name, coeff in dict_var_name_2_obj.items():
+            var_dict[var_name] = xp.var(name=var_name, lb=0)
+
+        # Define the objective function (minimize sum(obj_coeff * var))
+        objective = xp.Sum(dict_var_name_2_obj[var_name] * var_dict[var_name]
+                            for var_name in dict_var_name_2_obj)
+        lp_prob.setObjective(objective, sense=xp.minimize)
+
+        # --- Add inequality constraints (>=) ---
+        # Group terms for each inequality constraint.
+        ineq_expressions = {}
+        for (var_name, con_name), coeff in dict_var_con_2_lhs_exog.items():
+            if con_name not in ineq_expressions:
+                ineq_expressions[con_name] = 0
+            ineq_expressions[con_name] += coeff * var_dict[var_name]
+
+        # Add each inequality constraint to the model.
+        for con_name, expr in ineq_expressions.items():
+            if con_name in dict_con_name_2_LB:
+                lp_prob.addConstraint(expr >= dict_con_name_2_LB[con_name], name=con_name)
+
+        # --- Add equality constraints ---
+        # Group terms for each equality constraint.
+        eq_expressions = {}
+        for (var_name, con_name), coeff in dict_var_con_2_lhs_eq.items():
+            if con_name not in eq_expressions:
+                eq_expressions[con_name] = 0
+            eq_expressions[con_name] += coeff * var_dict[var_name]
+
+        # Add each equality constraint to the model.
+        for con_name, expr in eq_expressions.items():
+            if con_name in dict_con_name_2_eq:
+                lp_prob.addConstraint(expr == dict_con_name_2_eq[con_name], name=con_name)
+
+        # --- Solve the LP ---
+        start_time = time.time()
+        lp_prob.solve()
+        end_time = time.time()
+
+        self.lp_time = end_time - start_time
+        self.lp_status = lp_prob.getProbStatus()
+        if self.lp_status == 'Infeasible':
+            input('ERROR infeasible')
+
+        self.lp_prob = lp_prob
+        self.lp_primal_solution = dict()
+        for var_name, var in var_dict.items():
+            self.lp_primal_solution[var_name] = var.getSolution()
+
+        self.lp_objective = lp_prob.getObjVal()
+        self.lp_dual_solution = dict()
+        for con_name in lp_prob.getConstraints():
+            self.lp_dual_solution[con_name] = lp_prob.getDual(con_name)
     def make_new_splits(self):
 
         #get max value
