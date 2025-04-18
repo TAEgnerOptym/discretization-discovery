@@ -19,4 +19,5 @@ def grab_default_params():
 	my_params['num_terms_per_bin_init_construct']=10000
 	my_params['allOneBig_init']=1
 	my_params['min_inc_2_compress']=.01
+	my_params['save_graph_each_iter']=0
 	return my_params
