@@ -35,6 +35,8 @@ my_params['num_terms_per_bin_init_construct']=10000
 
 #min_inc_2_compress:  minimum amount to increase the dual objective by in order to apply compression
 my_params['min_inc_2_compress']=.01
+#save graph each iter
+my_params['save_graph_each_iter']=0 #set to one to do this
 
 At every iteration  we produce the state of the code so that you can keep track currently  it looks as follows.  I put description after
 
