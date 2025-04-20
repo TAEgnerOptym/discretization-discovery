@@ -315,7 +315,13 @@ class jy_make_input_file_no_la:
                     #input('--')
                 self.initGraphNode2AggNode['timeGraph'][str(i)]='time'+str(u_use)+'_'+str(bin_num)
                 my_count=my_count+1
-
+        #print('set 1')
+        #print(set(self.initGraphNode2AggNode['timeGraph'].values()))
+        #print('set 2')
+        #print(set(self.initGraphNode2AggNode['capGraph'].values()))
+        #print('self.jy_opt[allOneBig_init]')
+        #print(self.jy_opt['allOneBig_init'])
+        #input('---')
         self.out_dict['graphName2Nodes']=self.graphName2Nodes
         self.out_dict['initGraphNode2AggNode']=self.initGraphNode2AggNode
     

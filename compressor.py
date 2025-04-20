@@ -13,27 +13,59 @@ import time
 from scipy.sparse import csr_matrix
 import pulp
 from scipy.cluster.hierarchy import linkage
+import xpress as xp
 
 
 class compressor:
     
     def __init__(self,my_full_solver):
-
+        t1=time.time()
         self.MF=my_full_solver
         self.graph_node_2_agg_node=self.MF.graph_node_2_agg_node
         self.myLBObj=self.MF.my_lower_bound_LP
         self.graph_names=self.MF.graph_names
+        self.time_compressor=dict()
+        self.time_compressor['prior']=time.time()-t1
+        t1=time.time()
         self.get_dual_dict()
+        self.time_compressor['get_dual_dict']=time.time()-t1
+        t1=time.time()
         self.copy_lp_terms()
+        self.time_compressor['copy_lp_terms']=time.time()-t1
+        t1=time.time()
         self.remove_flow_in_flow_out_terms()
+        self.time_compressor['remove_flow_in_flow_out_terms']=time.time()-t1
+        t1=time.time()
         self.add_new_RHS_terms()
+        self.time_compressor['add_new_RHS_terms']=time.time()-t1
+        t1=time.time()
         self.add_new_ineq_terms()
+        self.time_compressor['add_new_ineq_terms']=time.time()-t1
+        t1=time.time()
         self.check_solution_feasibility()
-        self.make_LP()
-        self.get_pi_by_h_node()
-        self.make_f_2_new_f()
-        self.make_i_2_new_f()
+        self.time_compressor['check_solution_feasibility']=time.time()-t1
+        if my_full_solver.jy_opt['use_Xpress']==False:
+            self.make_LP()
+        else:
+            self.make_xpress_LP()
+            
+        t1=time.time()
 
+        self.get_pi_by_h_node()
+        self.time_compressor['get_pi_by_h_node']=time.time()-t1
+        t1=time.time()
+        self.make_f_2_new_f()
+        self.time_compressor['make_f_2_new_f']=time.time()-t1
+        t1=time.time()
+        self.make_i_2_new_f()
+        self.time_compressor['make_i_2_new_f']=time.time()-t1
+        print('self.time_compressor')
+        print(self.time_compressor)
+        total = sum(self.time_compressor.values())
+        self.time_percentage_compressor = {key: (val / total if total != 0 else 0) for key, val in self.time_compressor.items()}
+        print('time_percentage_compressor')
+        print(self.time_percentage_compressor)
+        print('----')
     def check_agg_nodes(self):
         for  h in self.graph_names:
             count_find=dict()
@@ -252,6 +284,8 @@ class compressor:
         #print(counterMe)
         #input('counterMe')
     def make_LP(self):
+        t2=time.time()
+
         dict_var_name_2_obj=self.dict_var_name_2_obj
         dict_var_con_2_lhs_exog=self.dict_var_con_2_lhs_exog
         dict_con_name_2_LB=self.dict_con_name_2_LB
@@ -308,10 +342,15 @@ class compressor:
 
         # --- Solve the LP ---
         # Using the default CBC solver here.
+        self.time_compressor['lp_prior']=time.time()-t2
+
         start_time=time.time()
         solver = pulp.PULP_CBC_CMD(msg=False)
         lp_prob.solve(solver)
         end_time=time.time()
+        self.time_compressor['lp_time']=end_time-start_time
+
+        t3=time.time()
         self.lp_time=end_time-start_time
         self.lp_prob=lp_prob
         self.lp_primal_solution=dict()
@@ -345,9 +384,12 @@ class compressor:
         #print('LP obejctive of comrpessor self.lp_objective')
         #print(self.lp_objective)
         #input('---')
+        self.time_compressor['lp_post']=time.time()-t3
+
     def make_xpress_LP(self):
-        import xpress as xp
-        xp.init('C:/xpressmp/bin/xpauth.xpr')
+        xp.init(self.MF.jy_opt['xpress_file_loc'])
+
+        t2=time.time()
         dict_var_name_2_obj = self.dict_var_name_2_obj
         dict_var_con_2_lhs_exog = self.dict_var_con_2_lhs_exog
         dict_con_name_2_LB = self.dict_con_name_2_LB
@@ -381,9 +423,13 @@ class compressor:
             lp_prob.addConstraint(expr == dict_con_name_2_eq[con_name], name=con_name)
 
         # --- Solve the LP ---
+        self.time_dict_proj['pre_X_compress']=time.time()-t2
+
         start_time = time.time()
         lp_prob.solve()
         end_time = time.time()
+        self.time_compressor['x_compress']=end_time-start_time
+        t3=time.time()
 
         self.lp_time = end_time - start_time
         self.lp_prob = lp_prob
@@ -403,6 +449,8 @@ class compressor:
         # Get dual values (shadow prices) for constraints
         for con_name in lp_prob.getConstraints():
             self.lp_dual_solution[con_name] = lp_prob.getDual(con_name)
+        self.time_compressor['pre_X_compress']=time.time()-t3
+
     def get_pi_by_h_node(self):
         self.h_f_2_dual=dict()
         self.h_f_2_dual_sig_fig=dict()

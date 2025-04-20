@@ -37,7 +37,12 @@ my_params['num_terms_per_bin_init_construct']=10000
 my_params['min_inc_2_compress']=.01
 #save graph each iter
 my_params['save_graph_each_iter']=0 #set to one to do this
+#set to true to use Xpress
+my_params['use_Xpress']=True
+#xpress_file_loc:  location of the express file
+my_params['run_baseline']=True #set to true to run the  baseline solver at the end 
 
+my_params['xpress_file_loc']='/Users/julian/Documents/FICO\ Xpress\ Config/xpauth.xpr'
 At every iteration  we produce the state of the code so that you can keep track currently  it looks as follows.  I put description after
 
 ITER FINISHE:  40 #iteration number 
@@ -80,4 +85,6 @@ self.history_dict['ilp_time'] #ilp time
 self.history_dict['final_sizes'] #final sizes after the last compression
 self.history_dict['final_graph_node_2_agg_node'] #mapping of each graph, node to tis compressed node
         
-
+self.history_dict['BASELINE_ILP_sol_obj']# baseline milp solution objective
+self.history_dict['BASELINE_milp_solution'] #baseline MILP solution
+self.history_dict['BASELINE_milp_time'] #baseline MILP solve time

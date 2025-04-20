@@ -14,7 +14,7 @@ from lower_bound_LP_milp import lower_bound_LP_milp
 import pulp
 from compressor import compressor
 from projector import projector
-
+from baseline_solver import baseline_solver
 import json
 class full_solver:
 
@@ -285,4 +285,13 @@ class full_solver:
         
         print('final solution objective')
         print(new_Ilp_value)
+        if self.jy_opt['run_baseline']==True:
+            print('running baseline')
+
+            my_base=baseline_solver(self,True,True)
+            self.history_dict['ILP_sol_obj']=my_base.milp_solution_objective_value
+            self.history_dict['milp_solution']=my_base.milp_solution
+            self.history_dict['milp_time']=my_base.milp_time
         self.prepare_ILP_solution()
+        
+        

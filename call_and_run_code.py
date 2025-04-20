@@ -14,6 +14,7 @@ import ast
 def call_and_run_code(input_file_path,my_params_path,my_json_file_path,my_output_path):
 
     my_params=grab_params(my_params_path)
+
     print('Reading file and creating input')
     make_problem_instance(input_file_path,my_params,my_json_file_path)
     print('DONE Reading file and creating input')
@@ -30,5 +31,6 @@ def call_and_run_code(input_file_path,my_params_path,my_json_file_path,my_output
     print('DONE Loading file file and adjusting for domian')
 
     print('Calling the solver')
+
 
     my_solver=full_solver(D,my_params,my_output_path)

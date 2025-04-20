@@ -13,11 +13,13 @@ import time
 from scipy.sparse import csr_matrix
 import pulp
 import random
-
+import time
 
 class projector:
 
     def __init__(self,my_full_solver,h):
+        self.time_dict_proj=dict()
+        t1=time.time()
         self.h=h
         self.MF=my_full_solver
         self.my_lp=self.MF.my_lower_bound_LP
@@ -44,15 +46,27 @@ class projector:
         self.dict_PROJ_eq_con_name_2_rhs=dict()
 
         self.non_source_sink=set(self.graph_node_2_agg_node)-set([self.compact_sink ,self.compact_source])
-
+        self.time_dict_proj['prior']=time.time()-t1
+        t1=time.time()
         self.get_non_zero_terms_p()
+        self.time_dict_proj['get_non_zero_terms_p']=time.time()-t1
+        t1=time.time()
         self.get_non_zero_terms_ij_i()
+        self.time_dict_proj['get_non_zero_terms_ij_i']=time.time()-t1
+        t1=time.time()
         self.proj_make_vars()
+        self.time_dict_proj['proj_make_vars']=time.time()-t1
+        t1=time.time()
         self.proj_make_actions_match_exog()
+        self.time_dict_proj['proj_make_actions_match_exog']=time.time()-t1
+        t1=time.time()
         self.proj_make_equv_class_consist()
-        
+        self.time_dict_proj['proj_make_equv_class_consist']=time.time()-t1
+        t1=time.time()
 
         self.proj_make_proj_flow_i_plus_minus()
+        self.time_dict_proj['proj_make_proj_flow_i_plus_minus']=time.time()-t1
+        t1=time.time()
         debug_on=False
         if debug_on==True:
             #self.proj_make_equiv_flow()
@@ -60,8 +74,20 @@ class projector:
             self.make_primal_feas()
             self.check_solution_feasibility()
         self.make_LP()
+        t1=time.time()
         self.make_new_splits()
-
+        self.time_dict_proj['make_new_splits']=time.time()-t1
+        t1=time.time()
+        print('self.time_dict_proj')
+        print(self.time_dict_proj)
+        print('--')
+        total = sum(self.time_dict_proj.values())
+        time_percentage_projector = {key: (val / total if total != 0 else 0) for key, val in self.time_dict_proj.items()}
+        print('time_percentage_projector')
+        print(time_percentage_projector)
+        print('h above')
+        print(self.h)
+        print('----')
     def proj_make_equiv_flow(self):
 
         for f in self.non_source_sink_agg_nodes:
@@ -93,7 +119,31 @@ class projector:
             if lp_primal_solution[p]>self.MF.jy_opt['epsilon']:
                 self.non_zero_p.append(p)
                 self.non_zero_p_plus_null.append(p)
+    
     def get_non_zero_terms_ij_i(self):
+        # Clear results
+        self.non_zero_ij = []
+        self.Nz_ij_2_q = {}
+        self.q_2_NZ_ij = {}
+        
+        # Precompute a set for fast membership test.
+        non_zero_set = set(self.non_zero_p_plus_null)
+        
+        # Iterate over each key (edge tuple) and its corresponding list in hij_2_P_orig.
+        for ij, P_list in self.hij_2_P_orig.items():
+            # Filter P_list, keeping only terms that are in non_zero_set.
+            filtered = [p for p in P_list if p in non_zero_set]
+            if filtered:  # If the filtered list is non-empty:
+                # Append (i,j) to non_zero_ij.
+                self.non_zero_ij.append(ij)
+                # Sort filtered list and convert to a tuple for use as a key.
+                sorted_q = tuple(sorted(filtered))
+                self.Nz_ij_2_q[ij] = sorted_q
+                # Use setdefault to update q_2_NZ_ij in one shot.
+                self.q_2_NZ_ij.setdefault(sorted_q, []).append(ij)
+
+    
+    def OLD_get_non_zero_terms_ij_i(self):
         self.non_zero_ij=[]
         h=self.h
         self.Nz_ij_2_q=dict()
@@ -346,67 +396,93 @@ class projector:
         dict_var_con_2_lhs_eq=self.dict_PROG_eq_var_con_lhs
         dict_con_name_2_eq=self.dict_PROJ_eq_con_name_2_rhs
         # --- Build the LP model ---
+        t2=time.time()
+        my_times_proj=[]
         lp_prob = pulp.LpProblem("MyLP", pulp.LpMinimize)
 
         # Create decision variables (all non-negative)
+        t1=time.time()
         var_dict = {}
         for var_name, coeff in dict_var_name_2_obj.items():
             var_dict[var_name] = pulp.LpVariable(var_name, lowBound=0)
-
+        my_times_proj.append(time.time()-t1)
+        t1=time.time()
         # Define the objective function (minimize sum(obj_coeff * var))
         lp_prob += pulp.lpSum(dict_var_name_2_obj[var_name] * var_dict[var_name]
                             for var_name in dict_var_name_2_obj), "Objective"
-
+        my_times_proj.append(time.time()-t1)
+        t1=time.time()
         # --- Add inequality constraints (>=) ---
         # Group terms for each inequality constraint.
         ineq_expressions = {}
         for (var_name, con_name), coeff in dict_var_con_2_lhs_exog.items():
             ineq_expressions.setdefault(con_name, 0)
             ineq_expressions[con_name] += coeff * var_dict[var_name]
-
+        my_times_proj.append(time.time()-t1)
+        t1=time.time()
         # Add each inequality constraint to the model.
         for con_name, expr in ineq_expressions.items():
             if con_name in dict_con_name_2_LB:
                 lp_prob += expr >= dict_con_name_2_LB[con_name], con_name #+ "_ineq"
-
+        my_times_proj.append(time.time()-t1)
+        t1=time.time()
         # --- Add equality constraints ---
         # Group terms for each equality constraint.
         eq_expressions = {}
         for (var_name, con_name), coeff in dict_var_con_2_lhs_eq.items():
             eq_expressions.setdefault(con_name, 0)
             eq_expressions[con_name] += coeff * var_dict[var_name]
-    
+        my_times_proj.append(time.time()-t1)
+        t1=time.time()
         # Add each equality constraint to the model.
         for con_name, expr in eq_expressions.items():
             if con_name in dict_con_name_2_eq:
                 lp_prob += expr == dict_con_name_2_eq[con_name], con_name #+ "_eq"
-
+        my_times_proj.append(time.time()-t1)
+        t1=time.time()
         # --- Solve the LP ---
         # Using the default CBC solver here.
+        self.time_dict_proj['lp_prior']=time.time()-t2
         start_time = time.time()
         solver = pulp.PULP_CBC_CMD(msg=False)
         lp_prob.solve(solver)
         end_time = time.time()
+        self.time_dict_proj['lp_time']=end_time-start_time
+        t2=time.time()
+        my_times_proj.append(end_time-start_time)
         self.lp_time=end_time-start_time
         self.lp_status=pulp.LpStatus[lp_prob.status]
         if self.lp_status=='Infeasible':
             input('ERROR infeasible')
+        t1=time.time()
         self.lp_prob=lp_prob
         self.lp_primal_solution=dict()
         for var_name, var in var_dict.items():
             self.lp_primal_solution[var_name]=var.varValue
 
-            
+        my_times_proj.append(time.time()-t1)
+        t1=time.time()
         
         self.lp_objective= pulp.value(lp_prob.objective)
         self.lp_dual_solution=dict()
         for con_name, constraint in lp_prob.constraints.items():
 
             self.lp_dual_solution[con_name]=constraint.pi
+        my_times_proj.append(time.time()-t1)
+
+       # print('my_times_proj')
+       # print(my_times_proj)
+       # print('my_times_proj/sum')
+       # print(np.array(my_times_proj)/np.sum(np.array(my_times_proj)))
+       # print('lpPortion')
+       # print((end_time-start_time)/np.sum(np.array(my_times_proj)))
+       # print('---')
+        self.time_dict_proj['lp_post']=time.time()-t2
 
     def make_xpress_LP(self):
         import xpress as xp
         xp.init('C:/xpressmp/bin/xpauth.xpr')
+        t2=time.time()
         dict_var_name_2_obj = self.dict_PROJ_var_name_2_obj
         dict_var_con_2_lhs_exog = self.dict_PROG_ineq_var_con_lhs
         dict_con_name_2_LB = self.dict_PROJ_ineq_con_name_2_rhs
@@ -452,11 +528,13 @@ class projector:
             if con_name in dict_con_name_2_eq:
                 lp_prob.addConstraint(expr == dict_con_name_2_eq[con_name], name=con_name)
 
+        self.time_dict_proj['pre_X_proj']=time.time()-t2
         # --- Solve the LP ---
         start_time = time.time()
         lp_prob.solve()
         end_time = time.time()
-
+        self.time_dict_proj['X_proj']=end_time-start_time
+        t3=time.time()
         self.lp_time = end_time - start_time
         self.lp_status = lp_prob.getProbStatus()
         if self.lp_status == 'Infeasible':
@@ -471,6 +549,8 @@ class projector:
         self.lp_dual_solution = dict()
         for con_name in lp_prob.getConstraints():
             self.lp_dual_solution[con_name] = lp_prob.getDual(con_name)
+        self.time_dict_proj['post_x_proj']=time.time()-t3
+
     def make_new_splits(self):
 
         #get max value
