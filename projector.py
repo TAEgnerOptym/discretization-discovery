@@ -78,16 +78,18 @@ class projector:
         self.make_new_splits()
         self.time_dict_proj['make_new_splits']=time.time()-t1
         t1=time.time()
-        print('self.time_dict_proj')
-        print(self.time_dict_proj)
-        print('--')
+        
         total = sum(self.time_dict_proj.values())
         time_percentage_projector = {key: (val / total if total != 0 else 0) for key, val in self.time_dict_proj.items()}
-        print('time_percentage_projector')
-        print(time_percentage_projector)
-        print('h above')
-        print(self.h)
-        print('----')
+        if self.MF.jy_opt['verbose']==True:
+            print('self.time_dict_proj')
+            print(self.time_dict_proj)
+            print('--')
+            print('time_percentage_projector')
+            print(time_percentage_projector)
+            print('h above')
+            print(self.h)
+            print('----')
     def proj_make_equiv_flow(self):
 
         for f in self.non_source_sink_agg_nodes:

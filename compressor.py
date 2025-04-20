@@ -59,13 +59,15 @@ class compressor:
         t1=time.time()
         self.make_i_2_new_f()
         self.time_compressor['make_i_2_new_f']=time.time()-t1
-        print('self.time_compressor')
-        print(self.time_compressor)
+        
         total = sum(self.time_compressor.values())
         self.time_percentage_compressor = {key: (val / total if total != 0 else 0) for key, val in self.time_compressor.items()}
-        print('time_percentage_compressor')
-        print(self.time_percentage_compressor)
-        print('----')
+        if self.MF.jy_opt['verbose']==True:
+            print('self.time_compressor')
+            print(self.time_compressor)
+            print('time_percentage_compressor')
+            print(self.time_percentage_compressor)
+            print('----')
     def check_agg_nodes(self):
         for  h in self.graph_names:
             count_find=dict()

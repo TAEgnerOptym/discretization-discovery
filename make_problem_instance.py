@@ -11,7 +11,7 @@ import json
 def make_problem_instance(input_file_path,my_params,my_json_file_path):
     my_instance=vrp_instance_class(input_file_path,my_params)
     dem_thresh=naive_get_dem_thresh_list(my_instance,int(my_params['dem_step_sz']))
-    time_thresh=naive_get_time_thresh_list(my_instance,int(my_params['time_step_sz']))
+    time_thresh=naive_get_time_thresh_list(my_instance,(my_params['time_step_sz']))
 
     #print(my_instance.NC)
     my_dem_graph=dem_graph(my_instance,dem_thresh)

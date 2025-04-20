@@ -724,14 +724,16 @@ class lower_bound_LP_milp:
         self.times_lp_times['post_lp_time']=time.time()-t3
         #print(np.array(my_times)/(np.sum(np.array(my_times))))
         #input('---')
-        print('self.times_lp_times')
-        print(self.times_lp_times)
-        print('--')
+        
         total = sum(self.times_lp_times.values())
         time_percentage_LP = {key: (val / total if total != 0 else 0) for key, val in self.times_lp_times.items()}
-        print('time_percentage_LP')
-        print(time_percentage_LP)
-        print('----')
+        if self.full_prob.jy_opt['verbose']==True:
+            print('self.times_lp_times')
+            print(self.times_lp_times)
+            print('--')
+            print('time_percentage_LP')
+            print(time_percentage_LP)
+            print('----')
         if self.lp_status=='Infeasible':
             input('HOLD')
     def make_xpress_LP(self):

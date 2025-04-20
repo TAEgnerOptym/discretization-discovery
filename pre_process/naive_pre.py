@@ -20,6 +20,23 @@ def naive_get_time_thresh_list(my_vrp,thresh_jmp):
 		my_list=[]
 		t_min=my_vrp.late_start[u]
 		t_max=my_vrp.early_start[u]
+		num_steps=int((t_max-t_min)/thresh_jmp)
+		for ti in range(1,num_steps+1):
+			t_end=t_min+(ti*thresh_jmp)
+			my_list.append(t_end)
+		time_thresh_list.append(my_list)
+
+	return time_thresh_list
+
+def old_naive_get_time_thresh_list(my_vrp,thresh_jmp):
+
+	Nc=my_vrp.num_cust
+	d0=my_vrp.vehicle_capacity
+	time_thresh_list=[];
+	for u in range(0,Nc):
+		my_list=[]
+		t_min=my_vrp.late_start[u]
+		t_max=my_vrp.early_start[u]
 		for t_end in range(int(t_min+thresh_jmp),int(t_max),int(thresh_jmp)):
 			my_list.append(t_end)
 		time_thresh_list.append(my_list)
