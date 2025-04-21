@@ -2,7 +2,7 @@ import numpy as np
 
 class jy_make_input_file_no_la:
 
-    def __init__(self,my_instance,my_dem_graph,my_time_graph,num_terms_per_bin):
+    def __init__(self,my_instance,my_dem_graph,my_time_graph,num_terms_per_bin,ngGraph):
         
         self.my_instance=my_instance
         self.jy_opt=my_instance.my_params
@@ -10,6 +10,9 @@ class jy_make_input_file_no_la:
         #self.my_instance.num_cust=int(self.my_instance.num_cust)
         self.my_dem_graph=my_dem_graph
         self.my_time_graph=my_time_graph
+        if self.jy_opt['use_ng']>0.5:
+            self.ngGraph=ngGraph
+
         self.out_dict=dict()
         self.num_terms_per_bin=num_terms_per_bin
         self.make_all_delta()
@@ -27,6 +30,9 @@ class jy_make_input_file_no_la:
         self.hijP=dict()
         self.hijP['timeGraph']=dict()
         self.hijP['capGraph']=dict()
+        if self.jy_opt['use_ng']>0.5:
+            self.hijP['ngGraph']=dict()
+
         for ij in  self.my_dem_graph.E:
             i=ij[0]
             j=ij[1]
@@ -50,10 +56,28 @@ class jy_make_input_file_no_la:
                 x_name='null_action'
             self.hijP['timeGraph'][str(ij)]=[x_name]
         self.out_dict['hij2P']=self.hijP
-
+        if self.jy_opt['use_ng']>0.5:
+            for ij in  self.ngGraph.E:
+                i=ij[0]
+                j=ij[1]
+                u=i[0]
+                v=j[0]
+                x_name=[]
+                if u!=v:
+                    x_name='act_'+str(u)+'_'+str(v)
+                    #print(u)
+                    #print(v)
+                    #input('---')
+                else:
+                    x_name='null_action'
+                if x_name not in self.all_actions and x_name!=self.null_action:
+                    print('x_name')
+                    print(x_name)
+                    input('err') 
+                self.hijP['ngGraph'][str(ij)]=[x_name]
 
     def make_all_integ_con(self):
-        print('hi')
+        #print('hi')
         self.all_integ_con=[]
         self.primIntegCon2Contrib=dict()
         self.actionIntegCon2Contrib=dict()
@@ -247,6 +271,8 @@ class jy_make_input_file_no_la:
         self.allGraphNames=[]
         self.allGraphNames.append('timeGraph')
         self.allGraphNames.append('capGraph')
+        if self.jy_opt['use_ng']>0.5:
+            self.allGraphNames.append('ngGraph')
         self.out_dict['allGraphNames']=self.allGraphNames
     
     def make_h_2_source_sink_id(self):
@@ -267,6 +293,15 @@ class jy_make_input_file_no_la:
         self.h2SourceId['capGraph']=str(self.my_dem_graph.node_list[source_cust][0])
         self.h2SinkId['timeGraph']=str(self.my_time_graph.node_list[sink_cust][0])
         self.h2SinkId['capGraph']=str(self.my_dem_graph.node_list[sink_cust][0])
+        
+        if self.jy_opt['use_ng']>0.5:
+            print('self.ngGraph')
+            print(self.ngGraph)
+
+            self.h2SourceId['ngGraph']=str(self.ngGraph.node_list[source_cust][0])
+            self.h2SinkId['ngGraph']=str(self.ngGraph.node_list[sink_cust][0])
+            
+        
         #print(self.h2SourceId['timeGraph'])
         #print(self.h2SourceId['capGraph'])
         #print('self.h2SinkId['timeGraph']')
@@ -292,7 +327,13 @@ class jy_make_input_file_no_la:
 
         self.initGraphNode2AggNode['timeGraph'][self.h2SourceId['timeGraph']]='time_-1'
         self.initGraphNode2AggNode['timeGraph'][self.h2SinkId['timeGraph']]='time_-2'
+        if self.jy_opt['use_ng']>0.5:
+            self.graphName2Nodes['ngGraph']=[self.h2SourceId['ngGraph'],self.h2SinkId['ngGraph']]
 
+            self.initGraphNode2AggNode['ngGraph']=dict()
+            self.initGraphNode2AggNode['ngGraph'][self.h2SourceId['ngGraph']]='ng_-1'#str(self.ngGraph.node_list[source_cust][0])
+            self.initGraphNode2AggNode['ngGraph'][self.h2SinkId['ngGraph']]='ng_-2'#str(self.ngGraph.node_list[sink_cust][0])
+            
         for u in range(0,self.my_instance.num_cust):
             my_count=0
             u_use=u
@@ -315,13 +356,19 @@ class jy_make_input_file_no_la:
                     #input('--')
                 self.initGraphNode2AggNode['timeGraph'][str(i)]='time'+str(u_use)+'_'+str(bin_num)
                 my_count=my_count+1
-        #print('set 1')
-        #print(set(self.initGraphNode2AggNode['timeGraph'].values()))
-        #print('set 2')
-        #print(set(self.initGraphNode2AggNode['capGraph'].values()))
-        #print('self.jy_opt[allOneBig_init]')
-        #print(self.jy_opt['allOneBig_init'])
-        #input('---')
+            if self.jy_opt['use_ng']>0.5:
+                my_count=0
+                for i in self.ngGraph.node_list[u]:
+                    self.graphName2Nodes['ngGraph'].append(str(i))
+                    bin_num=int(my_count/self.num_terms_per_bin)
+                    if self.jy_opt['allOneBig_init']>0.5:
+                        bin_num=50
+                        #input('--')
+                    self.initGraphNode2AggNode['ngGraph'][str(i)]='ng_'+str(u_use)+'_'+str(bin_num)
+                    my_count=my_count+1
+
+
+
         self.out_dict['graphName2Nodes']=self.graphName2Nodes
         self.out_dict['initGraphNode2AggNode']=self.initGraphNode2AggNode
     

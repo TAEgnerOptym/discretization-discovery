@@ -564,6 +564,8 @@ class projector:
         for i_orig in self.non_source_sink:
             i=i_orig[:]
             i= i.replace(" ", "_")
+            i= i.replace("[", "_")
+            i= i.replace("]", "_")
             con_name_1='con_i_slack_pos_'+i
             con_name_2='con_i_slack_neg_'+i
             if  con_name_1 not in self.lp_dual_solution:

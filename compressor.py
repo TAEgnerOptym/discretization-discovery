@@ -584,11 +584,13 @@ class compressor:
                 
                     print('con_name')
                     print(con_name)
+                    #print('h')
+                   # print(h)
                     print('self.H_ell_2_pos_neg[h][con_name]')
                     print(self.ell_2_pos_neg[con_name])
                     ell=self.ell_2_pos_neg[con_name]
-                    print('self.H_ell_2_list_leaf[timeGraph][ell]')
-                    print(self.H_ell_2_list_leaf['timeGraph'][ell])
+                    #print('self.H_ell_2_list_leaf[timeGraph][ell]')
+                    #print(self.H_ell_2_list_leaf['timeGraph'][ell])
                     print(f"Inequality constraint '{con_name}' is violated: LHS = {lhs_value}, required >= {lb}")
                     feasible = False
                     input('error here ')
