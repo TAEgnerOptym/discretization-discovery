@@ -206,10 +206,10 @@ class full_solver:
             else:
                 [did_split,proj_objective_componentLps,proj_time_component_lps]=self.apply_splitting()
                 
-                if did_split==False:
-                    print('braeking do to no split')
-                    print('new_lp_value=  '+str(new_lp_value))
-                    break
+                #if did_split==False:
+                #    print('braeking do to no split')
+                #    print('new_lp_value=  '+str(new_lp_value))
+                #    break
             
 
 
@@ -235,6 +235,7 @@ class full_solver:
             print('lp project time '+str(self.history_dict['sum_lp_time_project'][-1]))
             print('lp compress time '+str(self.history_dict['lp_time_compress'][-1]))
             print('lplb time '+str(self.history_dict['lp_time_LB'][-1]))
+            print('sum_lp_value_project '+str(self.history_dict['sum_lp_value_project'][-1]))
             self.count_size(False)
             print('prob_sizes_at_start')
             print(prob_sizes_at_start)
@@ -246,10 +247,12 @@ class full_solver:
             #input('---')
 
             if did_compress_call==False and did_split==False:
+                print('breaking do to no split')
                 break
         #input('done entire call')
         if did_compress_call==False and use_compression==True and iter>0:
             #input('here')
+            print('Doing final Clean up operations')
             self.my_lower_bound_LP=lower_bound_LP_milp(self,self.graph_node_2_agg_node,False,False)
             prob_sizes_at_start=self.count_size()
 
@@ -274,6 +277,23 @@ class full_solver:
             self.history_dict['sum_lp_time_project'].append(sum(proj_time_component_lps.values()))
             if self.jy_opt['save_graph_each_iter']>0.5:
                 self.augment_history_graphs()
+            print('-----')
+            print('-----')
+            print('-----')
+            print('FINAL CLEANUP FINISHE:  ')
+            print('new_lp_value=  '+str(new_lp_value))
+            print('did_compress_call:  '+str(did_compress_call))
+            print('lp project time '+str(self.history_dict['sum_lp_time_project'][-1]))
+            print('lp compress time '+str(self.history_dict['lp_time_compress'][-1]))
+            print('lplb time '+str(self.history_dict['lp_time_LB'][-1]))
+            print('sum_lp_value_project '+str(self.history_dict['sum_lp_value_project'][-1]))
+
+            self.count_size(False)
+            print('prob_sizes_at_start')
+            print(prob_sizes_at_start)
+            print('-----')
+            print('-----')
+            print('-----')
             
 
         self.history_dict['final_sizes']=self.count_size()
