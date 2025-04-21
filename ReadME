@@ -45,6 +45,11 @@ my_params['run_baseline']=True #set to true to run the  baseline solver at the e
 my_params['verbose']=False#prints the time break down of compoennet
 #xpress file locaiton
 my_params['xpress_file_loc']='/Users/julian/Documents/FICO\ Xpress\ Config/xpauth.xpr'
+
+my_params['use_NG_graph']=1 #set to one to use the ng -graph to eliminate cycles
+my_params['num_NG']=4 #number of ng-neighbors to use 
+
+
 At every iteration  we produce the state of the code so that you can keep track currently  it looks as follows.  I put description after
 
 ITER FINISHE:  40 #iteration number 

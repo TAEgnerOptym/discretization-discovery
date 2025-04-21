@@ -23,7 +23,7 @@ def grab_default_params():
 	my_params['xpress_file_loc']='/Users/julian/Documents/FICO\ Xpress\ Config/xpauth.xpr'
 	my_params['run_baseline']=True #running hte baseline solver
 	my_params['verbose']=False #running hte baseline solver
-	my_params['use_NG_graph']=False
+	my_params['use_NG_graph']=1
 	my_params['num_NG']=4
 
 	return my_params
