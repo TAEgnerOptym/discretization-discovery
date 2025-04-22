@@ -170,10 +170,7 @@ class full_solver:
         iter=0
         use_compression=self.jy_opt['use_compression']
         did_compress_call=False
-        print('INIT len(self.graph_node_2_agg_node[timeGraph])')
-        print(len(self.graph_node_2_agg_node['timeGraph']))
-        init_len_time=len(self.graph_node_2_agg_node['timeGraph'])
-        input('--')
+
         while iter<self.jy_opt['max_iterations_loop_compress_project']:
             iter=iter+1
             prob_sizes_at_start=self.count_size()
@@ -245,11 +242,6 @@ class full_solver:
             print('-----')
             print('-----')
             print('-----')
-            print('inter len(self.graph_node_2_agg_node[timeGraph])')
-            print(len(self.graph_node_2_agg_node['timeGraph']))
-            #input('--')
-            if len(self.graph_node_2_agg_node['timeGraph'])!=init_len_time:
-                input('error here')
             #input('---')
             #print(self.history_dict)
             #input('---')
@@ -320,15 +312,6 @@ class full_solver:
             self.history_dict['ILP_sol_obj']=my_base.milp_solution_objective_value
             self.history_dict['milp_solution']=my_base.milp_solution
             self.history_dict['milp_time']=my_base.milp_time
-        
-        print('final len(self.graph_node_2_agg_node[timeGraph])')
-        print(len(self.graph_node_2_agg_node['timeGraph']))
-
-        if len(self.graph_node_2_agg_node['timeGraph'])!=init_len_time:
-            input('error here 1')
-
         self.prepare_ILP_solution()
         
         
-        if len(self.graph_node_2_agg_node['timeGraph'])!=init_len_time:
-            input('error here 2')
