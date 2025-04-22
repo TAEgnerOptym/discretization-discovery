@@ -20,10 +20,12 @@ def grab_default_params():
 	my_params['min_inc_2_compress']=.01
 	my_params['save_graph_each_iter']=0
 	my_params['use_Xpress']=False
-	my_params['xpress_file_loc']='/Users/julian/Documents/FICO\ Xpress\ Config/xpauth.xpr'
+	#my_params['xpress_file_loc']='/Users/julian/Documents/FICO\ Xpress\ Config/xpauth.xpr'
+	my_params['xpress_file_loc']='/Users/julian/Documents/FICO_Xpress_Config/xpauth.xpr'
 	my_params['run_baseline']=True #running hte baseline solver
 	my_params['verbose']=False #running hte baseline solver
 	my_params['use_NG_graph']=1
 	my_params['num_NG']=4
+	my_params['in_demo_mode']=0
 
 	return my_params

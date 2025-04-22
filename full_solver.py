@@ -170,7 +170,8 @@ class full_solver:
         iter=0
         use_compression=self.jy_opt['use_compression']
         did_compress_call=False
-
+        if (self.jy_opt['in_demo_mode']==True):
+            input('Press enter about to start the algorithm')
         while iter<self.jy_opt['max_iterations_loop_compress_project']:
             iter=iter+1
             prob_sizes_at_start=self.count_size()
@@ -295,7 +296,8 @@ class full_solver:
             print('-----')
             print('-----')
             
-        
+        if (self.jy_opt['in_demo_mode']==True):
+            input('Press enter about to start the acutal ILP')
         self.history_dict['final_sizes']=self.count_size()
         self.history_dict['final_graph_node_2_agg_node']=self.graph_node_2_agg_node
         self.my_lower_bound_ILP=lower_bound_LP_milp(self,self.graph_node_2_agg_node,True,True)
@@ -307,11 +309,22 @@ class full_solver:
         print(new_Ilp_value)
         if self.jy_opt['run_baseline']==True:
             print('running baseline')
-
+            if (self.jy_opt['in_demo_mode']==True):
+                input('Press enter about to start the running of the baseline ILP')
             my_base=baseline_solver(self,True,True)
             self.history_dict['ILP_sol_obj']=my_base.milp_solution_objective_value
             self.history_dict['milp_solution']=my_base.milp_solution
             self.history_dict['milp_time']=my_base.milp_time
         self.prepare_ILP_solution()
+
+        print('--ALL DONE-')
+ #       print('self.my_lower_bound_ILP.milp_time')
+ #       print(self.my_lower_bound_ILP.milp_time)
+ #       print('self.my_lower_bound_ILP')
+ #       print(new_Ilp_value)
+ #       if self.jy_opt['run_baseline']==True:
+
+  #          print('my_base.milp_time')
+  #          print(my_base.milp_time)
         
         

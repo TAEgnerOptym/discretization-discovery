@@ -608,6 +608,9 @@ class lower_bound_LP_milp:
         self.times_lp_times['post_XMILP']=time.time()-t3
 
     def make_LP(self):
+
+
+        
         dict_var_name_2_obj=self.dict_var_name_2_obj
         dict_var_con_2_lhs_exog=self.dict_var_con_2_lhs_exog
         dict_con_name_2_LB=self.dict_con_name_2_LB
@@ -694,8 +697,17 @@ class lower_bound_LP_milp:
         # Using the default CBC solver here.
         self.times_lp_times['pre_lp_solve']=time.time()-t2
         start_time=time.time()
+        #if 1>0:
         solver = pulp.PULP_CBC_CMD(msg=False)
+        #if 1>0:
+        #    input('here')
+        #    solver = pulp.XPRESS_CMD(msg=False)
+        #    input('done')
+
+        #input('hhii')
         lp_prob.solve(solver)
+        #input('hohoh')
+
         end_time=time.time()
         self.lp_time=end_time-start_time
         my_times.append(end_time-start_time)
@@ -740,6 +752,11 @@ class lower_bound_LP_milp:
         #/Users/julian/Documents/FICO\ Xpress\ Config/xpauth.xpr
         #xp.init('C:/xpressmp/bin/xpauth.xpr')
         xp.init(self.full_prob.jy_opt['xpress_file_loc'])
+
+
+
+
+        
         t2=time.time()
         dict_var_name_2_obj = self.dict_var_name_2_obj
         dict_var_con_2_lhs_exog = self.dict_var_con_2_lhs_exog
