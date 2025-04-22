@@ -180,6 +180,7 @@ class baseline_solver:
         import xpress as xp
         xp.init('C:/xpressmp/bin/xpauth.xpr')
         milp_prob = xp.problem("MILP_Problem")
+        milp_prob.setOutputEnabled(self.full_prob.jy_opt['verbose']>0.5)
 
         # Create decision variables based on the input. 
         # If a variable is binary, declare it as such, otherwise as continuous (nonnegative).
@@ -187,9 +188,9 @@ class baseline_solver:
 
         for var_name, obj_coeff in dict_var_name_2_obj.items():
             if dict_var_name_2_is_binary.get(var_name, 0):
-                var_dict[var_name] = xp.var(name=var_name, vartype=xp.binary)
+                var_dict[var_name] = milp_prob.addVariable(name=var_name, vartype=xp.binary)
             else:
-                var_dict[var_name] = xp.var(name=var_name, lb=0)
+                var_dict[var_name] = milp_prob.addVariable(name=var_name, lb=0)
 
         # Define the objective function: minimize sum(objective_coefficient * variable)
         objective = xp.Sum(dict_var_name_2_obj[var_name] * var_dict[var_name] 
@@ -200,13 +201,15 @@ class baseline_solver:
         for con_name in dict_con_name_2_LB:
             expr = xp.Sum(dict_var_con_2_lhs_exog.get((var_name, con_name), 0) * var_dict[var_name] 
                             for var_name in var_dict)
-            milp_prob.addConstraint(expr >= dict_con_name_2_LB[con_name], name=con_name + "_ineq")
+            con_ineq = xp.constraint(expr >= dict_con_name_2_LB[con_name], name=con_name )
+            milp_prob.addConstraint(con_ineq)
 
         # --- Add equality constraints ---
         for con_name in dict_con_name_2_eq:
             expr = xp.Sum(dict_var_con_2_lhs_eq.get((var_name, con_name), 0) * var_dict[var_name] 
                             for var_name in var_dict)
-            milp_prob.addConstraint(expr == dict_con_name_2_eq[con_name], name=con_name + "_eq")
+            con_eq=xp.constraint(expr==dict_con_name_2_eq[con_name], name=con_name)
+            milp_prob.addConstraint(con_eq)
 
         # --- Solve the MILP ---
         self.BASE_times_lp_times['pre_XMILP']=time.time()-t2
@@ -220,7 +223,7 @@ class baseline_solver:
 
         self.milp_time = end_time - start_time
         self.milp_prob = milp_prob
-        self.milp_solution = {var_name: var_dict[var_name].getSolution() for var_name in var_dict}
+        self.milp_solution = {var_name: milp_prob.getSolution(var_name) for var_name in var_dict}
         self.milp_solution_status = milp_prob.getProbStatus()
         self.milp_solution_objective_value = milp_prob.getObjVal()
         self.BASE_times_lp_times['post_XMILP']=time.time()-t3
@@ -370,6 +373,7 @@ class baseline_solver:
 
         # --- Build the LP model ---
         lp_prob = xp.problem("MyLP")
+        lp_prob.setOutputEnabled(self.full_prob.jy_opt['verbose']>0.5)
 
         # Create decision variables (all non-negative)
         var_dict = {}

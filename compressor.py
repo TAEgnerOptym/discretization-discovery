@@ -21,6 +21,7 @@ class compressor:
     def __init__(self,my_full_solver):
         t1=time.time()
         self.MF=my_full_solver
+        self.jy_opt=self.MF.jy_opt
         self.graph_node_2_agg_node=self.MF.graph_node_2_agg_node
         self.myLBObj=self.MF.my_lower_bound_LP
         self.graph_names=self.MF.graph_names
@@ -211,6 +212,10 @@ class compressor:
                 con_2='Hier_flow_in_out_neg_h='+h+"_ell="+str(ell)
                 con_1= con_1.replace(" ", "_")
                 con_2= con_2.replace(" ", "_")
+                con_1= con_1.replace("(", "_")
+                con_2= con_2.replace("(", "_")
+                con_1= con_1.replace(")", "_")
+                con_2= con_2.replace(")", "_")
                 self.dict_con_name_2_LB[con_1]=my_weight
                 self.dict_con_name_2_LB[con_2]=my_weight
                 self.H_ell_2_neg[h][con_1]=ell
@@ -250,6 +255,10 @@ class compressor:
                         con_2='Hier_flow_in_out_neg_h='+h+"_ell="+str(ell)
                         con_1= con_1.replace(" ", "_")
                         con_2= con_2.replace(" ", "_")
+                        con_1= con_1.replace("(", "_")
+                        con_2= con_2.replace("(", "_")
+                        con_1= con_1.replace(")", "_")
+                        con_2= con_2.replace(")", "_")
                         tup_1=tuple([var_name,con_1])
                         tup_2=tuple([var_name,con_2])
                         if tup_1 not in self.dict_var_con_2_lhs_exog:
@@ -259,8 +268,12 @@ class compressor:
                         self.dict_var_con_2_lhs_exog[tup_1]+=1
                         self.dict_var_con_2_lhs_exog[tup_2]+=-1
                         if con_1 not in self.dict_con_name_2_LB:
+                            print('con_1')
+                            print(con_1)
                             input('issue here ')
                         if con_2 not in self.dict_con_name_2_LB:
+                            print('con_2')
+                            print(con_2)
                             input('issue here 2 ')
                         counterMe=counterMe+1
                 if g!=agg_sink:
@@ -269,6 +282,10 @@ class compressor:
                         con_2='Hier_flow_in_out_neg_h='+h+"_ell="+str(ell)
                         con_1= con_1.replace(" ", "_")
                         con_2= con_2.replace(" ", "_")
+                        con_1= con_1.replace("(", "_")
+                        con_2= con_2.replace("(", "_")
+                        con_1= con_1.replace(")", "_")
+                        con_2= con_2.replace(")", "_")
                         tup_1=tuple([var_name,con_1])
                         tup_2=tuple([var_name,con_2])
                         if tup_1 not in self.dict_var_con_2_lhs_exog:
@@ -397,61 +414,96 @@ class compressor:
         dict_con_name_2_LB = self.dict_con_name_2_LB
         dict_var_con_2_lhs_eq = self.dict_var_con_2_lhs_eq
         dict_con_name_2_eq = self.dict_con_name_2_eq
-
-        # --- Build the LP model ---
+# --- Build the LP model ---
         lp_prob = xp.problem("MyLP")
+        lp_prob.setOutputEnabled(self.jy_opt['verbose']>0.5)
 
-        # Create decision variables (all non-negative)
+        # Create decision variables (all non-negative) and store them in a list.
         var_dict = {}
+        vars_list = []  # list of variables to add to the model
         for var_name, coeff in dict_var_name_2_obj.items():
-            var_dict[var_name] = xp.var(name=var_name, lb=0)
+            # Create a variable with lower bound 0.
+            v = lp_prob.addVariable(name=var_name, lb=0)
+            var_dict[var_name] = v
+            vars_list.append(v)
 
-        # Define the objective function (minimize sum(obj_coeff * var))
-        objective = xp.Sum(dict_var_name_2_obj[var_name] * var_dict[var_name]
-                            for var_name in dict_var_name_2_obj)
+        # Define the objective function (minimize sum of coeff * variable).
+        # Converting the generator to a list to be safe.
+        objective = xp.Sum([dict_var_name_2_obj[var_name] * var_dict[var_name]
+                            for var_name in dict_var_name_2_obj])
         lp_prob.setObjective(objective, sense=xp.minimize)
-
         # --- Add inequality constraints (>=) ---
         # Group terms for each inequality constraint.
-        for con_name in dict_con_name_2_LB:
-            expr = xp.Sum(dict_var_con_2_lhs_exog.get((var_name, con_name), 0) * var_dict[var_name]
-                            for var_name in var_dict)
-            lp_prob.addConstraint(expr >= dict_con_name_2_LB[con_name], name=con_name)
+        ineq_expressions = {}
+        #did_find_2 = False
+        for (var_name, con_name), coeff in dict_var_con_2_lhs_exog.items():
+            if con_name not in ineq_expressions:
+                ineq_expressions[con_name] = 0
+            ineq_expressions[con_name] += coeff * var_dict[var_name]
+            #if con_name == 'exog_min_veh_':
+            #    did_find_2 = True
+
+        #did_find = False
+        cons = []
+        for con_name, expr in ineq_expressions.items():
+            #if con_name in dict_con_name_2_LB:
+                #if con_name == 'exog_min_veh_':
+                #    did_find = True
+            con = xp.constraint(expr >= dict_con_name_2_LB[con_name], name=con_name)#+ "_ineq")
+            cons.append(con)
+        lp_prob.addConstraint(cons)
+
+        #if did_find == False:
+        #    input('this is odd')
 
         # --- Add equality constraints ---
-        for con_name in dict_con_name_2_eq:
-            expr = xp.Sum(dict_var_con_2_lhs_eq.get((var_name, con_name), 0) * var_dict[var_name]
-                            for var_name in var_dict)
-            lp_prob.addConstraint(expr == dict_con_name_2_eq[con_name], name=con_name)
+        # Group terms for each equality constraint.
+        eq_expressions = {}
+        for (var_name, con_name), coeff in dict_var_con_2_lhs_eq.items():
+            if con_name not in eq_expressions:
+                eq_expressions[con_name] = 0
+            eq_expressions[con_name] += coeff * var_dict[var_name]
+
+        # Add each equality constraint to the model.
+        for con_name, expr in eq_expressions.items():
+            if con_name in dict_con_name_2_eq:
+                con_eq = xp.constraint(expr == dict_con_name_2_eq[con_name], name=con_name)
+                lp_prob.addConstraint(con_eq)
 
         # --- Solve the LP ---
-        self.time_dict_proj['pre_X_compress']=time.time()-t2
-
+        self.time_compressor['pre_XP_lp']=time.time()-t2
         start_time = time.time()
         lp_prob.solve()
         end_time = time.time()
-        self.time_compressor['x_compress']=end_time-start_time
-        t3=time.time()
 
         self.lp_time = end_time - start_time
+        self.time_compressor['lp_time']=self.lp_time
+        t3=time.time()
         self.lp_prob = lp_prob
         self.lp_primal_solution = dict()
-        for var_name, var in var_dict.items():
-            self.lp_primal_solution[var_name] = var.getSolution()
+        #for var_name, var in var_dict.items():
+        #    self.lp_primal_solution[var_name] = lp_prob.getSolution(var_name)
 
         self.lp_status = lp_prob.getProbStatus()
-        if self.lp_status != 'Optimal':
-            print('self.lp_status')
-            print(self.lp_status)
-            input('error inn')
-
         self.lp_objective = lp_prob.getObjVal()
         self.lp_dual_solution = dict()
 
-        # Get dual values (shadow prices) for constraints
-        for con_name in lp_prob.getConstraints():
-            self.lp_dual_solution[con_name] = lp_prob.getDual(con_name)
-        self.time_compressor['pre_X_compress']=time.time()-t3
+        #for con in lp_prob.getConstraint():
+        #    self.lp_dual_solution[con.name] = lp_prob.getDual(con.name)[0]
+
+        lp_sol = lp_prob.getSolution()
+        self.lp_primal_solution = {var_obj.name: lp_sol[i]
+                                for i, var_obj in enumerate(lp_prob.getVariable())}
+
+        lp_dual = lp_prob.getDuals()
+        self.lp_dual_solution = {con.name: lp_dual[i]
+                                for i, con in enumerate(lp_prob.getConstraint())}
+
+        if self.lp_status == 'Infeasible':
+            input('HOLD')
+        self.time_compressor['post_XLP']=time.time()-t3
+
+
 
     def get_pi_by_h_node(self):
         self.h_f_2_dual=dict()
@@ -469,9 +521,21 @@ class compressor:
                     con_2='Hier_flow_in_out_neg_h='+str(h)+"_ell="+str(ell)
                     con_1= con_1.replace(" ", "_")
                     con_2= con_2.replace(" ", "_")
+                    con_1= con_1.replace("(", "_")
+                    con_2= con_2.replace("(", "_")
+                    con_1= con_1.replace(")", "_")
+                    con_2= con_2.replace(")", "_")
                     
                     dual_1=self.lp_dual_solution[con_1]
                     dual_2=self.lp_dual_solution[con_2]
+                    #print('dual_1')
+                    #print(dual_1)
+                    #print('dual_2')
+                    #print(dual_2)
+                    #print('con_1')
+                    #print(con_1)
+                    #print('con_2')
+                    #print(con_1)
                     self.h_f_2_dual[h][f]=self.h_f_2_dual[h][f]+dual_1-dual_2
                 new_val=self.h_f_2_dual[h][f]
                 self.h_f_2_dual_sig_fig[h][f]=new_val

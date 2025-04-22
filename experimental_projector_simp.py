@@ -59,9 +59,9 @@ class projector:
         t1=time.time()
         self.proj_make_actions_match_exog()
         self.time_dict_proj['proj_make_actions_match_exog']=time.time()-t1
-        t1=time.time()
-        self.proj_make_equv_class_consist()
-        self.time_dict_proj['proj_make_equv_class_consist']=time.time()-t1
+        #t1=time.time()
+        #self.proj_make_equv_class_consist()
+        #self.time_dict_proj['proj_make_equv_class_consist']=time.time()-t1
         t1=time.time()
 
         self.proj_make_proj_flow_i_plus_minus()
@@ -187,10 +187,10 @@ class projector:
             my_var='Proj_ij_i'+i+'_j=_'+j
             
             self.dict_PROJ_var_name_2_obj[my_var]=0
-        for q in self.q_2_NZ_ij:
-            for p in q:
-                my_var='Proj_q'+str(q)+'_p=_'+p
-                self.dict_PROJ_var_name_2_obj[my_var]=0
+        #for q in self.q_2_NZ_ij:
+        #    for p in q:
+        #        my_var='Proj_q'+str(q)+'_p=_'+p
+        #        self.dict_PROJ_var_name_2_obj[my_var]=0
     
     def make_primal_feas(self):
         #assumes one customr per node
@@ -250,28 +250,18 @@ class projector:
         for p in self.non_zero_p:
             con_name="p_select_"+p
             self.dict_PROJ_eq_con_name_2_rhs[con_name]=self.lp_primal_solution[p]
-        for q in self.q_2_NZ_ij:
-            for p in q:
-                if p !=self.null_action:
-                    my_var='Proj_q'+str(q)+'_p=_'+p
+        
+        for ij in self.non_zero_ij:
+            i=ij[0]
+            j=ij[1]
+            my_var='Proj_ij_i'+i+'_j=_'+j
+            for p in self.hij_2_P_orig[ij]:
+                if p in self.non_zero_p:
                     my_con="p_select_"+p
+
                     self.dict_PROG_eq_var_con_lhs[tuple([my_var,my_con])]=1
-    def proj_make_equv_class_consist(self):
 
-        for q in self.q_2_NZ_ij:
-            con_name='q_ij_agree_'+str(q)
-            self.dict_PROJ_eq_con_name_2_rhs[con_name]=0
-
-            for ij in self.q_2_NZ_ij[q]:
-
-                i=str(ij[0])
-                j=str(ij[1])
-                var_name='Proj_ij_i'+i+'_j=_'+j
-                self.dict_PROG_eq_var_con_lhs[tuple([var_name,con_name])]=1
-            for p in q:
-                var_name_2='Proj_q'+str(q)+'_p=_'+p
-                self.dict_PROG_eq_var_con_lhs[tuple([var_name_2,con_name])]=-1
-  
+    
     def proj_make_proj_flow_i_plus_minus(self):
 
         for i in self.non_source_sink:
@@ -522,10 +512,10 @@ class projector:
             if con_name not in ineq_expressions:
                 ineq_expressions[con_name] = 0
             ineq_expressions[con_name] += coeff * var_dict[var_name]
-            if con_name == 'exog_min_veh_':
-                did_find_2 = True
+            #if con_name == 'exog_min_veh_':
+            #    did_find_2 = True
 
-        did_find = False
+        #did_find = False
         for con_name, expr in ineq_expressions.items():
             if con_name in dict_con_name_2_LB:
                 #if con_name == 'exog_min_veh_':
@@ -562,20 +552,23 @@ class projector:
         self.time_dict_proj['lp_time']=self.lp_time
         t3=time.time()
         self.lp_prob = lp_prob
-        self.lp_primal_solution = dict()
         #for var_name, var in var_dict.items():
         #    self.lp_primal_solution[var_name] = lp_prob.getSolution(var_name)
 
         self.lp_status = lp_prob.getProbStatus()
         self.lp_objective = lp_prob.getObjVal()
-        self.lp_dual_solution = dict()
+        self.lp_primal_solution = dict()
 
-        lp_sol = lp_prob.getSolution()
-        self.lp_primal_solution = {var_name: lp_sol[var_obj.index]
-                                for var_name, var_obj in var_dict.items()}
+        ##self.lp_dual_solution = dict()
+        #for var_name, var in var_dict.items():
+        #    self.lp_primal_solution[var_name] = lp_prob.getSolution(var_name)
 
-        lp_dual = lp_prob.getDuals()
-        self.lp_dual_solution = {con.name: lp_dual[con.index]
+        ##for con in lp_prob.getConstraint():
+        #    self.lp_dual_solution[con.name] = lp_prob.getDual(con.name)[0]
+        self.lp_primal_solution = {var_name: lp_prob.getSolution(var_name)
+                                for var_name in var_dict}
+
+        self.lp_dual_solution = {con.name: lp_prob.getDual(con.name)[0]
                                 for con in lp_prob.getConstraint()}
         if self.lp_status == 'Infeasible':
             input('HOLD')
@@ -696,16 +689,3 @@ class projector:
                     self.NEW_node_2_agg_node[i]=extra_string+'_'+str(start_value)
                     count_change=count_change+1
                     count_pos=count_pos+1
-            #print('count_pos,count_tot-count_pos')
-            #print([count_pos,count_tot-count_pos])      
-            #print('---')  
-
-        #print('do_split_f')
-        #print(self.do_split_f)
-        #print('count_change')
-        #print(count_change)
-        #print('self.lp_objective')
-        #print(self.lp_objective)
-        #input('---')
-
-                    

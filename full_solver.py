@@ -13,7 +13,8 @@ from scipy.sparse import csr_matrix
 from lower_bound_LP_milp import lower_bound_LP_milp
 import pulp
 from compressor import compressor
-from projector import projector
+#from projector import projector
+from experimental_projector_simp import projector
 from baseline_solver import baseline_solver
 import json
 class full_solver:
@@ -66,6 +67,9 @@ class full_solver:
         #self.agg_graph_agg_node_2_node=full_input_dict['init_agg_graph_agg_node_2_node']
 
         self.graph_names=full_input_dict['allGraphNames']
+        self.TOT_time_component_lps=dict()
+        for h in self.graph_names:
+            self.TOT_time_component_lps[h]=0
         self.history_dict=dict()
         self.history_dict['lblp_lower']=[]
         self.history_dict['prob_sizes_at_start']=[]
@@ -101,13 +105,15 @@ class full_solver:
             objective=my_proj.lp_objective
             objective_componentLps[h]=my_proj.lp_objective
             time_component_lps[h]=my_proj.lp_time
-            
+            self.TOT_time_component_lps[h]=self.TOT_time_component_lps[h]+my_proj.lp_time
             count_prior_split[h]=len(set(self.graph_node_2_agg_node[h].values()))
             if objective>self.jy_opt['epsilon']:
                 self.graph_node_2_agg_node[h]=my_proj.NEW_node_2_agg_node
                 did_split=True
             count_after_split[h]=len(set(self.graph_node_2_agg_node[h].values()))
 
+        print('time_component_lps')
+        print(time_component_lps)
         #print('count_prior_split')
         #print(count_prior_split)
         #print('count_after_split')
@@ -172,6 +178,11 @@ class full_solver:
         did_compress_call=False
         if (self.jy_opt['in_demo_mode']==True):
             input('Press enter about to start the algorithm')
+        tot_lplb_time=0
+        tot_proj_lp_time=0
+        tot_comp_lp_time=0
+        
+
         while iter<self.jy_opt['max_iterations_loop_compress_project']:
             iter=iter+1
             prob_sizes_at_start=self.count_size()
@@ -318,13 +329,21 @@ class full_solver:
         self.prepare_ILP_solution()
 
         print('--ALL DONE-')
- #       print('self.my_lower_bound_ILP.milp_time')
- #       print(self.my_lower_bound_ILP.milp_time)
- #       print('self.my_lower_bound_ILP')
- #       print(new_Ilp_value)
- #       if self.jy_opt['run_baseline']==True:
+        print('self.my_lower_bound_ILP.milp_time')
+        print(self.my_lower_bound_ILP.milp_time)
+        print('self.my_lower_bound_ILP')
+        print(new_Ilp_value)
+        print('sum(self.history_dict[lp_time_LB])')
+        print(sum(self.history_dict['lp_time_LB']))
+        print('nana  sum lp_time_compress')
+        print(np.nansum(np.array(self.history_dict['lp_time_compress'])))
+        print('sum(self.history_dict[sum_lp_time_project].values())')
+        print(np.nansum(np.array(self.history_dict['sum_lp_time_project'])))
+        print('TOT_time_component_lps')
+        print(self.TOT_time_component_lps)
+        if self.jy_opt['run_baseline']==True:
 
-  #          print('my_base.milp_time')
-  #          print(my_base.milp_time)
+            print('my_base.milp_time')
+            print(my_base.milp_time)
         
         
