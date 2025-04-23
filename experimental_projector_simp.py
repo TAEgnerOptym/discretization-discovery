@@ -185,8 +185,10 @@ class projector:
             i=str(ij[0])
             j=str(ij[1])
             my_var='Proj_ij_i'+i+'_j=_'+j
-            
-            self.dict_PROJ_var_name_2_obj[my_var]=0
+            #this_cost=
+            #if self.hij_2_P_orig[ij][0]=:
+            #    this_cost=
+            self.dict_PROJ_var_name_2_obj[my_var]=self.MF.jy_opt['offset_cost_edge_project']
         #for q in self.q_2_NZ_ij:
         #    for p in q:
         #        my_var='Proj_q'+str(q)+'_p=_'+p
@@ -506,22 +508,22 @@ class projector:
         lp_prob.setObjective(objective, sense=xp.minimize)
         # --- Add inequality constraints (>=) ---
         # Group terms for each inequality constraint.
-        ineq_expressions = {}
+        ineq_expressions =  defaultdict(float)
         did_find_2 = False
         for (var_name, con_name), coeff in dict_var_con_2_lhs_exog.items():
-            if con_name not in ineq_expressions:
-                ineq_expressions[con_name] = 0
+            #if con_name not in ineq_expressions:
+            #    ineq_expressions[con_name] = 0
             ineq_expressions[con_name] += coeff * var_dict[var_name]
             #if con_name == 'exog_min_veh_':
             #    did_find_2 = True
 
         #did_find = False
         for con_name, expr in ineq_expressions.items():
-            if con_name in dict_con_name_2_LB:
+            #if con_name in dict_con_name_2_LB:
                 #if con_name == 'exog_min_veh_':
                 #    did_find = True
-                con = xp.constraint(expr >= dict_con_name_2_LB[con_name], name=con_name)
-                lp_prob.addConstraint(con)
+            con = xp.constraint(expr >= dict_con_name_2_LB[con_name], name=con_name)
+            lp_prob.addConstraint(con)
 
         #if did_find == False:
         #    input('this is odd')
@@ -530,17 +532,17 @@ class projector:
         #input('---')
         # --- Add equality constraints ---
         # Group terms for each equality constraint.
-        eq_expressions = {}
+        eq_expressions =  defaultdict(float)
         for (var_name, con_name), coeff in dict_var_con_2_lhs_eq.items():
-            if con_name not in eq_expressions:
-                eq_expressions[con_name] = 0
+            #if con_name not in eq_expressions:
+            #    eq_expressions[con_name] = 0
             eq_expressions[con_name] += coeff * var_dict[var_name]
 
         # Add each equality constraint to the model.
         for con_name, expr in eq_expressions.items():
-            if con_name in dict_con_name_2_eq:
-                con_eq = xp.constraint(expr == dict_con_name_2_eq[con_name], name=con_name)
-                lp_prob.addConstraint(con_eq)
+            #if con_name in dict_con_name_2_eq:
+            con_eq = xp.constraint(expr == dict_con_name_2_eq[con_name], name=con_name)
+            lp_prob.addConstraint(con_eq)
 
         # --- Solve the LP ---
         self.time_dict_proj['pre_XP_lp']=time.time()-t2
@@ -565,10 +567,12 @@ class projector:
 
         ##for con in lp_prob.getConstraint():
         #    self.lp_dual_solution[con.name] = lp_prob.getDual(con.name)[0]
-        self.lp_primal_solution = {var_name: lp_prob.getSolution(var_name)
-                                for var_name in var_dict}
+        lp_sol = lp_prob.getSolution()
+        self.lp_primal_solution = {var_name: lp_sol[var_obj.index]
+                                for var_name, var_obj in var_dict.items()}
 
-        self.lp_dual_solution = {con.name: lp_prob.getDual(con.name)[0]
+        lp_dual = lp_prob.getDuals()
+        self.lp_dual_solution = {con.name: lp_dual[con.index]
                                 for con in lp_prob.getConstraint()}
         if self.lp_status == 'Infeasible':
             input('HOLD')
@@ -636,7 +640,7 @@ class projector:
             self.f_2_mean_val[f]=my_sum/len(self.agg_node_2_node[f])
             self.f_2_min_val[f]=my_min#my_sum/len(self.agg_node_2_node[f])
             self.f_2_max_val[f]=my_max#my_sum/len(self.agg_node_2_node[f])
-            if self.f_2_max_val[f]-self.f_2_min_val[f]>.0001:
+            if self.f_2_max_val[f]-self.f_2_min_val[f]>self.MF.jy_opt['threshold_split']:#.0001:
                 self.do_split_f.append(f)
                 X=all_terms
                 Y=all_names

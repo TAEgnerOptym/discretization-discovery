@@ -27,5 +27,6 @@ def grab_default_params():
 	my_params['use_NG_graph']=1
 	my_params['num_NG']=4
 	my_params['in_demo_mode']=0
-
+	my_params['threshold_split']=0.01
+	my_params['offset_cost_edge_project']=0#-.00001
 	return my_params

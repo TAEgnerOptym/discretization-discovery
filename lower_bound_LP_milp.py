@@ -559,7 +559,7 @@ class lower_bound_LP_milp:
         dict_var_con_2_lhs_exog=self.dict_var_con_2_lhs_exog
         dict_var_con_2_lhs_eq=self.dict_var_con_2_lhs_eq
         dict_var_name_2_is_binary=self.dict_var_name_2_is_binary
-        import xpress as xp
+        #import xpress as xp
         xp.init('C:/xpressmp/bin/xpauth.xpr')
         milp_prob = xp.problem("MILP_Problem")
         milp_prob.setOutputEnabled(self.full_prob.jy_opt['verbose']>0.5)
@@ -788,39 +788,38 @@ class lower_bound_LP_milp:
         lp_prob.setObjective(objective, sense=xp.minimize)
         # --- Add inequality constraints (>=) ---
         # Group terms for each inequality constraint.
-        ineq_expressions = {}
+        ineq_expressions = defaultdict(float)
         did_find_2 = False
         for (var_name, con_name), coeff in dict_var_con_2_lhs_exog.items():
-            if con_name not in ineq_expressions:
-                ineq_expressions[con_name] = 0
+            #if con_name not in ineq_expressions:
+            #    ineq_expressions[con_name] = 0
             ineq_expressions[con_name] += coeff * var_dict[var_name]
-            if con_name == 'exog_min_veh_':
-                did_find_2 = True
+            #if con_name == 'exog_min_veh_':
+            #    did_find_2 = True
 
-        did_find = False
         for con_name, expr in ineq_expressions.items():
-            if con_name in dict_con_name_2_LB:
-                if con_name == 'exog_min_veh_':
-                    did_find = True
-                con = xp.constraint(expr >= dict_con_name_2_LB[con_name], name=con_name )#+ "_ineq")
-                lp_prob.addConstraint(con)
+            #if con_name in dict_con_name_2_LB:
+                #if con_name == 'exog_min_veh_':
+                #    did_find = True
+            con = xp.constraint(expr >= dict_con_name_2_LB[con_name], name=con_name )#+ "_ineq")
+            lp_prob.addConstraint(con)
 
-        if did_find == False:
-            input('this is odd')
+        #if did_find == False:
+         #   input('this is odd')
 
         # --- Add equality constraints ---
         # Group terms for each equality constraint.
-        eq_expressions = {}
+        eq_expressions = defaultdict(float)
         for (var_name, con_name), coeff in dict_var_con_2_lhs_eq.items():
-            if con_name not in eq_expressions:
-                eq_expressions[con_name] = 0
+            #if con_name not in eq_expressions:
+            #    eq_expressions[con_name] = 0
             eq_expressions[con_name] += coeff * var_dict[var_name]
 
         # Add each equality constraint to the model.
         for con_name, expr in eq_expressions.items():
-            if con_name in dict_con_name_2_eq:
-                con_eq = xp.constraint(expr == dict_con_name_2_eq[con_name], name=con_name)
-                lp_prob.addConstraint(con_eq)
+            #if con_name in dict_con_name_2_eq:
+            con_eq = xp.constraint(expr == dict_con_name_2_eq[con_name], name=con_name)
+            lp_prob.addConstraint(con_eq)
 
         # --- Solve the LP ---
         self.times_lp_times['pre_XP_lp']=time.time()-t2
