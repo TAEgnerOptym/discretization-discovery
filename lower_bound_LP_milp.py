@@ -78,13 +78,19 @@ class lower_bound_LP_milp:
                 self.make_LP()
             else:
                 self.make_xpress_LP()
-            
+                if self.full_prob.jy_opt['use_classic_compress']:
+                    t1=time.time()
+
+                    self.naive_compress_get_pi_by_h_node()
+                    self.naive_compress_make_f_2_new_f()
+                    self.Naive_make_i_2_new_f()
+                    self.times_lp_times['after_compression']=time.time()-t1
         else:
             if self.full_prob.jy_opt['use_Xpress']==False:
                 self.solve_milp()
             else: 
                  self.solve_xpress_milp()
-
+        
     def make_agg_node_2_nodes(self):
         self.agg_node_2_nodes = {
             h: {
@@ -580,19 +586,38 @@ class lower_bound_LP_milp:
         milp_prob.setObjective(objective, sense=xp.minimize)
 
         # --- Add inequality constraints (of the form: expression >= lower bound) ---
-        for con_name in dict_con_name_2_LB:
-            expr = xp.Sum(dict_var_con_2_lhs_exog.get((var_name, con_name), 0) * var_dict[var_name] 
-                            for var_name in var_dict)
-            con_ineq=xp.constraint(expr >= dict_con_name_2_LB[con_name], name=con_name)
-            milp_prob.addConstraint(con_ineq)#expr == dict_con_name_2_eq[con_name], name=con_name + "_eq")
+        ineq_expressions = defaultdict(float)
+        did_find_2 = False
+        for (var_name, con_name), coeff in dict_var_con_2_lhs_exog.items():
+            #if con_name not in ineq_expressions:
+            #    ineq_expressions[con_name] = 0
+            ineq_expressions[con_name] += coeff * var_dict[var_name]
+            #if con_name == 'exog_min_veh_':
+            #    did_find_2 = True
+
+        for con_name, expr in ineq_expressions.items():
+            #if con_name in dict_con_name_2_LB:
+                #if con_name == 'exog_min_veh_':
+                #    did_find = True
+            con = xp.constraint(expr >= dict_con_name_2_LB[con_name], name=con_name )#+ "_ineq")
+            milp_prob.addConstraint(con)
+
+        #if did_find == False:
+         #   input('this is odd')
 
         # --- Add equality constraints ---
-        for con_name in dict_con_name_2_eq:
-            expr = xp.Sum(dict_var_con_2_lhs_eq.get((var_name, con_name), 0) * var_dict[var_name] 
-                            for var_name in var_dict)
-            con_eq=xp.constraint(expr == dict_con_name_2_eq[con_name], name=con_name )
+        # Group terms for each equality constraint.
+        eq_expressions = defaultdict(float)
+        for (var_name, con_name), coeff in dict_var_con_2_lhs_eq.items():
+            #if con_name not in eq_expressions:
+            #    eq_expressions[con_name] = 0
+            eq_expressions[con_name] += coeff * var_dict[var_name]
 
-            milp_prob.addConstraint(con_eq)#expr == dict_con_name_2_eq[con_name], name=con_name + "_eq")
+        # Add each equality constraint to the model.
+        for con_name, expr in eq_expressions.items():
+            #if con_name in dict_con_name_2_eq:
+            con_eq = xp.constraint(expr == dict_con_name_2_eq[con_name], name=con_name)
+            milp_prob.addConstraint(con_eq)
 
         # --- Solve the MILP ---
         self.times_lp_times['pre_XMILP']=time.time()-t2
@@ -780,7 +805,7 @@ class lower_bound_LP_milp:
             v = lp_prob.addVariable(name=var_name, lb=0)
             var_dict[var_name] = v
             vars_list.append(v)
-
+        self.var_dict=var_dict
         # Define the objective function (minimize sum of coeff * variable).
         # Converting the generator to a list to be safe.
         objective = xp.Sum([dict_var_name_2_obj[var_name] * var_dict[var_name]
@@ -849,3 +874,71 @@ class lower_bound_LP_milp:
             input('HOLD')
         self.times_lp_times['post_XLP']=time.time()-t3
 
+
+    def naive_compress_get_pi_by_h_node(self):
+        self.Naive_h_f_2_dual=dict()
+        self.Naive_h_f_2_dual_sig_fig=dict()
+        self.Naive_h_val_2_id=dict()
+        for h in self.graph_names:
+            self.Naive_h_f_2_dual[h]=dict()
+            self.Naive_h_f_2_dual_sig_fig[h]=dict()
+            self.Naive_h_val_2_id[h]=dict()
+            counter_h=0
+            #print('self.lp_dual_solution')
+            #print(self.lp_dual_solution)
+            #matching_keys = [key for key in self.lp_dual_solution if key.startswith("flow_in_out_h="+h)]
+
+            #print(matching_keys)
+            #input('---')
+            this_fg_sink=self.graph_node_2_agg_node[h][self.h_2_sink_id[h]]
+            this_fg_source=self.graph_node_2_agg_node[h][self.h_2_source_id[h]]
+            f_except_source_sink=set(self.agg_node_2_nodes[h])-set([this_fg_sink,this_fg_source])
+            for f in f_except_source_sink:
+                this_con_name='flow_in_out_h='+h+"_n="+f
+                #this_con_name= this_con_name.replace(" ", "_")
+                #this_con_name= this_con_name.replace("(", "_")
+                #this_con_name= this_con_name.replace(")", "_")
+                self.Naive_h_f_2_dual[h][f]=self.lp_dual_solution[this_con_name]
+                new_val=round(self.Naive_h_f_2_dual[h][f],3)
+                self.Naive_h_f_2_dual_sig_fig[h][f]=new_val
+                if tuple([h,new_val]) not in self.Naive_h_val_2_id[h]:
+                    self.Naive_h_val_2_id[h][tuple([h,new_val])]=counter_h
+                    counter_h=counter_h+1
+                
+    def naive_compress_make_f_2_new_f(self):
+        self.Naive_H_f_2_new_f=dict()
+        for h in self.graph_names:
+            self.Naive_H_f_2_new_f[h]=dict()
+            this_fg_sink=self.graph_node_2_agg_node[h][self.h_2_sink_id[h]]
+            this_fg_source=self.graph_node_2_agg_node[h][self.h_2_source_id[h]]
+            self.Naive_H_f_2_new_f[h][this_fg_sink]=tuple([h,-2])
+            self.Naive_H_f_2_new_f[h][this_fg_source]=tuple([h,-1])
+            for f in self.Naive_h_f_2_dual_sig_fig[h]:
+                my_dual_val=self.Naive_h_f_2_dual_sig_fig[h][f]
+                my_dual_id=self.Naive_h_val_2_id[h][tuple([h,my_dual_val])]
+                my_key=tuple([h,my_dual_id])
+                self.Naive_H_f_2_new_f[h][f]=my_key
+    
+    def Naive_make_i_2_new_f(self):
+        self.NAIVE_graph_node_2_agg_node=dict()
+        count_orig=dict()
+        count_new=dict()
+        for h in self.graph_names:
+            self.NAIVE_graph_node_2_agg_node[h]=dict()
+            count_orig[h]=len(set(self.graph_node_2_agg_node[h].values()))
+            count_new[h]=len(set(self.Naive_H_f_2_new_f[h].values()))
+            #print('[h,count_orig[h],count_new[h]]')
+            #print([h,count_orig[h],count_new[h]])
+            #print('---')
+            for i in self.graph_node_2_agg_node[h]:
+                f=self.graph_node_2_agg_node[h][i]
+                
+                
+                if f not in self.Naive_H_f_2_new_f[h]:
+                    print('not fuond')
+                    input('error here ')
+                #print('f')
+                #print(f)
+                my_new_name=str(self.Naive_H_f_2_new_f[h][f])
+                my_new_name=my_new_name.replace(" ", "_")
+                self.NAIVE_graph_node_2_agg_node[h][i]=my_new_name

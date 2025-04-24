@@ -12,7 +12,8 @@ import time
 from scipy.sparse import csr_matrix
 from lower_bound_LP_milp import lower_bound_LP_milp
 import pulp
-from compressor import compressor
+#from compressor import compressor
+from experimental_compressor_additive import compressor
 #from projector import projector
 from experimental_projector_simp import projector
 from baseline_solver import baseline_solver
@@ -73,6 +74,7 @@ class full_solver:
         self.history_dict=dict()
         self.history_dict['lblp_lower']=[]
         self.history_dict['prob_sizes_at_start']=[]
+        self.history_dict['prob_sizes_mid']=[]
         self.history_dict['did_compress']=[]
         self.history_dict['lp_time_compress']=[]
         self.history_dict['lp_time_project']=[]
@@ -210,13 +212,17 @@ class full_solver:
             if incumbant_lp<new_lp_value-self.jy_opt['min_inc_2_compress']: #and iter>0:
                 #self.count_size()
                 #input('starting compression ')
-                [compress_lp_time,compress_lp_val]=self.ApplyCompresssion()
+                if self.jy_opt['use_classic_compress']<0.5:
+                    [compress_lp_time,compress_lp_val]=self.ApplyCompresssion()
+                else:
+                    self.graph_node_2_agg_node=self.my_lower_bound_LP.NAIVE_graph_node_2_agg_node
                 #self.count_size()
                 did_compress_call=True
                 #input('done compression ')
                 incumbant_lp=new_lp_value
-            else:
-                [did_split,proj_objective_componentLps,proj_time_component_lps]=self.apply_splitting()
+            #else:
+            this_prob_sizes_mid=self.count_size()
+            [did_split,proj_objective_componentLps,proj_time_component_lps]=self.apply_splitting()
                 
                 #if did_split==False:
                 #    print('braeking do to no split')
@@ -228,6 +234,7 @@ class full_solver:
 
             self.history_dict['lblp_lower'].append(new_lp_value)
             self.history_dict['prob_sizes_at_start'].append(prob_sizes_at_start)
+            self.history_dict['prob_sizes_mid'].append(this_prob_sizes_mid)
             self.history_dict['did_compress'].append(did_compress_call)
             self.history_dict['lp_time_compress'].append(compress_lp_time)
             self.history_dict['lp_time_project'].append(proj_time_component_lps)
@@ -251,6 +258,8 @@ class full_solver:
             self.count_size(False)
             print('prob_sizes_at_start')
             print(prob_sizes_at_start)
+            print('this_prob_sizes_mid')
+            print(this_prob_sizes_mid)
             print('-----')
             print('-----')
             print('-----')
@@ -262,7 +271,7 @@ class full_solver:
                 print('breaking do to no split')
                 break
         #input('done entire call')
-        if did_compress_call==False and use_compression==True and iter>0:
+        if 1>0:#did_compress_call==False and use_compression==True and iter>0:
             #input('here')
             print('Doing final Clean up operations')
             self.my_lower_bound_LP=lower_bound_LP_milp(self,self.graph_node_2_agg_node,False,False)
@@ -273,10 +282,16 @@ class full_solver:
             did_compress_call=True
             proj_objective_componentLps=dict()
             proj_time_component_lps=dict()
+            compress_lp_time=0
+            compress_lp_val=np.nan
             for h in self.graph_names:
                 proj_objective_componentLps[h]=np.nan
                 proj_time_component_lps[h]=np.nan
-            [compress_lp_time,compress_lp_val]=self.ApplyCompresssion()
+            if self.jy_opt['use_classic_compress']<0.5:
+                [compress_lp_time,compress_lp_val]=self.ApplyCompresssion()
+            else:
+                self.graph_node_2_agg_node=self.my_lower_bound_LP.NAIVE_graph_node_2_agg_node
+            
             self.history_dict['lblp_lower'].append(new_lp_value)
             self.history_dict['prob_sizes_at_start'].append(prob_sizes_at_start)
             self.history_dict['did_compress'].append(did_compress_call)
@@ -309,6 +324,7 @@ class full_solver:
             
         if (self.jy_opt['in_demo_mode']==True):
             input('Press enter about to start the acutal ILP')
+        print('starting ILP')
         self.history_dict['final_sizes']=self.count_size()
         self.history_dict['final_graph_node_2_agg_node']=self.graph_node_2_agg_node
         self.my_lower_bound_ILP=lower_bound_LP_milp(self,self.graph_node_2_agg_node,True,True)

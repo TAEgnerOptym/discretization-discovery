@@ -407,6 +407,7 @@ class compressor:
         self.time_compressor['lp_post']=time.time()-t3
 
     def make_xpress_LP(self):
+        input('resolving from scrach maybe i dont want to do theis')
         xp.init(self.MF.jy_opt['xpress_file_loc'])
 
         t2=time.time()
@@ -693,7 +694,7 @@ class compressor:
                     #print('con_2')
                     #print(con_1)
                     self.h_f_2_dual[h][f]=self.h_f_2_dual[h][f]+dual_1-dual_2
-                new_val=self.h_f_2_dual[h][f]
+                new_val=round(self.h_f_2_dual[h][f],3)
                 self.h_f_2_dual_sig_fig[h][f]=new_val
                 if tuple([h,new_val]) not in self.h_val_2_id[h]:
                     self.h_val_2_id[h][tuple([h,new_val])]=counter_h
