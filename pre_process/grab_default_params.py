@@ -32,4 +32,7 @@ def grab_default_params():
 	my_params['use_classic_compress']=0
 	my_params['use_classic_compress_last']=0
 	my_params['num_thresh_split_projector']=10#number of split points in projector 
+	my_params['lplb_solver']=1 #default solver 
+	my_params['compresss_solver']=1 #default solver 
+	my_params['proj_solver']=1 #default solver 
 	return my_params

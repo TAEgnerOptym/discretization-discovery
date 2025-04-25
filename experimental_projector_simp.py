@@ -554,6 +554,8 @@ class projector:
             lp_prob.addConstraint(con_eq)
 
         # --- Solve the LP ---
+        lp_prob.controls.defaultalg = self.MF.jy_opt['proj_solver']
+
         self.time_dict_proj['pre_XP_lp']=time.time()-t2
         start_time = time.time()
         lp_prob.solve()
@@ -695,7 +697,13 @@ class projector:
             print('self.lp_objective')
             print(self.lp_objective)
             input('errror here')
+        #for f in self.do_split_f:
+        #    print('f')
+        #    print(f)
+        #    print('self.f_2_max_val[f]-self.f_2_min_val[f]')
+        #    print(self.f_2_max_val[f]-self.f_2_min_val[f])
 
+        #input('--')
         if 1<0:
             start_value=0
             for f in self.do_split_f:
@@ -738,8 +746,17 @@ class projector:
                     levels[int(round(i * (N-1) / (K-1)))]
                     for i in range(K)
                 ]
+            #print('--')
+            #print(levels)
+            #print('chosen')
+            #print(chosen)
+            #input('levels  drop')
         else:
             chosen = levels
+            #print('--')
+            #print(levels)
+            
+            #input('levels no drop')
 
         chosen.sort()  # just in case
 

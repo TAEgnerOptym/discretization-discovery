@@ -599,51 +599,63 @@ class lower_bound_LP_milp:
         # If a variable is binary, declare it as such, otherwise as continuous (nonnegative).
         var_dict = {}
 
-        for var_name, obj_coeff in dict_var_name_2_obj.items():
-            if dict_var_name_2_is_binary.get(var_name, 0):
-                var_dict[var_name] = milp_prob.addVariable(name=var_name, vartype=xp.binary)
-            else:
-                var_dict[var_name] = milp_prob.addVariable(name=var_name, lb=0)
-        
+        if 1<0:
+            vars_list = [xp.var(name=name, lb=0) for name in dict_var_name_2_obj]
+
+            for var_name, obj_coeff in dict_var_name_2_obj.items():
+                if dict_var_name_2_is_binary.get(var_name, 0):
+                    var_dict[var_name] = milp_prob.addVariable(name=var_name, vartype=xp.binary)
+                else:
+                    var_dict[var_name] = milp_prob.addVariable(name=var_name, lb=0)
+        else:
+            vars_list = [
+            xp.var(
+                name=name,
+                lb=0,
+                vartype=(xp.binary if dict_var_name_2_is_binary.get(name, 0) else xp.continuous)
+            )
+            for name in dict_var_name_2_obj
+            ]
+            for var in vars_list:
+                var_dict[var.name]=var
+            milp_prob.addVariable(*vars_list) 
         # Define the objective function: minimize sum(objective_coefficient * variable)
         objective = xp.Sum(dict_var_name_2_obj[var_name] * var_dict[var_name] 
                             for var_name in dict_var_name_2_obj)
         milp_prob.setObjective(objective, sense=xp.minimize)
 
         # --- Add inequality constraints (of the form: expression >= lower bound) ---
-        ineq_expressions = defaultdict(float)
-        did_find_2 = False
-        for (var_name, con_name), coeff in dict_var_con_2_lhs_exog.items():
-            #if con_name not in ineq_expressions:
-            #    ineq_expressions[con_name] = 0
-            ineq_expressions[con_name] += coeff * var_dict[var_name]
-            #if con_name == 'exog_min_veh_':
-            #    did_find_2 = True
+        
+        vdict    = var_dict
+        LB       = dict_con_name_2_LB
+        EQ       = dict_con_name_2_eq
+        exog     = dict_var_con_2_lhs_exog
+        eq_map   = dict_var_con_2_lhs_eq
+        cx       = xp.constraint
+        ac       = milp_prob.addConstraint
 
-        for con_name, expr in ineq_expressions.items():
-            #if con_name in dict_con_name_2_LB:
-                #if con_name == 'exog_min_veh_':
-                #    did_find = True
-            con = xp.constraint(expr >= dict_con_name_2_LB[con_name], name=con_name )#+ "_ineq")
-            milp_prob.addConstraint(con)
+        # 2) One‐time grouping of terms by constraint name
+        group_exog = defaultdict(list)
+        for (var, con), coeff in exog.items():
+            group_exog[con].append((vdict[var], coeff))
 
-        #if did_find == False:
-         #   input('this is odd')
+        group_eq = defaultdict(list)
+        for (var, con), coeff in eq_map.items():
+            group_eq[con].append((vdict[var], coeff))
 
-        # --- Add equality constraints ---
-        # Group terms for each equality constraint.
-        eq_expressions = defaultdict(float)
-        for (var_name, con_name), coeff in dict_var_con_2_lhs_eq.items():
-            #if con_name not in eq_expressions:
-            #    eq_expressions[con_name] = 0
-            eq_expressions[con_name] += coeff * var_dict[var_name]
+        # 3) Build all constraint objects
+        cons = []
+        for con_name, terms in group_exog.items():
+            # sum up coeff * var
+            expr = sum(var * coeff for var, coeff in terms)
+            cons.append(cx(expr >= LB[con_name], name=con_name))
 
-        # Add each equality constraint to the model.
-        for con_name, expr in eq_expressions.items():
-            #if con_name in dict_con_name_2_eq:
-            con_eq = xp.constraint(expr == dict_con_name_2_eq[con_name], name=con_name)
-            milp_prob.addConstraint(con_eq)
+        for con_name, terms in group_eq.items():
+            expr = sum(var * coeff for var, coeff in terms)
+            cons.append(cx(expr == EQ[con_name], name=con_name))
 
+        # 4) Bulk‐add them in one call
+        ac(*cons)
         # --- Solve the MILP ---
         self.times_lp_times['pre_XMILP']=time.time()-t2
         print('starting the final MILP call')
@@ -656,7 +668,16 @@ class lower_bound_LP_milp:
 
         self.milp_time = end_time - start_time
         self.milp_prob = milp_prob
-        self.milp_solution = {var_name: milp_prob.getSolution(var_name) for var_name in var_dict}
+        
+        vals = milp_prob.getSolution(vars_list)
+        t3=time.time()
+
+        self.milp_solution = {
+            var.name: vals[i]
+            for i, var in enumerate(vars_list)
+        }
+        
+        #self.milp_solution = {var_name: milp_prob.getSolution(var_name) for var_name in var_dict}
         self.milp_solution_status = milp_prob.getProbStatus()
         self.milp_solution_objective_value = milp_prob.getObjVal()
         self.times_lp_times['post_XMILP']=time.time()-t3
@@ -878,7 +899,10 @@ class lower_bound_LP_milp:
         # 4) Bulk‐add them in one call
         ac(*cons)
         # --- Solve the LP ---
+        lp_prob.controls.defaultalg = self.full_prob.jy_opt['lplb_solver']
+
         self.times_lp_times['pre_XP_lp_2_pt2']=time.time()-t2
+        
         start_time = time.time()
         lp_prob.solve()
         end_time = time.time()

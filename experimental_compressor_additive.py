@@ -277,6 +277,7 @@ class compressor:
                         counterMe=counterMe+1
 
     def make_xpress_LP(self):
+        t2=time.time()
         lp_prob=self.myLBObj.lp_prob
 
         
@@ -295,7 +296,11 @@ class compressor:
             # Add the constraint to your lp_prob.
             lp_prob.addConstraint(constraint_obj)
         
+        lp_prob.controls.defaultalg = self.MF.jy_opt['compress_solver']
+
         #('starting')
+        self.time_compressor['pre_XLP']=time.time()-t2
+
         start_time = time.time()
         lp_prob.solve()
         end_time = time.time()

@@ -340,6 +340,16 @@ class full_solver:
             
         if (self.jy_opt['in_demo_mode']==True):
             input('Press enter about to start the acutal ILP')
+
+        print('--JUST BEFORE CALLIN ILP DONE-')
+        self.count_size(False)
+        print('sum(self.history_dict[lp_time_LB])')
+        print(sum(self.history_dict['lp_time_LB']))
+        print('nana  sum lp_time_compress')
+        print(np.nansum(np.array(self.history_dict['lp_time_compress'])))
+        print('sum(self.history_dict[sum_lp_time_project].values())')
+        print(np.nansum(np.array(self.history_dict['sum_lp_time_project'])))
+        print('TOT_time_component_lps')
         print('starting ILP')
         self.history_dict['final_sizes']=self.count_size()
         self.history_dict['final_graph_node_2_agg_node']=self.graph_node_2_agg_node
