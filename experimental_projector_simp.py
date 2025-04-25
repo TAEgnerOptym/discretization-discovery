@@ -495,12 +495,20 @@ class projector:
         # Create decision variables (all non-negative) and store them in a list.
         var_dict = {}
         vars_list = []  # list of variables to add to the model
-        for var_name, coeff in dict_var_name_2_obj.items():
-            # Create a variable with lower bound 0.
-            v = lp_prob.addVariable(name=var_name, lb=0)
-            var_dict[var_name] = v
-            vars_list.append(v)
+        if 1<0:
+            for var_name, coeff in dict_var_name_2_obj.items():
+                # Create a variable with lower bound 0.
+                v = lp_prob.addVariable(name=var_name, lb=0)
+                var_dict[var_name] = v
+                vars_list.append(v)
+        else:
+            vars_list = [xp.var(name=name, lb=0) for name in dict_var_name_2_obj]
 
+            # 2) register *each* one with the model
+            lp_prob.addVariable(*vars_list)   # ← note the * here!
+
+            # 3) now you can build var_dict
+            var_dict = {v.name: v for v in vars_list}
         # Define the objective function (minimize sum of coeff * variable).
         # Converting the generator to a list to be safe.
         objective = xp.Sum([dict_var_name_2_obj[var_name] * var_dict[var_name]
@@ -567,13 +575,16 @@ class projector:
 
         ##for con in lp_prob.getConstraint():
         #    self.lp_dual_solution[con.name] = lp_prob.getDual(con.name)[0]
-        lp_sol = lp_prob.getSolution()
-        self.lp_primal_solution = {var_name: lp_sol[var_obj.index]
-                                for var_name, var_obj in var_dict.items()}
+        vals = lp_prob.getSolution(vars_list)
+        self.lp_primal_solution = {
+            var.name: vals[i]
+            for i, var in enumerate(vars_list)
+        }
 
-        lp_dual = lp_prob.getDuals()
-        self.lp_dual_solution = {con.name: lp_dual[con.index]
-                                for con in lp_prob.getConstraint()}
+        self.lp_dual_solution = {
+            con.name: lp_prob.getDual(con)
+            for con in lp_prob.getConstraint()
+        }
         if self.lp_status == 'Infeasible':
             input('HOLD')
         self.time_dict_proj['post_XLP']=time.time()-t3

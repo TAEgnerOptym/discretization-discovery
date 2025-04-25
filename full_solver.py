@@ -186,9 +186,16 @@ class full_solver:
         
 
         while iter<self.jy_opt['max_iterations_loop_compress_project']:
+            self.time_list_outer=dict()
             iter=iter+1
+            t1=time.time()
+
             prob_sizes_at_start=self.count_size()
+            self.time_list_outer['part0']=time.time()-t1
+            t1=time.time()
             self.my_lower_bound_LP=lower_bound_LP_milp(self,self.graph_node_2_agg_node,False,False)
+            self.time_list_outer['part0.5']=time.time()-t1
+            t1=time.time()
             lblp_time=self.my_lower_bound_LP.lp_time
             new_lp_value=self.my_lower_bound_LP.lp_objective
             
@@ -209,6 +216,8 @@ class full_solver:
             for h in self.graph_names:
                 proj_objective_componentLps[h]=np.nan
                 proj_time_component_lps[h]=np.nan
+            self.time_list_outer['part1']=time.time()-t1
+            t1=time.time()
             if incumbant_lp<new_lp_value-self.jy_opt['min_inc_2_compress']: #and iter>0:
                 #self.count_size()
                 #input('starting compression ')
@@ -221,6 +230,8 @@ class full_solver:
                 #input('done compression ')
                 incumbant_lp=new_lp_value
             #else:
+            self.time_list_outer['part2']=time.time()-t1
+            t1=time.time()
             this_prob_sizes_mid=self.count_size()
             [did_split,proj_objective_componentLps,proj_time_component_lps]=self.apply_splitting()
                 
@@ -231,6 +242,8 @@ class full_solver:
             
 
 
+            self.time_list_outer['part3']=time.time()-t1
+            t1=time.time()
 
             self.history_dict['lblp_lower'].append(new_lp_value)
             self.history_dict['prob_sizes_at_start'].append(prob_sizes_at_start)
@@ -245,6 +258,8 @@ class full_solver:
             self.history_dict['sum_lp_time_project'].append(sum(proj_time_component_lps.values()))
             if self.jy_opt['save_graph_each_iter']>0.5:
                 self.augment_history_graphs()
+            self.time_list_outer['part4']=time.time()-t1
+            t1=time.time()
             print('-----')
             print('-----')
             print('-----')
@@ -264,9 +279,10 @@ class full_solver:
             print('-----')
             print('-----')
             #input('---')
-            #print(self.history_dict)
+            print('self.time_list_outer')
+            print(self.time_list_outer)
             #input('---')
-
+            
             if did_compress_call==False and did_split==False:
                 print('breaking do to no split')
                 break
@@ -287,7 +303,7 @@ class full_solver:
             for h in self.graph_names:
                 proj_objective_componentLps[h]=np.nan
                 proj_time_component_lps[h]=np.nan
-            if self.jy_opt['use_classic_compress']<0.5:
+            if self.jy_opt['use_classic_compress_last']<0.5:
                 [compress_lp_time,compress_lp_val]=self.ApplyCompresssion()
             else:
                 self.graph_node_2_agg_node=self.my_lower_bound_LP.NAIVE_graph_node_2_agg_node

@@ -30,4 +30,5 @@ def grab_default_params():
 	my_params['threshold_split']=0.01
 	my_params['offset_cost_edge_project']=0#-.00001
 	my_params['use_classic_compress']=0
+	my_params['use_classic_compress_last']=0
 	return my_params

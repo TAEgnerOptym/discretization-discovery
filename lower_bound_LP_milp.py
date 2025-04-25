@@ -22,9 +22,10 @@ class lower_bound_LP_milp:
 
 
     def __init__(self,full_prob,graph_node_2_agg_node,OPT_do_ILP,OPT_use_psi):
+        t1=time.time()
+
         self.times_lp_times=dict()
 
-        t1=time.time()
         self.full_prob=full_prob
         full_input_dict=full_prob.full_input_dict
         self.graph_node_2_agg_node=graph_node_2_agg_node
@@ -91,6 +92,28 @@ class lower_bound_LP_milp:
             else: 
                  self.solve_xpress_milp()
         
+        if self.full_prob.jy_opt['verbose']==True:
+            total = sum(self.times_lp_times.values())
+
+            time_percentage_LBLP = {key: (val / total if total != 0 else 0) for key, val in self.times_lp_times.items()}
+
+            print('self.times_lp_times')
+            print(self.times_lp_times)
+            print('--')
+            print('time_percentage_LBLP')
+            print(time_percentage_LBLP)
+            print('total')
+            print(total)
+            for key, val in sorted(self.times_lp_times.items(),
+                       key=lambda kv: kv[1],
+                       reverse=True):
+                print(f"{key}: {val}")
+            print('percentages')
+            for key, val in sorted(self.times_lp_times.items(),
+                       key=lambda kv: kv[1],
+                       reverse=True):
+                print(f"{key}: {val}")
+            #input('look here')
     def make_agg_node_2_nodes(self):
         self.agg_node_2_nodes = {
             h: {
@@ -800,11 +823,17 @@ class lower_bound_LP_milp:
         # Create decision variables (all non-negative) and store them in a list.
         var_dict = {}
         vars_list = []  # list of variables to add to the model
-        for var_name, coeff in dict_var_name_2_obj.items():
-            # Create a variable with lower bound 0.
-            v = lp_prob.addVariable(name=var_name, lb=0)
-            var_dict[var_name] = v
-            vars_list.append(v)
+        vars_list = [xp.var(name=name, lb=0) for name in dict_var_name_2_obj]
+
+        self.times_lp_times['pre_XP_lp_2_pt0']=time.time()-t2
+        t2=time.time()
+
+        lp_prob.addVariable(*vars_list)   # ← note the * here!
+
+        self.times_lp_times['pre_XP_lp_2_pt0.5']=time.time()-t2
+        t2=time.time()
+        var_dict = {v.name: v for v in vars_list}
+
         self.var_dict=var_dict
         # Define the objective function (minimize sum of coeff * variable).
         # Converting the generator to a list to be safe.
@@ -813,41 +842,41 @@ class lower_bound_LP_milp:
         lp_prob.setObjective(objective, sense=xp.minimize)
         # --- Add inequality constraints (>=) ---
         # Group terms for each inequality constraint.
-        ineq_expressions = defaultdict(float)
-        did_find_2 = False
-        for (var_name, con_name), coeff in dict_var_con_2_lhs_exog.items():
-            #if con_name not in ineq_expressions:
-            #    ineq_expressions[con_name] = 0
-            ineq_expressions[con_name] += coeff * var_dict[var_name]
-            #if con_name == 'exog_min_veh_':
-            #    did_find_2 = True
+        self.times_lp_times['pre_XP_lp_2_pt1']=time.time()-t2
+    
+        
+        vdict    = var_dict
+        LB       = dict_con_name_2_LB
+        EQ       = dict_con_name_2_eq
+        exog     = dict_var_con_2_lhs_exog
+        eq_map   = dict_var_con_2_lhs_eq
+        cx       = xp.constraint
+        ac       = lp_prob.addConstraint
 
-        for con_name, expr in ineq_expressions.items():
-            #if con_name in dict_con_name_2_LB:
-                #if con_name == 'exog_min_veh_':
-                #    did_find = True
-            con = xp.constraint(expr >= dict_con_name_2_LB[con_name], name=con_name )#+ "_ineq")
-            lp_prob.addConstraint(con)
+        # 2) One‐time grouping of terms by constraint name
+        group_exog = defaultdict(list)
+        for (var, con), coeff in exog.items():
+            group_exog[con].append((vdict[var], coeff))
 
-        #if did_find == False:
-         #   input('this is odd')
+        group_eq = defaultdict(list)
+        for (var, con), coeff in eq_map.items():
+            group_eq[con].append((vdict[var], coeff))
 
-        # --- Add equality constraints ---
-        # Group terms for each equality constraint.
-        eq_expressions = defaultdict(float)
-        for (var_name, con_name), coeff in dict_var_con_2_lhs_eq.items():
-            #if con_name not in eq_expressions:
-            #    eq_expressions[con_name] = 0
-            eq_expressions[con_name] += coeff * var_dict[var_name]
+        # 3) Build all constraint objects
+        cons = []
+        for con_name, terms in group_exog.items():
+            # sum up coeff * var
+            expr = sum(var * coeff for var, coeff in terms)
+            cons.append(cx(expr >= LB[con_name], name=con_name))
 
-        # Add each equality constraint to the model.
-        for con_name, expr in eq_expressions.items():
-            #if con_name in dict_con_name_2_eq:
-            con_eq = xp.constraint(expr == dict_con_name_2_eq[con_name], name=con_name)
-            lp_prob.addConstraint(con_eq)
+        for con_name, terms in group_eq.items():
+            expr = sum(var * coeff for var, coeff in terms)
+            cons.append(cx(expr == EQ[con_name], name=con_name))
 
+        # 4) Bulk‐add them in one call
+        ac(*cons)
         # --- Solve the LP ---
-        self.times_lp_times['pre_XP_lp']=time.time()-t2
+        self.times_lp_times['pre_XP_lp_2_pt2']=time.time()-t2
         start_time = time.time()
         lp_prob.solve()
         end_time = time.time()
@@ -857,22 +886,39 @@ class lower_bound_LP_milp:
         t3=time.time()
         self.lp_prob = lp_prob
         self.lp_primal_solution = dict()
-        
+        self.times_lp_times['post_XLP_1']=time.time()-t3
+        t3=time.time()
+
         self.lp_status = lp_prob.getProbStatus()
         self.lp_objective = lp_prob.getObjVal()
         self.lp_dual_solution = dict()
+        self.times_lp_times['post_XLP_2']=time.time()-t3
+        t3=time.time()
 
-        lp_sol = lp_prob.getSolution()
-        self.lp_primal_solution = {var_name: lp_sol[var_obj.index]
-                                for var_name, var_obj in var_dict.items()}
+        vals = lp_prob.getSolution(vars_list)
+        self.times_lp_times['post_XLP_3']=time.time()-t3
+        t3=time.time()
 
-        lp_dual = lp_prob.getDuals()
-        self.lp_dual_solution = {con.name: lp_dual[con.index]
-                                for con in lp_prob.getConstraint()}
-
+        self.lp_primal_solution = {
+            var.name: vals[i]
+            for i, var in enumerate(vars_list)
+        }
+        self.times_lp_times['post_XLP_4']=time.time()-t3
+        t3=time.time()
+        if 0>1:
+            self.lp_dual_solution = {
+                con.name: lp_prob.getDual(con)
+                for con in lp_prob.getConstraint()
+            }
+        else:
+            cons = lp_prob.getConstraint()
+            # 2) One C‐call to fetch all duals in the same order
+            duals = lp_prob.getDuals(cons)
+            # 3) Build your dict in a single Python loop
+            self.lp_dual_solution = {con.name: d for con, d in zip(cons, duals)}
         if self.lp_status == 'Infeasible':
             input('HOLD')
-        self.times_lp_times['post_XLP']=time.time()-t3
+        self.times_lp_times['post_XLP_5']=time.time()-t3
 
 
     def naive_compress_get_pi_by_h_node(self):
