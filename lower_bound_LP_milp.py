@@ -581,6 +581,8 @@ class lower_bound_LP_milp:
         #print('done ILP call')
         #input('done ILP call')
     def solve_xpress_milp(self):
+        print('starting the setup of the  MILP call')
+
         t2=time.time()
         dict_var_name_2_obj=self.dict_var_name_2_obj
         dict_con_name_2_LB=self.dict_con_name_2_LB
@@ -644,7 +646,7 @@ class lower_bound_LP_milp:
 
         # --- Solve the MILP ---
         self.times_lp_times['pre_XMILP']=time.time()-t2
-
+        print('starting the final MILP call')
         start_time = time.time()
         milp_prob.solve()
         end_time = time.time()

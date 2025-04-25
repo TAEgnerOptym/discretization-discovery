@@ -14,6 +14,7 @@ from scipy.sparse import csr_matrix
 import pulp
 import random
 import time
+import bisect
 
 class projector:
 
@@ -694,13 +695,69 @@ class projector:
             print('self.lp_objective')
             print(self.lp_objective)
             input('errror here')
-        start_value=0
-        for f in self.do_split_f:
-            start_value=start_value+1
-            count_pos=0
-            count_tot=len(self.agg_node_2_node[f])
-            for i in self.agg_node_2_node[f]:
-                if i_2_dual[i]>self.f_2_mean_val[f]:
-                    self.NEW_node_2_agg_node[i]=extra_string+'_'+str(start_value)
+
+        if 1<0:
+            start_value=0
+            for f in self.do_split_f:
+                start_value=start_value+1
+                count_pos=0
+                count_tot=len(self.agg_node_2_node[f])
+                for i in self.agg_node_2_node[f]:
+                    if i_2_dual[i]>self.f_2_mean_val[f]:
+                        self.NEW_node_2_agg_node[i]=extra_string+'_'+str(start_value)
+                        count_change=count_change+1
+                        count_pos=count_pos+1
+        else:
+            start_value=0
+            num_thesh_use=self.MF.jy_opt['num_thresh_split_projector']
+            for f in self.do_split_f:
+                start_value=start_value+num_thesh_use
+                count_pos=0
+                extra_str_f=str(random.randint(0,100000000))
+                tmp_dict=dict()
+                for i in self.agg_node_2_node[f]:
+                    tmp_dict[i]=i_2_dual[i]
+                [chosen, new_dict]=self.quantize_dict_to_index(tmp_dict,num_thesh_use)
+                for i in self.agg_node_2_node[f]:
+                    self.NEW_node_2_agg_node[i]=extra_string+'_'+extra_str_f+'_'+str(new_dict[i])
                     count_change=count_change+1
                     count_pos=count_pos+1
+
+
+    def quantize_dict_to_index(self,orig_dict, K):
+    # 1) round all values to 3dp and get sorted uniques
+        levels = sorted({round(v, 3) for v in orig_dict.values()})
+
+        # 2) sample up to K uniformly‐spaced levels
+        if len(levels) > K:
+            N = len(levels)
+            if K == 1:
+                chosen = [levels[N//2]]
+            else:
+                chosen = [
+                    levels[int(round(i * (N-1) / (K-1)))]
+                    for i in range(K)
+                ]
+        else:
+            chosen = levels
+
+        chosen.sort()  # just in case
+
+        # 3) snap each entry to the index of the nearest chosen level
+        index_map = {}
+        for key, val in orig_dict.items():
+            r = round(val, 3)
+            i = bisect.bisect_left(chosen, r)
+
+            # collect candidate indices
+            idxs = []
+            if i > 0:
+                idxs.append(i-1)
+            if i < len(chosen):
+                idxs.append(i)
+
+            # pick the idx whose chosen[idx] is closest to r
+            best_idx = min(idxs, key=lambda j: abs(chosen[j] - r))
+            index_map[key] = best_idx
+
+        return chosen, index_map
