@@ -19,6 +19,7 @@ sys.path.append("exper_ideas")
 from jy_active_set_lp import jy_active_set_lp
 from jy_active_set_lp import jy_active_set_lp_primal_dual
 from warm_start_lp import warm_start_lp
+from warm_start_lp import forbidden_variables_loop
 
 class lower_bound_LP_milp:
 
@@ -221,6 +222,13 @@ class lower_bound_LP_milp:
                     self.h_q_2_q_id[h][my_tup_pq]=tuple([h,count])
                     count=count+1
                 self.h_q_2_fg[h][my_tup_pq].add(tup_fg)
+                #if len(self.h_q_2_fg[h][my_tup_pq])>1 and len(my_tup_pq)>1:
+                #    print('len(self.h_q_2_fg[h][my_tup_pq])')
+                #    print(len(self.h_q_2_fg[h][my_tup_pq]))
+                #    print('len(my_tup_pq)')
+                #    print(len(my_tup_pq))
+                #    print('len(my_tup_pq)')
+                #    input('cool this is happy')
     def make_mappings(self):
         
         self.make_agg_node_2_nodes()
@@ -927,10 +935,15 @@ class lower_bound_LP_milp:
             print(len(self.vars_names_ignore))
             print('len(self.var_dict)')
             print(len(self.var_dict))
-            lp_prob,time_lp_1,time_lp_2=warm_start_lp(lp_prob,self.var_dict,self.actions_ignore)
-            self.lp_time=time_lp_1+time_lp_2
-            print('time_lp_1:'+str(time_lp_1)+"  time_lp_2 "+str(time_lp_2))
-            input('--')
+            #lp_prob,time_lp_1,time_lp_2=warm_start_lp(lp_prob,self.var_dict,self.actions_ignore)
+            #self.lp_time=time_lp_1+time_lp_2
+            #print('time_lp_1:'+str(time_lp_1)+"  time_lp_2 "+str(time_lp_2))
+            #input('--')
+            print('len(self.actions_ignore)')
+            print(len(self.actions_ignore))
+            print('--')
+            lp_prob,time_lp_1=forbidden_variables_loop(lp_prob,self.var_dict,self.actions_ignore)
+            self.lp_time=time_lp_1
         self.times_lp_times['lp_time']=self.lp_time
         t3=time.time()
         self.lp_prob = lp_prob

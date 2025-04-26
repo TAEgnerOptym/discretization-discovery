@@ -15,14 +15,14 @@ def warm_start_lp(lp_prob, var_dict, zero_names, flags='d'):
     Returns:
       lp_prob : the same xpress.problem, already solved with the warm start
     """
-    lp_prob.controls.defaultalg = 2
+    lp_prob.controls.defaultalg = 1
     # 1) Gather the xp.var objects to fix
     zero_vars = [var_dict[name] for name in zero_names]
 
     # 2) Save original bounds from the var objects
     orig_bounds = {v: (v.lb, v.ub) for v in zero_vars}
-
-    lp_prob.chgbounds(zero_vars, ['U'] * len(zero_vars), [0] * len(zero_vars))
+    epsilon=.001
+    lp_prob.chgbounds(zero_vars, ['U'] * len(zero_vars), [epsilon] * len(zero_vars))
     ##print('n')
     #pr#int(n)
     num_non_zero_entries=0
@@ -110,3 +110,113 @@ def warm_start_lp(lp_prob, var_dict, zero_names, flags='d'):
     print(time_lp_2)
     # 8) Return the warmed LP problem
     return lp_prob,time_lp_1,time_lp_2
+
+
+
+import xpress as xp
+import numpy as np
+import time
+
+def forbidden_variables_loop(lp_prob, var_dict, forbidden_var_names, epsilon=1e-6, K=2, verbose=True):
+    """
+    Solve LP while progressively relaxing forbidden variable bounds based on primal values.
+
+    Parameters:
+    lp_prob: xpress.problem
+        The LP model.
+    forbidden_var_names: list or set
+        Names of variables to restrict initially.
+    epsilon: float
+        Small positive value to set upper bounds.
+    K: int
+        Maximum number of variables to relax per iteration (default 10).
+    verbose: bool
+        Whether to print progress.
+
+    Returns:
+    lp_prob: xpress.problem
+        The solved LP after adjustments.
+    """
+    forbidden_var_names = set(forbidden_var_names)
+
+    # Mapping from name to variable
+    all_vars = {v.name: v for v in lp_prob.getVariable()}
+
+    # Only keep existing variables
+    forbidden_var_names &= set(all_vars.keys())
+    vars_list = lp_prob.getVariable()
+    
+    lp_prob.controls.defaultalg = 1  # primal simplex
+
+    if not forbidden_var_names:
+        if verbose:
+            print("No forbidden variables found in model.")
+        return lp_prob, 0.0
+
+    # Initial bound change for forbidden variables
+    vars_to_restrict = [all_vars[name] for name in forbidden_var_names]
+    lp_prob.chgbounds(vars_to_restrict, ['U'] * len(vars_to_restrict), [epsilon] * len(vars_to_restrict))
+
+    iteration = 0
+    total_solve_time = 0.0
+
+    while True:
+        iteration += 1
+        if verbose:
+            print(f"\n--- Iteration {iteration} ---")
+            print(f"Forbidden variables to check: {len(forbidden_var_names)}")
+
+        # Solve and measure time
+        t_start = time.time()
+        lp_prob.solve()
+        t_end = time.time()
+
+        solve_time = t_end - t_start
+        total_solve_time += solve_time
+
+        if verbose:
+            print(f"Solve time: {solve_time:.4f} seconds")
+            print(f"Objective value: {lp_prob.getObjVal()}")
+
+        # Fetch primal solution
+        vals = lp_prob.getSolution()
+        lp_primal_solution = {
+            var.name: vals[i]
+            for i, var in enumerate(vars_list)
+        }
+
+        # Identify forbidden vars with nonzero primal values
+        active_vars_with_vals = [
+            (v, lp_primal_solution.get(v.name, 0.0))
+            for v in vars_to_restrict
+            if v.name in forbidden_var_names and abs(lp_primal_solution.get(v.name, 0.0)) > 1e-8
+        ]
+
+        if verbose:
+            print(f"Active forbidden variables with nonzero values: {len(active_vars_with_vals)}")
+
+        if not active_vars_with_vals:
+            if verbose:
+                print("No more forbidden variables with active primal values. Done!")
+                print(f"Total LP solve time: {total_solve_time:.4f} seconds")
+            break
+
+        # Sort by primal value descending, pick top-K
+        active_vars_with_vals.sort(key=lambda x: abs(x[1]), reverse=True)
+        selected_active_vars = [v for v, _ in active_vars_with_vals[:K]]
+
+        if verbose:
+            print(f"Relaxing {len(selected_active_vars)} variables this iteration.")
+
+        # Remove selected variables from forbidden set
+        forbidden_var_names -= {v.name for v in selected_active_vars}
+
+        # Reset bounds (make them free again)
+        lp_prob.chgbounds(selected_active_vars, ['U'] * len(selected_active_vars), [np.inf] * len(selected_active_vars))
+
+        # Update vars_to_restrict for next iteration
+        vars_to_restrict = [all_vars[name] for name in forbidden_var_names]
+
+    if verbose:
+        print("\nFinished forbidden_variables_loop.")
+    return lp_prob, total_solve_time
