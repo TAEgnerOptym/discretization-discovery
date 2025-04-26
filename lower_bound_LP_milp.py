@@ -924,7 +924,7 @@ class lower_bound_LP_milp:
 
         self.times_lp_times['pre_XP_lp_2_pt2']=time.time()-t2
         
-        if 1<0:
+        if self.full_prob.jy_opt['use_julians_custom_lp_solver']>1:
             start_time = time.time()
 
             lp_prob.solve()
