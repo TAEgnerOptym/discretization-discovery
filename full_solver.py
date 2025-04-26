@@ -18,7 +18,6 @@ from experimental_compressor_additive import compressor
 from experimental_projector_simp import projector
 from baseline_solver import baseline_solver
 import json
-from warm_start_lp import warm_start_lp
 class full_solver:
 
     def __init__(self,full_input_dict,jy_opt,output_file_path):
