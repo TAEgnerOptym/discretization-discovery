@@ -2,7 +2,7 @@ from call_and_run_code import call_and_run_code
 
 import argparse
 
-default_input='data/jy_c103.txt'
+default_input='data/jy_c104.txt'
 default_my_json='sample_json_input_description.json'
 default_out_file_path='sample_json_output.json'
 default_option_path='my_params.json'

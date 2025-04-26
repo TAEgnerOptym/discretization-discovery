@@ -20,6 +20,7 @@ from jy_active_set_lp import jy_active_set_lp
 from jy_active_set_lp import jy_active_set_lp_primal_dual
 from warm_start_lp import warm_start_lp
 from warm_start_lp import forbidden_variables_loop
+from warm_start_lp import forbidden_variables_loop_dual
 
 class lower_bound_LP_milp:
 
@@ -923,7 +924,7 @@ class lower_bound_LP_milp:
 
         self.times_lp_times['pre_XP_lp_2_pt2']=time.time()-t2
         
-        if 1>0:
+        if 1<0:
             start_time = time.time()
 
             lp_prob.solve()
@@ -942,7 +943,8 @@ class lower_bound_LP_milp:
             print('len(self.actions_ignore)')
             print(len(self.actions_ignore))
             print('--')
-            lp_prob,time_lp_1=forbidden_variables_loop(lp_prob,self.var_dict,self.actions_ignore)
+            #lp_prob,time_lp_1=forbidden_variables_loop(lp_prob,self.var_dict,self.actions_ignore)
+            lp_prob,time_lp_1=forbidden_variables_loop_dual(lp_prob,self.var_dict,self.actions_ignore)
             self.lp_time=time_lp_1
         self.times_lp_times['lp_time']=self.lp_time
         t3=time.time()
