@@ -927,7 +927,7 @@ class lower_bound_LP_milp:
             print(len(self.vars_names_ignore))
             print('len(self.var_dict)')
             print(len(self.var_dict))
-            lp_prob,time_lp_1,time_lp_2=warm_start_lp(lp_prob,self.var_dict,self.vars_names_ignore)
+            lp_prob,time_lp_1,time_lp_2=warm_start_lp(lp_prob,self.var_dict,self.actions_ignore)
             self.lp_time=time_lp_1+time_lp_2
             print('time_lp_1:'+str(time_lp_1)+"  time_lp_2 "+str(time_lp_2))
             input('--')
