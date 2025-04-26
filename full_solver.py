@@ -18,6 +18,7 @@ from experimental_compressor_additive import compressor
 from experimental_projector_simp import projector
 from baseline_solver import baseline_solver
 import json
+from warm_start_lp import warm_start_lp
 class full_solver:
 
     def __init__(self,full_input_dict,jy_opt,output_file_path):
@@ -28,6 +29,7 @@ class full_solver:
         self.full_input_dict=full_input_dict
         #self.all_delta:  list of the ids of all delta terms 
         self.all_delta=full_input_dict['allDelta']
+        self.all_actions_not_source_sink_connected=full_input_dict['all_actions_not_source_sink_connected']
         #self.all_graph_names:  names of all of the graphs
         self.all_graph_names=full_input_dict['allGraphNames']
         #graph_name_2_nodes:  given a graph_name gives  you the nodes  names
@@ -184,6 +186,7 @@ class full_solver:
         tot_proj_lp_time=0
         tot_comp_lp_time=0
         
+        self.actions_ignore=self.all_actions_not_source_sink_connected
 
         while iter<self.jy_opt['max_iterations_loop_compress_project']:
             self.time_list_outer=dict()
@@ -195,6 +198,7 @@ class full_solver:
             t1=time.time()
             self.my_lower_bound_LP=lower_bound_LP_milp(self,self.graph_node_2_agg_node,False,False)
             self.time_list_outer['part0.5']=time.time()-t1
+            self.actions_ignore=self.my_lower_bound_LP.new_actions_ignore.copy()
             t1=time.time()
             lblp_time=self.my_lower_bound_LP.lp_time
             new_lp_value=self.my_lower_bound_LP.lp_objective

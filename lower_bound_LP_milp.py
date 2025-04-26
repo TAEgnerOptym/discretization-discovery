@@ -18,6 +18,8 @@ import sys
 sys.path.append("exper_ideas")
 from jy_active_set_lp import jy_active_set_lp
 from jy_active_set_lp import jy_active_set_lp_primal_dual
+from warm_start_lp import warm_start_lp
+
 class lower_bound_LP_milp:
 
 
@@ -25,9 +27,13 @@ class lower_bound_LP_milp:
         t1=time.time()
 
         self.times_lp_times=dict()
-
         self.full_prob=full_prob
         full_input_dict=full_prob.full_input_dict
+        self.actions_ignore=full_prob.actions_ignore
+        self.dict_2_action_ignore=defaultdict(int)
+        self.vars_names_ignore=self.actions_ignore.copy()
+        #self.action_var_names_keep=set(self.all_actions)-set(full_prob.actions_ignore)
+
         self.graph_node_2_agg_node=graph_node_2_agg_node
         self.all_delta=full_input_dict['allDelta']
         #self.all_graph_names:  names of all of the graphs
@@ -235,6 +241,7 @@ class lower_bound_LP_milp:
             my_x_typr='Continuous'
         for var_name in self.all_non_null_action:
             self.dict_var_name_2_obj[var_name]=self.action_2_cost[var_name]
+        #for 
         if do_ilp==True or use_psi==False:
             for var_name in self.all_non_null_action:
                 self.dict_var_name_2_is_binary[var_name]=1
@@ -247,6 +254,8 @@ class lower_bound_LP_milp:
                 g=tup_fg[1]
                 var_name='EDGE_h='+h+'_f='+f+'_g='+g
                 self.dict_var_name_2_obj[var_name]=0
+        
+        all_new_entries_ignore=[]
         for h in self.graph_names:
             for q in self.h_q_2_q_id[h]:
                 # Precompute the prefix for this combination of h and q.
@@ -255,6 +264,9 @@ class lower_bound_LP_milp:
                 new_entries = {prefix + p: 0 for p in q}
                 # Update the main dictionary in one operation.
                 self.dict_var_name_2_obj.update(new_entries)
+                new_entries_ignore = list(prefix + p for p in q if p in self.vars_names_ignore)
+                all_new_entries_ignore=all_new_entries_ignore+new_entries_ignore
+        self.vars_names_ignore=self.vars_names_ignore+all_new_entries_ignore
 
 
     def OLD_help_construct_LB_make_vars(self):
@@ -903,11 +915,22 @@ class lower_bound_LP_milp:
 
         self.times_lp_times['pre_XP_lp_2_pt2']=time.time()-t2
         
-        start_time = time.time()
-        lp_prob.solve()
-        end_time = time.time()
+        if 1>0:
+            start_time = time.time()
 
-        self.lp_time = end_time - start_time
+            lp_prob.solve()
+            end_time = time.time()
+            self.lp_time = end_time - start_time
+
+        else: #lp_prob, var_dict, zero_names
+            print('len(self.vars_names_ignore)')
+            print(len(self.vars_names_ignore))
+            print('len(self.var_dict)')
+            print(len(self.var_dict))
+            lp_prob,time_lp_1,time_lp_2=warm_start_lp(lp_prob,self.var_dict,self.vars_names_ignore)
+            self.lp_time=time_lp_1+time_lp_2
+            print('time_lp_1:'+str(time_lp_1)+"  time_lp_2 "+str(time_lp_2))
+            input('--')
         self.times_lp_times['lp_time']=self.lp_time
         t3=time.time()
         self.lp_prob = lp_prob
@@ -942,6 +965,15 @@ class lower_bound_LP_milp:
             duals = lp_prob.getDuals(cons)
             # 3) Build your dict in a single Python loop
             self.lp_dual_solution = {con.name: d for con, d in zip(cons, duals)}
+        self.new_actions_ignore=[]#self.full_prob.all_actions_not_source_sink_connected.copy()
+        
+        for my_act in self.full_prob.all_actions_not_source_sink_connected:
+            if self.lp_primal_solution[my_act]==0:
+                self.new_actions_ignore.append(my_act)
+        print('len(self.new_actions_ignore)')
+        print(len(self.new_actions_ignore))
+        print('len(self.full_prob.all_actions_not_source_sink_connected)')
+        print(len(self.full_prob.all_actions_not_source_sink_connected))
         if self.lp_status == 'Infeasible':
             input('HOLD')
         self.times_lp_times['post_XLP_5']=time.time()-t3

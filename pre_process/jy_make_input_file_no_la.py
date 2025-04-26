@@ -126,7 +126,7 @@ class jy_make_input_file_no_la:
             self.deltaCon2Contrib[tup_time_lb]=1
             self.deltaCon2Contrib[tup_cap_ub]=-1
             self.deltaCon2Contrib[tup_cap_lb]=1
-
+        self.all_actions_not_source_sink_connected=[]
         for uv in self.all_uv_edges:
             u=uv[0]
             v=uv[1]
@@ -163,6 +163,7 @@ class jy_make_input_file_no_la:
                 time_name_u='delta_timeRem_'+str(u)
                 dem_name_v='delta_capRem_'+str(v)
                 time_name_v='delta_timeRem_'+str(v)
+                self.all_actions_not_source_sink_connected.append(new_action)
 
                 tup_time_action=str(tuple([new_action,name_uv_time]))
                 tup_dem_action=str(tuple([new_action,name_uv_cap]))
@@ -191,6 +192,7 @@ class jy_make_input_file_no_la:
 
         self.out_dict['deltaCon2Contrib']=self.deltaCon2Contrib
         self.out_dict['actionCon2Contrib']=self.actionCon2Contrib
+        self.out_dict['all_actions_not_source_sink_connected']=self.all_actions_not_source_sink_connected
     def make_exog_name_RHS(self):
         self.allExogNames=[]
         self.exogName2Rhs=dict()
