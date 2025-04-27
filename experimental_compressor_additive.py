@@ -14,6 +14,7 @@ from scipy.sparse import csr_matrix
 import pulp
 from scipy.cluster.hierarchy import linkage
 import xpress as xp
+from warm_start_lp import warm_start_lp_using_class
 
 
 class compressor:
@@ -25,7 +26,8 @@ class compressor:
         self.graph_node_2_agg_node=self.MF.graph_node_2_agg_node
         self.myLBObj=self.MF.my_lower_bound_LP
         self.graph_names=self.MF.graph_names
-        
+        self.actions_ignore=self.MF.actions_ignore
+
         #input('about to resolve')
         #self.myLBObj.lp_prob.solve()
         #input('done resolve')
@@ -301,12 +303,18 @@ class compressor:
         #('starting')
         self.time_compressor['pre_XLP']=time.time()-t2
 
-        start_time = time.time()
-        lp_prob.solve()
-        end_time = time.time()
+        if self.MF.jy_opt['use_julians_custom_lp_solver']<0.5:
+            start_time = time.time()
+
+            lp_prob.solve()
+            end_time = time.time()
+            self.lp_time = end_time - start_time
+        else: #lp_prob, var_dict, zero_names
+            lp_prob,time_lp_1=warm_start_lp_using_class(lp_prob,var_dict,self.MF.all_actions_not_source_sink_connected,self.actions_ignore)
+            self.lp_time=time_lp_1
         #input('stopping')
 
-        self.lp_time = end_time - start_time
+        #self.lp_time = end_time - start_time
         self.time_compressor['lp_time']=self.lp_time
         t3=time.time()
         self.lp_prob = lp_prob

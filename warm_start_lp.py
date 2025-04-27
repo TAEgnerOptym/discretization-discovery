@@ -1,6 +1,7 @@
 import xpress as xp
 import time
 import numpy as np
+from  jy_fast_lp import jy_fast_lp
 def warm_start_lp(lp_prob, var_dict, zero_names, flags='d'):
     """
     Warm‐start an LP by first fixing a subset of vars to zero,
@@ -356,3 +357,9 @@ def forbidden_variables_loop_dual(lp_prob, var_dict, forbidden_var_names, K=20, 
         print(total_solve_time)
         input('done debug')
     return lp_prob, total_solve_time
+
+
+def warm_start_lp_using_class(lp_prob, var_dict,all_possible_forbidden_names,cur_forbidden_name):
+
+    my_jy_lp_fast=jy_fast_lp(lp_prob, var_dict,all_possible_forbidden_names,cur_forbidden_name)
+    return [my_jy_lp_fast.lp_prob,my_jy_lp_fast.tot_lp_time]

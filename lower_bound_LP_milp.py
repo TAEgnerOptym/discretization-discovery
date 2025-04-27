@@ -21,7 +21,7 @@ from jy_active_set_lp import jy_active_set_lp_primal_dual
 from warm_start_lp import warm_start_lp
 from warm_start_lp import forbidden_variables_loop
 from warm_start_lp import forbidden_variables_loop_dual
-
+from warm_start_lp import warm_start_lp_using_class
 class lower_bound_LP_milp:
 
 
@@ -32,6 +32,10 @@ class lower_bound_LP_milp:
         self.full_prob=full_prob
         full_input_dict=full_prob.full_input_dict
         self.actions_ignore=full_prob.actions_ignore
+
+        #print('self.actions_ignore=')
+        #print(self.actions_ignore)
+        #input('hi')
         self.dict_2_action_ignore=defaultdict(int)
         self.vars_names_ignore=self.actions_ignore.copy()
         #self.action_var_names_keep=set(self.all_actions)-set(full_prob.actions_ignore)
@@ -924,7 +928,7 @@ class lower_bound_LP_milp:
 
         self.times_lp_times['pre_XP_lp_2_pt2']=time.time()-t2
         
-        if self.full_prob.jy_opt['use_julians_custom_lp_solver']>1:
+        if self.full_prob.jy_opt['use_julians_custom_lp_solver']<0.5:
             start_time = time.time()
 
             lp_prob.solve()
@@ -944,7 +948,8 @@ class lower_bound_LP_milp:
             print(len(self.actions_ignore))
             print('--')
             #lp_prob,time_lp_1=forbidden_variables_loop(lp_prob,self.var_dict,self.actions_ignore)
-            lp_prob,time_lp_1=forbidden_variables_loop_dual(lp_prob,self.var_dict,self.actions_ignore)
+            #lp_prob,time_lp_1=forbidden_variables_loop_dual(lp_prob,self.var_dict,self.actions_ignore)
+            lp_prob,time_lp_1=warm_start_lp_using_class(lp_prob,self.var_dict,self.full_prob.all_actions_not_source_sink_connected,self.actions_ignore)
             self.lp_time=time_lp_1
         self.times_lp_times['lp_time']=self.lp_time
         t3=time.time()
@@ -985,10 +990,10 @@ class lower_bound_LP_milp:
         for my_act in self.full_prob.all_actions_not_source_sink_connected:
             if self.lp_primal_solution[my_act]==0:
                 self.new_actions_ignore.append(my_act)
-        print('len(self.new_actions_ignore)')
-        print(len(self.new_actions_ignore))
-        print('len(self.full_prob.all_actions_not_source_sink_connected)')
-        print(len(self.full_prob.all_actions_not_source_sink_connected))
+        #print('len(self.new_actions_ignore)')
+        #print(len(self.new_actions_ignore))
+        #print('len(self.full_prob.all_actions_not_source_sink_connected)')
+        #print(len(self.full_prob.all_actions_not_source_sink_connected))
         if self.lp_status == 'Infeasible':
             input('HOLD')
         self.times_lp_times['post_XLP_5']=time.time()-t3
