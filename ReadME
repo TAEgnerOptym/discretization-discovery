@@ -51,7 +51,7 @@ my_params['num_NG']=4 #number of ng-neighbors to use
 my_params['use_classic_compress']=0 #set to one to do classic compression
 
 my_params['in_demo_mode']=0 #set to one in order to  have pause statemnetns prior to start of run and prior to calling ilp and baesline
-
+my_params['do_ilp']=1# set ot one to do ILP, 0 otherwise
 At every iteration  we produce the state of the code so that you can keep track currently  it looks as follows.  I put description after
 
 ITER FINISHE:  40 #iteration number 
@@ -97,3 +97,4 @@ self.history_dict['final_graph_node_2_agg_node'] #mapping of each graph, node to
 self.history_dict['BASELINE_ILP_sol_obj']# baseline milp solution objective
 self.history_dict['BASELINE_milp_solution'] #baseline MILP solution
 self.history_dict['BASELINE_milp_time'] #baseline MILP solve time
+#

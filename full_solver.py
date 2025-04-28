@@ -145,16 +145,18 @@ class full_solver:
         return [compress_lp_time,compress_lp_val]
     
     def prepare_ILP_solution(self):
-        my_ilp_sol=self.my_lower_bound_ILP.milp_solution
-        out_sol=dict()
-        for my_delta in self.all_delta:
-            out_sol[my_delta]=my_ilp_sol[my_delta]
-        for my_act in self.all_actions:
-            out_sol[my_act]=my_ilp_sol[my_act]
-        for my_prim in self.all_primitive_vars:
-            out_sol[my_prim]=my_ilp_sol[my_prim]
+        
+        if self.jy_opt['do_ilp']>0.5:
+            my_ilp_sol=self.my_lower_bound_ILP.milp_solution
+            out_sol=dict()
+            for my_delta in self.all_delta:
+                out_sol[my_delta]=my_ilp_sol[my_delta]
+            for my_act in self.all_actions:
+                out_sol[my_act]=my_ilp_sol[my_act]
+            for my_prim in self.all_primitive_vars:
+                out_sol[my_prim]=my_ilp_sol[my_prim]
 
-        self.history_dict['output_ilp_solution']=out_sol
+            self.history_dict['output_ilp_solution']=out_sol
 
         with open(self.output_file_path, 'w') as file:
             json.dump(self.history_dict, file)
@@ -353,42 +355,45 @@ class full_solver:
         print('sum(self.history_dict[sum_lp_time_project].values())')
         print(np.nansum(np.array(self.history_dict['sum_lp_time_project'])))
         print('TOT_time_component_lps')
-        print('starting ILP')
         self.history_dict['final_sizes']=self.count_size()
         self.history_dict['final_graph_node_2_agg_node']=self.graph_node_2_agg_node
-        self.my_lower_bound_ILP=lower_bound_LP_milp(self,self.graph_node_2_agg_node,True,True)
-        new_Ilp_value=self.my_lower_bound_ILP.milp_solution_objective_value
-        self.history_dict['ilp_objective']=new_Ilp_value
-        self.history_dict['ilp_time']=self.my_lower_bound_ILP.milp_time
-        
-        print('final solution objective')
-        print(new_Ilp_value)
-        if self.jy_opt['run_baseline']==True:
-            print('running baseline')
-            if (self.jy_opt['in_demo_mode']==True):
-                input('Press enter about to start the running of the baseline ILP')
-            my_base=baseline_solver(self,True,True)
-            self.history_dict['ILP_sol_obj']=my_base.milp_solution_objective_value
-            self.history_dict['milp_solution']=my_base.milp_solution
-            self.history_dict['milp_time']=my_base.milp_time
-        self.prepare_ILP_solution()
+        if self.jy_opt['do_ilp']>0.5:
+            print('starting ILP')
 
-        print('--ALL DONE-')
-        print('self.my_lower_bound_ILP.milp_time')
-        print(self.my_lower_bound_ILP.milp_time)
-        print('self.my_lower_bound_ILP')
-        print(new_Ilp_value)
-        print('sum(self.history_dict[lp_time_LB])')
-        print(sum(self.history_dict['lp_time_LB']))
-        print('nana  sum lp_time_compress')
-        print(np.nansum(np.array(self.history_dict['lp_time_compress'])))
-        print('sum(self.history_dict[sum_lp_time_project].values())')
-        print(np.nansum(np.array(self.history_dict['sum_lp_time_project'])))
-        print('TOT_time_component_lps')
-        print(self.TOT_time_component_lps)
+            self.my_lower_bound_ILP=lower_bound_LP_milp(self,self.graph_node_2_agg_node,True,True)
+            new_Ilp_value=self.my_lower_bound_ILP.milp_solution_objective_value
+            self.history_dict['ilp_objective']=new_Ilp_value
+            self.history_dict['ilp_time']=self.my_lower_bound_ILP.milp_time
+            
+            print('final solution objective')
+            print(new_Ilp_value)
+            if self.jy_opt['run_baseline']==True:
+                print('running baseline')
+                if (self.jy_opt['in_demo_mode']==True):
+                    input('Press enter about to start the running of the baseline ILP')
+                my_base=baseline_solver(self,True,True)
+                self.history_dict['ILP_sol_obj']=my_base.milp_solution_objective_value
+                self.history_dict['milp_solution']=my_base.milp_solution
+                self.history_dict['milp_time']=my_base.milp_time
+
+            print('--ALL DONE-')
+            print('self.my_lower_bound_ILP.milp_time')
+            print(self.my_lower_bound_ILP.milp_time)
+            print('self.my_lower_bound_ILP')
+            print(new_Ilp_value)
+            print('sum(self.history_dict[lp_time_LB])')
+            print(sum(self.history_dict['lp_time_LB']))
+            print('nana  sum lp_time_compress')
+            print(np.nansum(np.array(self.history_dict['lp_time_compress'])))
+            print('sum(self.history_dict[sum_lp_time_project].values())')
+            print(np.nansum(np.array(self.history_dict['sum_lp_time_project'])))
+            print('TOT_time_component_lps')
+            print(self.TOT_time_component_lps)
         if self.jy_opt['run_baseline']==True:
 
             print('my_base.milp_time')
             print(my_base.milp_time)
+            self.history_dict['my_base_milp_time']=my_base.milp_time
+            self.history_dict['my_base_milp_solution']=my_base.milp_solution
         
-        
+        self.prepare_ILP_solution()

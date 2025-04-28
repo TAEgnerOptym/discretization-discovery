@@ -36,4 +36,5 @@ def grab_default_params():
 	my_params['compresss_solver']=1 #default solver 
 	my_params['proj_solver']=1 #default solver 
 	my_params['use_julians_custom_lp_solver']=0
+	my_params['do_ilp']=1# do ilp 
 	return my_params

@@ -100,6 +100,8 @@ class jy_fast_lp:
             print("No forbidden variables found in model. this must be a typo")
             input('---')
         iter=0
+        if self.verbose==True:
+            input('about to start the internal lp solver')
         #self.verbose=True
         while True:
             iter=iter+1
