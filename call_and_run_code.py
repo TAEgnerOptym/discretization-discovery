@@ -9,7 +9,6 @@ from grab_params import grab_params
 import json
 import ast
 
-import ast
 
 def call_and_run_code(input_file_path,my_params_path,my_json_file_path,my_output_path):
 
@@ -31,6 +30,7 @@ def call_and_run_code(input_file_path,my_params_path,my_json_file_path,my_output
     print('DONE Loading file file and adjusting for domian')
 
     print('Calling the solver')
+
 
 
     my_solver=full_solver(D,my_params,my_output_path)

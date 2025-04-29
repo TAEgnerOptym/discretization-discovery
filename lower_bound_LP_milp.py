@@ -116,16 +116,23 @@ class lower_bound_LP_milp:
             print(time_percentage_LBLP)
             print('total')
             print(total)
+            print('----')
+
+            print('----')
+            print('----')
+
             for key, val in sorted(self.times_lp_times.items(),
                        key=lambda kv: kv[1],
                        reverse=True):
                 print(f"{key}: {val}")
+            print('----')
+            print('----')
             print('percentages')
-            for key, val in sorted(self.times_lp_times.items(),
+            for key, val in sorted(time_percentage_LBLP.items(),
                        key=lambda kv: kv[1],
                        reverse=True):
                 print(f"{key}: {val}")
-            #input('look here')
+            input('look here')
     def make_agg_node_2_nodes(self):
         self.agg_node_2_nodes = {
             h: {
@@ -194,53 +201,61 @@ class lower_bound_LP_milp:
         self.h_fg_2_q=dict() #given h,fg gives the equvelence_class
         self.h_q_2_q_id=dict()
         for h in self.graph_names:
-            all_fg_edges=self.h_fg_2_ij[h]
-            self.h_fg_2_q[h]=dict()
-            self.h_q_2_fg[h]=dict()
-            self.h_q_2_q_id[h]=dict()
-            count=0
-            for  tup_fg in all_fg_edges:
-                my_set=set([])
-                #print('-----')
-                #print('len(self.h_fg_2_ij[h][tup_fg])')
-                #print(len(self.h_fg_2_ij[h][tup_fg]))
-                #input('----')
-                for tup_ij in  self.h_fg_2_ij[h][tup_fg]:
-                    #print('self.hij_2_P[h][tup_ij]')
-                    #print(self.hij_2_P[h][tup_ij])
-                    #print('len(self.hij_2_P[h][tup_ij]')
-                    #print(len(self.hij_2_P[h][tup_ij]))
-                    for p in self.hij_2_P[h][tup_ij]:
-                        my_set.add(p)
-                #print('list(my_set)')
-                #print(list(my_set))
-                #print('before')
-                my_tup_pq=tuple(sorted(list(my_set)))
-                #print('my_tup_pq')
-                #print(my_tup_pq)
-                #print('afer')
-                #input('---')
-                self.h_fg_2_q[h][tup_fg]=my_tup_pq
-                
-                if my_tup_pq not in self.h_q_2_fg[h]:
-                    self.h_q_2_fg[h][my_tup_pq]=set([])
-                    self.h_q_2_q_id[h][my_tup_pq]=tuple([h,count])
-                    count=count+1
-                self.h_q_2_fg[h][my_tup_pq].add(tup_fg)
-                #if len(self.h_q_2_fg[h][my_tup_pq])>1 and len(my_tup_pq)>1:
-                #    print('len(self.h_q_2_fg[h][my_tup_pq])')
-                #    print(len(self.h_q_2_fg[h][my_tup_pq]))
-                #    print('len(my_tup_pq)')
-                #    print(len(my_tup_pq))
-                #    print('len(my_tup_pq)')
-                #    input('cool this is happy')
+            if 1<0:
+                all_fg_edges=self.h_fg_2_ij[h]
+                self.h_fg_2_q[h]=dict()
+                self.h_q_2_fg[h]=dict()
+                self.h_q_2_q_id[h]=dict()
+                count=0
+                for  tup_fg in all_fg_edges:
+                    my_set=set([])
+                    for tup_ij in  self.h_fg_2_ij[h][tup_fg]:
+                        for p in self.hij_2_P[h][tup_ij]:
+                            my_set.add(p)
+                    my_tup_pq=tuple(sorted(list(my_set)))
+                    self.h_fg_2_q[h][tup_fg]=my_tup_pq
+                    
+                    if my_tup_pq not in self.h_q_2_fg[h]:
+                        self.h_q_2_fg[h][my_tup_pq]=set([])
+                        self.h_q_2_q_id[h][my_tup_pq]=tuple([h,count])
+                        count=count+1
+                    self.h_q_2_fg[h][my_tup_pq].add(tup_fg)
+            else:
+                all_fg_edges = self.h_fg_2_ij[h]
+                self.h_fg_2_q[h] = dict()
+                self.h_q_2_fg[h] = dict()
+                self.h_q_2_q_id[h] = dict()
+                count = 0
+
+                for tup_fg in all_fg_edges:
+                    # Collect all sets of p-values quickly
+                    sets_to_union = (self.hij_2_P[h][tup_ij] for tup_ij in self.h_fg_2_ij[h][tup_fg])
+                    # Use set union in bulk
+                    my_set = set().union(*sets_to_union)
+                    
+                    my_tup_pq = tuple(sorted(my_set))
+                    self.h_fg_2_q[h][tup_fg] = my_tup_pq
+
+                    if my_tup_pq not in self.h_q_2_fg[h]:
+                        self.h_q_2_fg[h][my_tup_pq] = set()
+                        self.h_q_2_q_id[h][my_tup_pq] = (h, count)
+                        count += 1
+                    self.h_q_2_fg[h][my_tup_pq].add(tup_fg)
+
     def make_mappings(self):
-        
+        t1=time.time()
         self.make_agg_node_2_nodes()
+        self.times_lp_times['make_mappings_1']=time.time()-t1
+        t1=time.time()
         self.make_edge_fg_2_ij_reverse()
+        self.times_lp_times['make_mappings_2']=time.time()-t1
+        t1=time.time()
         self.make_h_fg_2_p_reverse()
+        self.times_lp_times['make_mappings_3']=time.time()-t1
+
 
     def help_construct_LB_make_vars(self):
+        t1=time.time()
         use_psi=self.OPT_use_psi
         do_ilp=self.OPT_do_ilp
         self.dict_var_name_2_is_binary=defaultdict(int)
@@ -249,17 +264,25 @@ class lower_bound_LP_milp:
             for var_name in self.all_primitive_vars:
                 self.dict_var_name_2_obj[var_name]=0
                 self.dict_var_name_2_is_binary[var_name]=1
+        self.times_lp_times['help_construct_LB_make_vars_1']=time.time()-t1
+        t1=time.time()
         my_x_typr='Binary'
         if do_ilp==False or use_psi==True:
             my_x_typr='Continuous'
         for var_name in self.all_non_null_action:
             self.dict_var_name_2_obj[var_name]=self.action_2_cost[var_name]
+        self.times_lp_times['help_construct_LB_make_vars_2']=time.time()-t1
+        t1=time.time()
         #for 
         if do_ilp==True or use_psi==False:
             for var_name in self.all_non_null_action:
                 self.dict_var_name_2_is_binary[var_name]=1
+        self.times_lp_times['help_construct_LB_make_vars_3']=time.time()-t1
+        t1=time.time()
         for var_name in self.all_delta:
             self.dict_var_name_2_obj[var_name]=0
+        self.times_lp_times['help_construct_LB_make_vars_4']=time.time()-t1
+        t1=time.time()
         for h in self.graph_names:
             for tup_fg in self.h_fg_2_ij[h]:
                 
@@ -267,7 +290,8 @@ class lower_bound_LP_milp:
                 g=tup_fg[1]
                 var_name='EDGE_h='+h+'_f='+f+'_g='+g
                 self.dict_var_name_2_obj[var_name]=0
-        
+        self.times_lp_times['help_construct_LB_make_vars_5']=time.time()-t1
+        t1=time.time()
         all_new_entries_ignore=[]
         for h in self.graph_names:
             for q in self.h_q_2_q_id[h]:
@@ -279,8 +303,10 @@ class lower_bound_LP_milp:
                 self.dict_var_name_2_obj.update(new_entries)
                 new_entries_ignore = list(prefix + p for p in q if p in self.vars_names_ignore)
                 all_new_entries_ignore=all_new_entries_ignore+new_entries_ignore
+        self.times_lp_times['help_construct_LB_make_vars_6']=time.time()-t1
+        t1=time.time()
         self.vars_names_ignore=self.vars_names_ignore+all_new_entries_ignore
-
+        self.times_lp_times['help_construct_LB_make_vars_7']=time.time()-t1
 
     def OLD_help_construct_LB_make_vars(self):
         use_psi=self.OPT_use_psi
@@ -486,10 +512,10 @@ class lower_bound_LP_milp:
     def construct_LB_or_ILP(self,use_psi,do_ilp):
         self.OPT_use_psi=use_psi
         self.OPT_do_ilp=do_ilp
-        t1=time.time()
+        #t1=time.time()
         self.make_mappings()
-        self.times_lp_times['make_mappings']=time.time()-t1
-        t1=time.time()
+        #self.times_lp_times['make_mappings']=time.time()-t1
+        #t1=time.time()
 
 
         self.pulp_all_vars=set()
@@ -500,10 +526,10 @@ class lower_bound_LP_milp:
         self.dict_con_name_2_LB=dict()
         self.dict_con_name_2_eq=dict()
         self.help_construct_LB_make_vars()
-        self.times_lp_times['help_construct_LB_make_vars']=time.time()-t1
-        t1=time.time()
+        #self.times_lp_times['help_construct_LB_make_vars']=time.time()-t1
+        #t1=time.time()
         self.help_construct_UB_LB_con()
-        self.times_lp_times['help_construct_UB_LB_con']=time.time()-t1
+        #self.times_lp_times['help_construct_UB_LB_con']=time.time()-t1
         t1=time.time()
         self.construct_constraints_exog()
         self.times_lp_times['construct_constraints_exog']=time.time()-t1
