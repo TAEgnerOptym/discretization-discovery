@@ -2,7 +2,6 @@ from call_and_run_code import call_and_run_code
 import os
 all_files=[]
 
-
 all_files.append("jy_r101.txt")
 all_files.append("jy_r102.txt")
 all_files.append("jy_r103.txt")
@@ -36,6 +35,8 @@ all_files.append("jy_rc105.txt")
 all_files.append("jy_rc106.txt")
 all_files.append("jy_rc107.txt")
 all_files.append("jy_rc108.txt")
+
+
 
 
 all_files.append("jy_rc201.txt")
@@ -72,7 +73,7 @@ all_files.append("jy_c208.txt")
 #all_files.append("jy_c109.txt")
 
 in_fold="data/"
-out_fold="output_no_ilp_50_time_window_1_empty_init/out_"
+out_fold="output_no_ilp_50_time_window_01_empty_init/out_"
 my_json_input_path="mid_jnk"
 param_file_path="my_params_50.json"
 for my_file in all_files:

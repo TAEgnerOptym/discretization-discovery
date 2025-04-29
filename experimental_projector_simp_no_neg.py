@@ -158,9 +158,9 @@ class projector:
 
         for i in self.graph_node_2_agg_node:
             my_var_1_name='Proj_slack_pos_'+str(i)
-            my_var_2_name='Proj_slack_neg_'+str(i)
+            #my_var_2_name='Proj_slack_neg_'+str(i)
             self.dict_PROJ_var_name_2_obj[my_var_1_name]=1
-            self.dict_PROJ_var_name_2_obj[my_var_2_name]=1
+            #self.dict_PROJ_var_name_2_obj[my_var_2_name]=1
             
         for ij in self.non_zero_ij:
             i=str(ij[0])
@@ -183,9 +183,9 @@ class projector:
             self.default_primal_solution[var]=0
         for i in self.graph_node_2_agg_node:
             my_var_1_name='Proj_slack_pos_'+str(i)
-            my_var_2_name='Proj_slack_neg_'+str(i)
+            #my_var_2_name='Proj_slack_neg_'+str(i)
             self.default_primal_solution[my_var_1_name]=100000
-            self.default_primal_solution[my_var_2_name]=100000
+            #self.default_primal_solution[my_var_2_name]=100000
         
         h=self.h
         edges_fg=self.my_lp.h_fg_2_ij[h].keys()
@@ -249,17 +249,19 @@ class projector:
 
         for i in self.non_source_sink:
             
-            con_name='con_i_slack_pos_'+i
+            con_name_1='con_i_slack_pos_'+i
+            #con_name_2='con_i_slack_neg_'+i
 
-            self.dict_PROJ_eq_con_name_2_rhs[con_name]=0
+            self.dict_PROJ_ineq_con_name_2_rhs[con_name_1]=-self.MF.jy_opt['epsilon']
+            #self.dict_PROJ_ineq_con_name_2_rhs[con_name_2]=-self.MF.jy_opt['epsilon']
 
 
             my_var_1_name='Proj_slack_pos_'+i
-            my_var_2_name='Proj_slack_neg_'+i
+            #my_var_2_name='Proj_slack_neg_'+i
             #my_var_2_name='Proj_slack_pos_'+i
 
-            self.dict_PROG_eq_var_con_lhs[tuple([my_var_1_name,con_name])]=1
-            self.dict_PROG_eq_var_con_lhs[tuple([my_var_2_name,con_name])]=-1
+            self.dict_PROG_ineq_var_con_lhs[tuple([my_var_1_name,con_name_1])]=1
+            #self.dict_PROG_ineq_var_con_lhs[tuple([my_var_2_name,con_name_2])]=1
 
 
         for ij in self.non_zero_ij:
@@ -268,12 +270,18 @@ class projector:
             var_name='Proj_ij_i'+i+'_j=_'+j
             if i!=self.compact_source:
                 con_name_1='con_i_slack_pos_'+i
-                self.dict_PROG_eq_var_con_lhs[tuple([var_name,con_name_1])]=1
+                self.dict_PROG_ineq_var_con_lhs[tuple([var_name,con_name_1])]=1
+                
+                #con_name_1a='con_i_slack_neg_'+i
+                #self.dict_PROG_ineq_var_con_lhs[tuple([var_name,con_name_1a])]=-1
                 
 
             if j!=self.compact_sink:
                 con_name_2='con_i_slack_pos_'+j
-                self.dict_PROG_eq_var_con_lhs[tuple([var_name,con_name_2])]=-1
+                self.dict_PROG_ineq_var_con_lhs[tuple([var_name,con_name_2])]=-1
+
+                #con_name_2a='con_i_slack_neg_'+j
+                #self.dict_PROG_ineq_var_con_lhs[tuple([var_name,con_name_2a])]=1
 
     def check_solution_feasibility(self):
         print('----')
@@ -586,6 +594,7 @@ class projector:
                 i= i.replace("[", "_")
                 i= i.replace("]", "_")
             con_name_1='con_i_slack_pos_'+i
+            #con_name_2='con_i_slack_neg_'+i
             if  con_name_1 not in self.lp_dual_solution:
 
                 print('self.lp_dual_solution.keys()')
@@ -668,7 +677,7 @@ class projector:
                 print('self.agg_node_2_node[self.graph_node_2_agg_node[i]]')
                 print(self.agg_node_2_node[self.graph_node_2_agg_node[i]])
                 input('error not found righ amount of tiems')
-        if self.lp_objective>.01 and len(self.do_split_f)==0:
+        if self.lp_objective>.0001 and len(self.do_split_f)==0:
             print('self.do_split_f')
             print(self.do_split_f)
             print('self.lp_objective')
@@ -711,8 +720,8 @@ class projector:
 
     def quantize_dict_to_index(self,orig_dict, K):
     # 1) round all values to 3dp and get sorted uniques
-        num_digits_round=self.MF.jy_opt['roundingDiscretization_num_digits_keep']
-        levels = sorted({round(v, num_digits_round) for v in orig_dict.values()})
+        num_digits_keep=self.MF.jy_opt['roundingDiscretization_num_digits_keep']
+        levels = sorted({round(v,num_digits_keep ) for v in orig_dict.values()})
 
         # 2) sample up to K uniformly‐spaced levels
         if len(levels) > K:
@@ -741,7 +750,7 @@ class projector:
         # 3) snap each entry to the index of the nearest chosen level
         index_map = {}
         for key, val in orig_dict.items():
-            r = round(val, num_digits_round)
+            r = round(val, num_digits_keep)
             i = bisect.bisect_left(chosen, r)
 
             # collect candidate indices

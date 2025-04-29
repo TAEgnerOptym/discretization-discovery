@@ -875,6 +875,12 @@ class lower_bound_LP_milp:
         if self.lp_status=='Infeasible':
             input('HOLD')
     def make_xpress_LP(self):
+
+       # if 'exog_min_veh_' not in self.dict_con_name_2_LB:
+       #     input('error ')
+       # else:
+       #     print(self.dict_con_name_2_LB['exog_min_veh_'])
+       #     input('--')
         #/Users/julian/Documents/FICO\ Xpress\ Config/xpauth.xpr
         #xp.init('C:/xpressmp/bin/xpauth.xpr')
         xp.init(self.full_prob.jy_opt['xpress_file_loc'])

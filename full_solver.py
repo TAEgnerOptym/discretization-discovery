@@ -16,7 +16,8 @@ import pulp
 from experimental_compressor_additive import compressor
 #from projector import projector
 #from experimental_projector_simp import projector
-from experimental_projector_simp_eq import projector
+#from experimental_projector_simp_eq import projector
+from experimental_projector_simp_no_neg import projector
 from baseline_solver import baseline_solver
 import json
 class full_solver:
@@ -112,7 +113,7 @@ class full_solver:
             time_component_lps[h]=my_proj.lp_time
             self.TOT_time_component_lps[h]=self.TOT_time_component_lps[h]+my_proj.lp_time
             count_prior_split[h]=len(set(self.graph_node_2_agg_node[h].values()))
-            if objective>self.jy_opt['epsilon']:
+            if objective>0.01:#%self.jy_opt['epsilon']:
                 self.graph_node_2_agg_node[h]=my_proj.NEW_node_2_agg_node
                 did_split=True
             count_after_split[h]=len(set(self.graph_node_2_agg_node[h].values()))
