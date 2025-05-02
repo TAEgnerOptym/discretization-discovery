@@ -58,7 +58,9 @@ class jy_fast_lp:
         self.call_core_alg()
         if debug_on==True:
             self.backup_lp()
-        #input('done call')
+        
+        if verbose==True:
+            input('done call')
 
 
     def setup_alg(self):
@@ -146,6 +148,8 @@ class jy_fast_lp:
         if self.verbose==True:
             print('self.hist')
             print(self.hist)
+            print('sum(self.hist[time_iter])')
+            print(sum(self.hist['time_iter']))
             input('paused')
             
 
@@ -185,7 +189,12 @@ class jy_fast_lp:
 
     def add_2_forbidden(self,selected_remove_vars):
         lp_prob=self.lp_prob
+        selected_remove_vars=set(selected_remove_vars)-self.current_forbidden_vars
+        selected_remove_vars=list(selected_remove_vars)
         lp_prob.chgbounds(selected_remove_vars, ['U'] * len(selected_remove_vars), [0] * len(selected_remove_vars))
+        if self.verbose==True:
+            print('removing this many:  ' +str(len(selected_remove_vars)))
+            print('--')
         for var in selected_remove_vars:
             self.forbidden_var_names.add(var.name)
             self.current_forbidden_vars.add(var)

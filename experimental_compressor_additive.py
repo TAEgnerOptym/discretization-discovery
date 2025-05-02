@@ -310,7 +310,10 @@ class compressor:
             end_time = time.time()
             self.lp_time = end_time - start_time
         else: #lp_prob, var_dict, zero_names
+            print('STARTING WARM  LP COMPRESSOR ')
             lp_prob,time_lp_1=warm_start_lp_using_class(lp_prob,var_dict,self.MF.all_actions_not_source_sink_connected,self.actions_ignore)
+            print('DONE WARM  LP COMPRESSOR ')
+
             self.lp_time=time_lp_1
         #input('stopping')
 

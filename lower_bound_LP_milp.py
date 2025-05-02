@@ -132,6 +132,8 @@ class lower_bound_LP_milp:
                        key=lambda kv: kv[1],
                        reverse=True):
                 print(f"{key}: {val}")
+            print('self.DEBUG_len')
+            print(self.DEBUG_len)
             input('look here')
     def make_agg_node_2_nodes(self):
         self.agg_node_2_nodes = {
@@ -292,18 +294,26 @@ class lower_bound_LP_milp:
                 self.dict_var_name_2_obj[var_name]=0
         self.times_lp_times['help_construct_LB_make_vars_5']=time.time()-t1
         t1=time.time()
-        all_new_entries_ignore=[]
+        t1 = time.time()
+        all_new_entries_ignore = []
+        vars_names_ignore_set = set(self.vars_names_ignore)  # For O(1) lookups
+        dict_update = {}  # Collect all new entries for one bulk update
+
         for h in self.graph_names:
             for q in self.h_q_2_q_id[h]:
-                # Precompute the prefix for this combination of h and q.
                 prefix = f"fill_PQ_h={h}_q={q}_p="
-                # Build a dictionary for each p in q all at once.
-                new_entries = {prefix + p: 0 for p in q}
-                # Update the main dictionary in one operation.
-                self.dict_var_name_2_obj.update(new_entries)
-                new_entries_ignore = list(prefix + p for p in q if p in self.vars_names_ignore)
-                all_new_entries_ignore=all_new_entries_ignore+new_entries_ignore
-        self.times_lp_times['help_construct_LB_make_vars_6']=time.time()-t1
+                for p in q:
+                    var_name = prefix + p
+                    dict_update[var_name] = 0
+                    if p in vars_names_ignore_set:
+                        all_new_entries_ignore.append(var_name)
+
+        # Single update call
+        self.dict_var_name_2_obj.update(dict_update)
+
+        # Final time record
+        self.times_lp_times['help_construct_LB_make_vars_6'] = time.time() - t1
+
         t1=time.time()
         self.vars_names_ignore=self.vars_names_ignore+all_new_entries_ignore
         self.times_lp_times['help_construct_LB_make_vars_7']=time.time()-t1
@@ -906,6 +916,9 @@ class lower_bound_LP_milp:
         vars_list = [xp.var(name=name, lb=0) for name in dict_var_name_2_obj]
 
         self.times_lp_times['pre_XP_lp_2_pt0']=time.time()-t2
+        #print('BIG LEN(vars_list)')
+        #print(len(vars_list))
+        self.DEBUG_len=len(vars_list)
         t2=time.time()
 
         lp_prob.addVariable(*vars_list)   # ← note the * here!
@@ -968,20 +981,14 @@ class lower_bound_LP_milp:
             self.lp_time = end_time - start_time
 
         else: #lp_prob, var_dict, zero_names
-            print('len(self.vars_names_ignore)')
-            print(len(self.vars_names_ignore))
-            print('len(self.var_dict)')
-            print(len(self.var_dict))
-            #lp_prob,time_lp_1,time_lp_2=warm_start_lp(lp_prob,self.var_dict,self.actions_ignore)
-            #self.lp_time=time_lp_1+time_lp_2
-            #print('time_lp_1:'+str(time_lp_1)+"  time_lp_2 "+str(time_lp_2))
-            #input('--')
-            print('len(self.actions_ignore)')
-            print(len(self.actions_ignore))
-            print('--')
+            
             #lp_prob,time_lp_1=forbidden_variables_loop(lp_prob,self.var_dict,self.actions_ignore)
             #lp_prob,time_lp_1=forbidden_variables_loop_dual(lp_prob,self.var_dict,self.actions_ignore)
+            print('STARTING WARM  LP LOWER ')
+
             lp_prob,time_lp_1=warm_start_lp_using_class(lp_prob,self.var_dict,self.full_prob.all_actions_not_source_sink_connected,self.actions_ignore)
+            print('DONE WARM  LP LOWER ')
+
             self.lp_time=time_lp_1
         self.times_lp_times['lp_time']=self.lp_time
         t3=time.time()

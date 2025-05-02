@@ -16,8 +16,11 @@ import pulp
 from experimental_compressor_additive import compressor
 #from projector import projector
 #from experimental_projector_simp import projector
-#from experimental_projector_simp_eq import projector
-from experimental_projector_simp_no_neg import projector
+from experimental_projector_simp_eq import projector
+#from  import projector
+#from experimental_projector_simp_no_neg import projector
+
+from experimental_projector_simp_no_neg_w_removal import projector
 from baseline_solver import baseline_solver
 import json
 class full_solver:
@@ -107,13 +110,16 @@ class full_solver:
         objective_componentLps=dict()
         time_component_lps=dict()
         for h in self.graph_names:
+            print('Starting SPlit+'+h)
             my_proj=projector(self,h)
+            print('DONE  SPlit+'+h)
+
             objective=my_proj.lp_objective
             objective_componentLps[h]=my_proj.lp_objective
             time_component_lps[h]=my_proj.lp_time
             self.TOT_time_component_lps[h]=self.TOT_time_component_lps[h]+my_proj.lp_time
             count_prior_split[h]=len(set(self.graph_node_2_agg_node[h].values()))
-            if objective>0.01:#%self.jy_opt['epsilon']:
+            if objective>0.00000001:#%self.jy_opt['epsilon']:
                 self.graph_node_2_agg_node[h]=my_proj.NEW_node_2_agg_node
                 did_split=True
             count_after_split[h]=len(set(self.graph_node_2_agg_node[h].values()))
@@ -199,9 +205,12 @@ class full_solver:
 
             prob_sizes_at_start=self.count_size()
             self.time_list_outer['part0']=time.time()-t1
+            print('lower bound computing ')
             t1=time.time()
             self.my_lower_bound_LP=lower_bound_LP_milp(self,self.graph_node_2_agg_node,False,False)
             self.time_list_outer['part0.5']=time.time()-t1
+            print('DONE lower bound computing ')
+
             self.actions_ignore=self.my_lower_bound_LP.new_actions_ignore.copy()
             t1=time.time()
             lblp_time=self.my_lower_bound_LP.lp_time
@@ -230,7 +239,11 @@ class full_solver:
                 #self.count_size()
                 #input('starting compression ')
                 if self.jy_opt['use_classic_compress']<0.5:
+                    print('Staritng COmpression ')
+
                     [compress_lp_time,compress_lp_val]=self.ApplyCompresssion()
+                    print('DOEN Staritng COmpression ')
+
                 else:
                     self.graph_node_2_agg_node=self.my_lower_bound_LP.NAIVE_graph_node_2_agg_node
                 #self.count_size()

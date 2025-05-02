@@ -102,7 +102,17 @@ class dem_graph:
 			#print(MV.dem[u])
 			#print(self.node_list[u])
 			#input('***')
-
+		#print('self.node_list[3]')
+		#print(self.node_list[3])
+		#print('self.node_list[4]')
+		#print(self.node_list[4])
+		#print('self.node_list[5]')
+		#print(self.node_list[5])
+		#print('self.dem_thresh[4]')
+		##print(self.dem_thresh[4])
+		#print('self.dem_thresh[5]')
+		#print(self.dem_thresh[5])
+		#input('--')
 	def __init__(self,my_vrp,dem_thresh):
 		#dem_thresh has the intermediate thresholds to be used
 		self.my_vrp=my_vrp
