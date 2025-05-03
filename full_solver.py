@@ -379,8 +379,9 @@ class full_solver:
 
             self.my_lower_bound_ILP=lower_bound_LP_milp(self,self.graph_node_2_agg_node,True,False)
             new_Ilp_value=self.my_lower_bound_ILP.milp_solution_objective_value
-            self.history_dict['ilp_objective']=new_Ilp_value
-            self.history_dict['ilp_time']=self.my_lower_bound_ILP.milp_time
+            self.history_dict['OUR_ilp_objective']=new_Ilp_value
+            self.history_dict['OUR_MIP_Lower_Bound']=self.my_lower_bound_ILP.MIP_lower_bound
+            self.history_dict['OUR_ilp_time']=self.my_lower_bound_ILP.milp_time
             
             print('final solution objective')
             print(new_Ilp_value)
@@ -389,9 +390,10 @@ class full_solver:
                 if (self.jy_opt['in_demo_mode']==True):
                     input('Press enter about to start the running of the baseline ILP')
                 my_base=baseline_solver(self,True,False)
-                self.history_dict['ILP_sol_obj']=my_base.milp_solution_objective_value
-                self.history_dict['milp_solution']=my_base.milp_solution
-                self.history_dict['milp_time']=my_base.milp_time
+                self.history_dict['BASE_ILP_sol_obj']=my_base.milp_solution_objective_value
+                self.history_dict['BASE_milp_solution']=my_base.milp_solution
+                self.history_dict['BASE_milp_time']=my_base.milp_time
+                self.history_dict['BASE_MIP_lower_bound'] = my_base.MIP_lower_bound#model.ObjBound
 
             print('--ALL DONE-')
             print('self.my_lower_bound_ILP.milp_time')
@@ -410,7 +412,7 @@ class full_solver:
 
             print('my_base.milp_time')
             print(my_base.milp_time)
-            self.history_dict['my_base_milp_time']=my_base.milp_time
-            self.history_dict['my_base_milp_solution']=my_base.milp_solution
-        
+            #self.history_dict['my_base_milp_time']=my_base.milp_time
+            #self.history_dict['my_base_milp_solution']=my_base.milp_solution
+            #self.history_dict['milp_solution_objective_value']=milp_solution_objective_value
         self.prepare_ILP_solution()

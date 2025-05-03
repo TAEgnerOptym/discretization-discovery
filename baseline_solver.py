@@ -244,6 +244,7 @@ class baseline_solver:
                    self.dict_var_name_2_is_binary,self.full_prob.jy_opt['max_ILP_time'])
         self.milp_solution=out_solution['primal_solution']
         self.milp_solution_objective_value=out_solution['objective']
+        self.MIP_lower_bound = out_solution['MIP_lower_bound']#model.ObjBound
         self.BASE_times_lp_times['GUR_time_pre']=out_solution['time_pre']
         self.BASE_times_lp_times['GUR_time_opt']=out_solution['time_opt']
         self.BASE_times_lp_times['GUR_time_post']=out_solution['time_post']

@@ -189,7 +189,7 @@ def solve_gurobi_milp(dict_var_name_2_obj,
             model.optimize()
             time_opt = time.time() - time_opt
             time_post = time.time()
-
+            MIP_lower_bound=model.ObjBound
             #if model.status != GRB.OPTIMAL:
             #    raise RuntimeError("Gurobi did not find an optimal MILP solution.")
 
@@ -203,5 +203,6 @@ def solve_gurobi_milp(dict_var_name_2_obj,
                 "objective": objective,
                 "time_pre": time_pre,
                 "time_opt": time_opt,
-                "time_post": time_post
+                "time_post": time_post,
+                "MIP_lower_bound":MIP_lower_bound
             }
