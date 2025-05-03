@@ -22,6 +22,7 @@ from warm_start_lp import warm_start_lp
 from warm_start_lp import forbidden_variables_loop
 from warm_start_lp import forbidden_variables_loop_dual
 from warm_start_lp import warm_start_lp_using_class
+from warm_start_lp import warm_start_lp_using_class_gurobi
 
 from solve_gurobi_lp import solve_gurobi_lp
 from solve_gurobi_lp import solve_gurobi_milp
@@ -102,7 +103,7 @@ class lower_bound_LP_milp:
                 self.Naive_make_i_2_new_f()
 
             if self.full_prob.jy_opt['use_gurobi']<0.5 and self.full_prob.jy_opt['use_Xpress']==True:
-                input('i dont want to be here im trying to paly gurobi')
+                #input('i dont want to be here im trying to paly gurobi')
                 self.make_xpress_LP()
                 if self.full_prob.jy_opt['use_classic_compress']:
                     t1=time.time()
@@ -1061,20 +1062,40 @@ class lower_bound_LP_milp:
 
 
     def call_gurobi_solver(self):
-        
-        out_solution=solve_gurobi_lp(self.dict_var_name_2_obj,
-                   self.dict_var_con_2_lhs_exog,
-                   self.dict_con_name_2_LB,
-                   self.dict_var_con_2_lhs_eq,
-                   self.dict_con_name_2_eq)
-        self.lp_dual_solution=out_solution['dual_solution']
-        self.lp_primal_solution=out_solution['primal_solution']
-        self.lp_objective=out_solution['objective']
-        self.times_lp_times['GUR_time_pre']=out_solution['time_pre']
-        self.times_lp_times['GUR_time_opt']=out_solution['time_opt']
-        self.times_lp_times['GUR_time_post']=out_solution['time_post']
-        self.lp_time=out_solution['time_opt']
-        self.new_actions_ignore=[]
+    
+        if self.full_prob.jy_opt['use_julians_custom_lp_solver']<0.5:
+            out_solution=solve_gurobi_lp(self.dict_var_name_2_obj,
+                    self.dict_var_con_2_lhs_exog,
+                    self.dict_con_name_2_LB,
+                    self.dict_var_con_2_lhs_eq,
+                    self.dict_con_name_2_eq)
+            
+
+            self.lp_dual_solution=out_solution['dual_solution']
+            self.lp_primal_solution=out_solution['primal_solution']
+            self.lp_objective=out_solution['objective']
+            self.times_lp_times['GUR_time_pre']=out_solution['time_pre']
+            self.times_lp_times['GUR_time_opt']=out_solution['time_opt']
+            self.times_lp_times['GUR_time_post']=out_solution['time_post']
+            self.lp_time=out_solution['time_opt']
+            
+        else:
+            #
+            GUR_CLASS_lp_prob,time_lp_1=warm_start_lp_using_class_gurobi(self.dict_var_name_2_obj,
+                    self.dict_var_con_2_lhs_exog,
+                    self.dict_con_name_2_LB,
+                    self.dict_var_con_2_lhs_eq,
+                    self.dict_con_name_2_eq,self.full_prob.all_actions_not_source_sink_connected,self.actions_ignore)
+            self.lp_primal_solution=GUR_CLASS_lp_prob.lp_primal_solution
+            self.lp_objective=GUR_CLASS_lp_prob.lp_objective
+            self.lp_dual_solution=GUR_CLASS_lp_prob.lp_dual_solution
+            self.lp_time=time_lp_1
+            #input('hi im here')
+        self.new_actions_ignore=[]#self.full_prob.all_actions_not_source_sink_connected.copy()
+
+        for my_act in self.full_prob.all_actions_not_source_sink_connected:
+            if self.lp_primal_solution[my_act]==0:
+                self.new_actions_ignore.append(my_act)
 
     def call_gurobi_milp_solver(self):
         
