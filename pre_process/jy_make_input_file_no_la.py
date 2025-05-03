@@ -239,7 +239,8 @@ class jy_make_input_file_no_la:
                 self.allExogNames.append(name_uv_cap)
                 self.allExogNames.append(name_uv_time)
                 self.exogName2Rhs[name_uv_cap] =-self.my_instance.vehicle_capacity
-                self.exogName2Rhs[name_uv_time]=-round(self.my_instance.early_start[v]-self.my_instance.late_start[u],1)
+                #self.exogName2Rhs[name_uv_time]=-round(self.my_instance.early_start[v]-self.my_instance.late_start[u],1)
+                self.exogName2Rhs[name_uv_time]=-(self.my_instance.early_start[v]-self.my_instance.late_start[u])
 
         self.out_dict['allExogNames']=self.allExogNames
         self.out_dict['exogName2Rhs']=self.exogName2Rhs

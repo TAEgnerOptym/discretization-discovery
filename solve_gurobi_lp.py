@@ -78,9 +78,12 @@ def solve_gurobi_lp(dict_var_name_2_obj,
             model.ModelSense = GRB.MINIMIZE
 
             time_pre = time.time() - time_pre
+            print('Starting Gur LP')
             time_opt = time.time()
             model.optimize()
             time_opt = time.time() - time_opt
+            print('DONE Gur LP')
+
             time_post = time.time()
 
             if model.status != GRB.OPTIMAL:
@@ -114,7 +117,7 @@ def solve_gurobi_milp(dict_var_name_2_obj,
                       dict_con_name_2_LB,
                       dict_var_con_2_lhs_eq,
                       dict_con_name_2_eq,
-                      dict_binary_vars):
+                      dict_binary_vars,max_ILP_time=1000):
     time_pre = time.time()
 
     # Step 0: Name remapping for Gurobi safety
@@ -147,6 +150,7 @@ def solve_gurobi_milp(dict_var_name_2_obj,
     with gp.Env(params=options) as env:
         with gp.Model("converted_MILP", env=env) as model:
             model.setParam("OutputFlag", 0)
+            model.setParam("TimeLimit", max_ILP_time)
 
             # Add variables, using binary type where needed
             var_dict = {}
@@ -186,8 +190,8 @@ def solve_gurobi_milp(dict_var_name_2_obj,
             time_opt = time.time() - time_opt
             time_post = time.time()
 
-            if model.status != GRB.OPTIMAL:
-                raise RuntimeError("Gurobi did not find an optimal MILP solution.")
+            #if model.status != GRB.OPTIMAL:
+            #    raise RuntimeError("Gurobi did not find an optimal MILP solution.")
 
             # Extract primal solution and objective only (no duals in MILP)
             primal_solution = {var_name_rev[var.VarName]: var.X for var in model.getVars()}

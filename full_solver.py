@@ -165,7 +165,7 @@ class full_solver:
             for my_prim in self.all_primitive_vars:
                 if my_prim in my_ilp_sol:
                     out_sol[my_prim]=my_ilp_sol[my_prim]
-
+            self.history_dict['jy_opt']=self.jy_opt
             self.history_dict['output_ilp_solution']=out_sol
 
         with open(self.output_file_path, 'w') as file:

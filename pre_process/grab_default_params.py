@@ -40,4 +40,5 @@ def grab_default_params():
 	my_params['roundingDiscretization_num_digits_keep']=3
 	my_params["doExrtraRemovalEdgesLB"]=0
 	my_params["use_gurobi"]=0
+	my_params["max_ILP_time"]=1000
 	return my_params
