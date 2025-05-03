@@ -6,36 +6,7 @@ import numpy as np
 class jy_fast_lp:
     
     def __init__(self,lp_prob, var_dict, all_possible_forbidden_names,init_forbiden_names, K=20, verbose=False,remove_choice=3,alg_use=1,debug_on=False,min_improvement_dump=.1,epsilon=.0001):
-        #Solve LP while progressively relaxing forbidden variable bounds based on primal values.
-        #""
-        #Parameters:
-        #lp_prob: xpress.problem
-        #    The LP model.
-        #var_dict:  dictionary mapping variable names to varaibles 
-        #all_possible_forbidden_names:  all variables that can ever be removed
-        #init_forbiden_names:  subset of all_possible_forbidden_names excluding positive terms
-        #epsilon: float
-        #    Small positive value to set upper bounds.
-        #K: int
-        #    Maximum number of variables to relax per iteration (default 10).
-        #verbose: bool
-        #    Whether to print progress.
-        # remove_choice:
-        # 1.  Never remove
-        # 2.  remove terms after decrease  of LP bound  and are positive 
-        # 3.  remove terms after improvment of LP bound and are non-postive 
-        # alg_use:  
-        #   option for alg to use for xpress
-        #min_improvement_dump:  
-        #   minium bound improvme t
-        #Returns:
-        #lp_prob: xpress.problem
-        #    The solved LP after adjustments.
-        #pos_based_forbidden_names:  
-        #    Computed after algorihtm
-        #red_cost_forbidden_names
-        #    Computed after algorihtm
-        #total_time_lp
+        
         self.lp_prob=lp_prob
         self.var_dict=var_dict
         self.all_possible_forbidden_names=all_possible_forbidden_names
@@ -67,28 +38,9 @@ class jy_fast_lp:
         self.forbidden_var_names=set()
         self.tot_lp_time=0
         lp_prob=self.lp_prob
-        #if self.init_choice==1:
-        #    self.forbidden_var_names = set(all_possible_forbidden_names)
-        #if self.init_choice==2:
-        #    self.forbidden_var_names =set(pos_based_forbidden_names)
-        #if self.init_choice==3:
-        #    self.forbidden_var_names =set(red_cost_forbidden_names)
-        # Mapping from name to variable
-        
         self.all_removable_vars = [self.var_dict[name] for name in self.all_possible_forbidden_names]
-        # Only keep existing variables
         self.vars_list = self.lp_prob.getVariable()
-       # print('all_removable_vars')
-       # print(self.all_removable_vars)
-       # print('len(all_removable_vars)')
-       # print(len(self.all_removable_vars))
-       # print('len(all_possible_forbidden_names)')
-       #print(len(self.all_possible_forbidden_names))
-       # input('all_removable_vars')
         lp_prob.controls.defaultalg = self.alg_use  # primal simplex
-
-        
-
 
     def call_core_alg(self):
         self.incumbant_lp_val=np.inf
@@ -125,12 +77,7 @@ class jy_fast_lp:
             self.add_neg_red_cost_vars()
             self.hist['numCurEnd'].append(len(self.forbidden_var_names))
 
-            if len(self.forbidden_var_names)>len(self.all_possible_forbidden_names):
-                print('len(self.forbidden_var_names)')
-                print(len(self.forbidden_var_names))
-                print('len(self.all_possible_forbidden_names)')
-                print(len(self.all_possible_forbidden_names))
-                input('error here')
+ 
 
             if self.verbose==True:
                 print('iter')
@@ -144,14 +91,7 @@ class jy_fast_lp:
                 print('len(forbidden_var_names)')
                 print(len(self.forbidden_var_names))
                 print('---')
-                
-        if self.verbose==True:
-            print('self.hist')
-            print(self.hist)
-            print('sum(self.hist[time_iter])')
-            print(sum(self.hist['time_iter']))
-            input('paused')
-            
+             
 
     def get_solution(self):
         
@@ -175,13 +115,6 @@ class jy_fast_lp:
             t_bakcup=time.time()-t_bakcup
             new_val=lp_prob.getObjVal()
            
-            print('new_val')
-            print(new_val)
-            print('new_val')
-            print(new_val)
-            print('t_bakcup')
-            print(t_bakcup)
-            print('tot_lp_time')
             print(self.tot_lp_time)
             if abs(new_val-old_val)>.001:
                 input('error')

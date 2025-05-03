@@ -22,6 +22,9 @@ from warm_start_lp import warm_start_lp
 from warm_start_lp import forbidden_variables_loop
 from warm_start_lp import forbidden_variables_loop_dual
 from warm_start_lp import warm_start_lp_using_class
+
+from solve_gurobi_lp import solve_gurobi_lp
+from solve_gurobi_lp import solve_gurobi_milp
 class lower_bound_LP_milp:
 
 
@@ -87,9 +90,19 @@ class lower_bound_LP_milp:
 
         if self.OPT_do_ilp==0:
             
-            if self.full_prob.jy_opt['use_Xpress']==False:
+            
+            if self.full_prob.jy_opt['use_Xpress']==False and self.full_prob.jy_opt['use_gurobi']==False:
+                input('i shouold not be here')
                 self.make_LP()
-            else:
+                
+            if self.full_prob.jy_opt['use_gurobi']>0.5:# and self.full_prob.jy_opt['use_gurobi']==False:
+                self.call_gurobi_solver()
+                self.naive_compress_get_pi_by_h_node()
+                self.naive_compress_make_f_2_new_f()
+                self.Naive_make_i_2_new_f()
+
+            if self.full_prob.jy_opt['use_gurobi']<0.5 and self.full_prob.jy_opt['use_Xpress']==True:
+                input('i dont want to be here im trying to paly gurobi')
                 self.make_xpress_LP()
                 if self.full_prob.jy_opt['use_classic_compress']:
                     t1=time.time()
@@ -99,11 +112,13 @@ class lower_bound_LP_milp:
                     self.Naive_make_i_2_new_f()
                     self.times_lp_times['after_compression']=time.time()-t1
         else:
-            if self.full_prob.jy_opt['use_Xpress']==False:
-                self.solve_milp()
-            else: 
+            if self.full_prob.jy_opt['use_gurobi']>0.5:
+                self.call_gurobi_milp_solver()
+            if self.full_prob.jy_opt['use_gurobi']<0.5 and self.full_prob.jy_opt['use_Xpress']==True:
                  self.solve_xpress_milp()
-        
+            if self.full_prob.jy_opt['use_Xpress']==False and self.full_prob.jy_opt['use_gurobi']==False:
+                self.solve_milp()
+
         if self.full_prob.jy_opt['verbose']==True:
             total = sum(self.times_lp_times.values())
 
@@ -132,9 +147,9 @@ class lower_bound_LP_milp:
                        key=lambda kv: kv[1],
                        reverse=True):
                 print(f"{key}: {val}")
-            print('self.DEBUG_len')
-            print(self.DEBUG_len)
-            input('look here')
+            #print('self.DEBUG_len')
+            #print(self.DEBUG_len)
+            #input('look here')
     def make_agg_node_2_nodes(self):
         self.agg_node_2_nodes = {
             h: {
@@ -292,6 +307,8 @@ class lower_bound_LP_milp:
                 g=tup_fg[1]
                 var_name='EDGE_h='+h+'_f='+f+'_g='+g
                 self.dict_var_name_2_obj[var_name]=0
+                #if self.full_prob.jy_opt['all_vars_binary']==True:
+                #    self.dict_var_name_2_is_binary[var_name]=1
         self.times_lp_times['help_construct_LB_make_vars_5']=time.time()-t1
         t1=time.time()
         t1 = time.time()
@@ -310,12 +327,17 @@ class lower_bound_LP_milp:
 
         # Single update call
         self.dict_var_name_2_obj.update(dict_update)
-
+        if self.full_prob.jy_opt['all_vars_binary']==True:
+            for var_name in dict_update:
+                self.dict_var_name_2_is_binary[var_name]=1
         # Final time record
         self.times_lp_times['help_construct_LB_make_vars_6'] = time.time() - t1
 
         t1=time.time()
         self.vars_names_ignore=self.vars_names_ignore+all_new_entries_ignore
+        #if self.full_prob.jy_opt['all_vars_binary']==True:
+        #    for var_name in set(self.dict_var_name_2_obj)-set(self.all_delta):
+        #        self.dict_var_name_2_is_binary[var_name]=1
         self.times_lp_times['help_construct_LB_make_vars_7']=time.time()-t1
 
     def OLD_help_construct_LB_make_vars(self):
@@ -1038,6 +1060,39 @@ class lower_bound_LP_milp:
         self.times_lp_times['post_XLP_5']=time.time()-t3
 
 
+    def call_gurobi_solver(self):
+        
+        out_solution=solve_gurobi_lp(self.dict_var_name_2_obj,
+                   self.dict_var_con_2_lhs_exog,
+                   self.dict_con_name_2_LB,
+                   self.dict_var_con_2_lhs_eq,
+                   self.dict_con_name_2_eq)
+        self.lp_dual_solution=out_solution['dual_solution']
+        self.lp_primal_solution=out_solution['primal_solution']
+        self.lp_objective=out_solution['objective']
+        self.times_lp_times['GUR_time_pre']=out_solution['time_pre']
+        self.times_lp_times['GUR_time_opt']=out_solution['time_opt']
+        self.times_lp_times['GUR_time_post']=out_solution['time_post']
+        self.lp_time=out_solution['time_opt']
+        self.new_actions_ignore=[]
+
+    def call_gurobi_milp_solver(self):
+        
+        out_solution=solve_gurobi_milp(self.dict_var_name_2_obj,
+                   self.dict_var_con_2_lhs_exog,
+                   self.dict_con_name_2_LB,
+                   self.dict_var_con_2_lhs_eq,
+                   self.dict_con_name_2_eq,
+                   self.dict_var_name_2_is_binary)
+        self.milp_solution=out_solution['primal_solution']
+        self.milp_solution_objective_value=out_solution['objective']
+        self.times_lp_times['GUR_time_pre']=out_solution['time_pre']
+        self.times_lp_times['GUR_time_opt']=out_solution['time_opt']
+        self.times_lp_times['GUR_time_post']=out_solution['time_post']
+        self.milp_time=out_solution['time_opt']
+        self.new_actions_ignore=[]
+
+
     def naive_compress_get_pi_by_h_node(self):
         self.Naive_h_f_2_dual=dict()
         self.Naive_h_f_2_dual_sig_fig=dict()
@@ -1105,3 +1160,5 @@ class lower_bound_LP_milp:
                 my_new_name=str(self.Naive_H_f_2_new_f[h][f])
                 my_new_name=my_new_name.replace(" ", "_")
                 self.NAIVE_graph_node_2_agg_node[h][i]=my_new_name
+
+    

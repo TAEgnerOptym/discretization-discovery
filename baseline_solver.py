@@ -14,6 +14,8 @@ import time
 
 from scipy.sparse import csr_matrix
 import pulp
+from solve_gurobi_lp import solve_gurobi_milp
+
 
 class baseline_solver:
 
@@ -53,16 +55,20 @@ class baseline_solver:
         self.baseline_construct_LB_or_ILP(self.OPT_use_psi,self.OPT_do_ilp)
 
         if self.OPT_do_ilp==0:
+            input('i not be ehere ')
             if self.full_prob.jy_opt['use_Xpress']==False:
                 self.make_LP()
             else:
                 self.make_xpress_LP()
             
         else:
-            if self.full_prob.jy_opt['use_Xpress']==False:
+            if self.full_prob.jy_opt['use_Xpress']==False and  self.full_prob.jy_opt['use_gurobi']==False:
                 self.solve_milp()
-            else: 
+            if self.full_prob.jy_opt['use_Xpress']==True and  self.full_prob.jy_opt['use_gurobi']==False:
                  self.solve_xpress_milp()
+            if self.full_prob.jy_opt['use_gurobi']==True:
+                self.call_gurobi_milp_solver()
+
     def baseline_construct_LB_or_ILP(self,use_psi,do_ilp):
         self.OPT_use_psi=use_psi
         self.OPT_do_ilp=do_ilp
@@ -227,6 +233,22 @@ class baseline_solver:
         self.milp_solution_status = milp_prob.getProbStatus()
         self.milp_solution_objective_value = milp_prob.getObjVal()
         self.BASE_times_lp_times['post_XMILP']=time.time()-t3
+
+    def call_gurobi_milp_solver(self):
+        
+        out_solution=solve_gurobi_milp(self.dict_var_name_2_obj,
+                   self.dict_var_con_2_lhs_exog,
+                   self.dict_con_name_2_LB,
+                   self.dict_var_con_2_lhs_eq,
+                   self.dict_con_name_2_eq,
+                   self.dict_var_name_2_is_binary)
+        self.milp_solution=out_solution['primal_solution']
+        self.milp_solution_objective_value=out_solution['objective']
+        self.BASE_times_lp_times['GUR_time_pre']=out_solution['time_pre']
+        self.BASE_times_lp_times['GUR_time_opt']=out_solution['time_opt']
+        self.BASE_times_lp_times['GUR_time_post']=out_solution['time_post']
+        self.milp_time=out_solution['time_opt']
+        self.new_actions_ignore=[]
 
     def make_LP(self):
         dict_var_name_2_obj=self.dict_var_name_2_obj
@@ -454,6 +476,7 @@ class baseline_solver:
             for var_name in self.all_primitive_vars:
                 self.dict_var_name_2_obj[var_name]=0
                 self.dict_var_name_2_is_binary[var_name]=1
+        
         my_x_typr='Binary'
         if do_ilp==False or use_psi==True:
             my_x_typr='Continuous'
@@ -464,7 +487,9 @@ class baseline_solver:
                 self.dict_var_name_2_is_binary[var_name]=1
         for var_name in self.all_delta:
             self.dict_var_name_2_obj[var_name]=0
-        
+        if self.full_prob.jy_opt['all_vars_binary']==True:
+            for var_name in set(self.dict_var_name_2_obj)-set(self.all_delta):
+                self.dict_var_name_2_is_binary[var_name]=1
     def help_construct_UB_LB_con(self):
         
         t1=time.time()

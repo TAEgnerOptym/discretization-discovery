@@ -12,8 +12,8 @@ import time
 from scipy.sparse import csr_matrix
 from lower_bound_LP_milp import lower_bound_LP_milp
 import pulp
-#from compressor import compressor
-from experimental_compressor_additive import compressor
+from compressor import compressor
+#from experimental_compressor_additive import compressor
 #from projector import projector
 #from experimental_projector_simp import projector
 from experimental_projector_simp_eq import projector
@@ -163,7 +163,8 @@ class full_solver:
             for my_act in self.all_actions:
                 out_sol[my_act]=my_ilp_sol[my_act]
             for my_prim in self.all_primitive_vars:
-                out_sol[my_prim]=my_ilp_sol[my_prim]
+                if my_prim in my_ilp_sol:
+                    out_sol[my_prim]=my_ilp_sol[my_prim]
 
             self.history_dict['output_ilp_solution']=out_sol
 
@@ -376,7 +377,7 @@ class full_solver:
         if self.jy_opt['do_ilp']>0.5:
             print('starting ILP')
 
-            self.my_lower_bound_ILP=lower_bound_LP_milp(self,self.graph_node_2_agg_node,True,True)
+            self.my_lower_bound_ILP=lower_bound_LP_milp(self,self.graph_node_2_agg_node,True,False)
             new_Ilp_value=self.my_lower_bound_ILP.milp_solution_objective_value
             self.history_dict['ilp_objective']=new_Ilp_value
             self.history_dict['ilp_time']=self.my_lower_bound_ILP.milp_time
@@ -387,7 +388,7 @@ class full_solver:
                 print('running baseline')
                 if (self.jy_opt['in_demo_mode']==True):
                     input('Press enter about to start the running of the baseline ILP')
-                my_base=baseline_solver(self,True,True)
+                my_base=baseline_solver(self,True,False)
                 self.history_dict['ILP_sol_obj']=my_base.milp_solution_objective_value
                 self.history_dict['milp_solution']=my_base.milp_solution
                 self.history_dict['milp_time']=my_base.milp_time

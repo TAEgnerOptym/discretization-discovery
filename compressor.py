@@ -14,7 +14,7 @@ from scipy.sparse import csr_matrix
 import pulp
 from scipy.cluster.hierarchy import linkage
 import xpress as xp
-
+from solve_gurobi_lp import solve_gurobi_lp
 
 class compressor:
     
@@ -45,10 +45,14 @@ class compressor:
         t1=time.time()
         self.check_solution_feasibility()
         self.time_compressor['check_solution_feasibility']=time.time()-t1
-        if my_full_solver.jy_opt['use_Xpress']==False:
+        if my_full_solver.jy_opt['use_Xpress']==False and my_full_solver.jy_opt['use_gurobi']==False:
             self.make_LP()
-        else:
+        if my_full_solver.jy_opt['use_Xpress']==True and my_full_solver.jy_opt['use_gurobi']==False:
             self.make_xpress_LP()
+        if  my_full_solver.jy_opt['use_gurobi']==True:
+            self.make_gur_lp()
+
+            
             #self.make_xpress_LP_Small()
 
         t1=time.time()
@@ -406,8 +410,22 @@ class compressor:
         #input('---')
         self.time_compressor['lp_post']=time.time()-t3
 
+    def make_gur_lp(self):
+        out_solution=solve_gurobi_lp(self.dict_var_name_2_obj,
+                   self.dict_var_con_2_lhs_exog,
+                   self.dict_con_name_2_LB,
+                   self.dict_var_con_2_lhs_eq,
+                   self.dict_con_name_2_eq)
+        self.lp_dual_solution=out_solution['dual_solution']
+        self.lp_primal_solution=out_solution['primal_solution']
+        self.lp_objective=out_solution['objective']
+        self.time_compressor['GUR_time_pre']=out_solution['time_pre']
+        self.time_compressor['GUR_time_opt']=out_solution['time_opt']
+        self.time_compressor['GUR_time_post']=out_solution['time_post']
+        self.lp_time=out_solution['time_opt']
+        self.new_actions_ignore=[]
     def make_xpress_LP(self):
-        input('resolving from scrach maybe i dont want to do theis')
+        #input('resolving from scrach maybe i dont want to do theis')
         xp.init(self.MF.jy_opt['xpress_file_loc'])
 
         t2=time.time()
