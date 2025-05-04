@@ -2,31 +2,22 @@ from call_and_run_code import call_and_run_code
 import os
 all_files=[]
 
-all_files.append("jy_r101.txt")
-all_files.append("jy_r102.txt")
-all_files.append("jy_r103.txt")
-all_files.append("jy_r104.txt")
-all_files.append("jy_r105.txt")
-all_files.append("jy_r106.txt")
-all_files.append("jy_r107.txt")
-all_files.append("jy_r108.txt")
-all_files.append("jy_r109.txt")
-all_files.append("jy_r110.txt")
-all_files.append("jy_r111.txt")
-all_files.append("jy_r112.txt")
+if 0<1:
+    all_files.append("jy_r107.txt")
 
-if 0>1:
-    all_files.append("jy_c101.txt")
-    all_files.append("jy_c102.txt")
-    all_files.append("jy_c103.txt")
-    all_files.append("jy_c104.txt")
-    all_files.append("jy_c105.txt")
-    all_files.append("jy_c106.txt")
-    all_files.append("jy_c107.txt")
-    all_files.append("jy_c108.txt")
-    all_files.append("jy_c109.txt")
+    all_files.append("jy_r101.txt")
+    all_files.append("jy_r102.txt")
+    all_files.append("jy_r103.txt")
+    all_files.append("jy_r104.txt")
+    all_files.append("jy_r105.txt")
+    all_files.append("jy_r106.txt")
+    all_files.append("jy_r108.txt")
+    all_files.append("jy_r109.txt")
+    all_files.append("jy_r110.txt")
+    all_files.append("jy_r111.txt")
+    all_files.append("jy_r112.txt")
 
-
+if 0<1:
     all_files.append("jy_rc101.txt")
     all_files.append("jy_rc102.txt")
     all_files.append("jy_rc103.txt")
@@ -37,6 +28,18 @@ if 0>1:
     all_files.append("jy_rc108.txt")
 
 
+if 0<1:
+    all_files.append("jy_c101.txt")
+    all_files.append("jy_c102.txt")
+    all_files.append("jy_c103.txt")
+    all_files.append("jy_c104.txt")
+    all_files.append("jy_c105.txt")
+    all_files.append("jy_c106.txt")
+    all_files.append("jy_c107.txt")
+    all_files.append("jy_c108.txt")
+    all_files.append("jy_c109.txt")
+
+if 0>1:
 
 
     all_files.append("jy_rc201.txt")

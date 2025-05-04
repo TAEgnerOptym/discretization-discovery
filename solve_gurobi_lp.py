@@ -87,6 +87,9 @@ def solve_gurobi_lp(dict_var_name_2_obj,
             time_post = time.time()
 
             if model.status != GRB.OPTIMAL:
+
+                print('model.status')
+                print(model.status)
                 raise RuntimeError("Gurobi did not find an optimal solution.")
 
             # Step 3: Recover solutions and remap names

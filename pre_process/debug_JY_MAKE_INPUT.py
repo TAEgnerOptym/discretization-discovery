@@ -5,11 +5,6 @@ class jy_make_input_file_no_la:
     def __init__(self,my_instance,my_dem_graph,my_time_graph,num_terms_per_bin,ngGraph):
         
         self.my_instance=my_instance
-        #eta=0.2
-        #for u in range(0,self.my_instance.num_cust):
-        #    self.my_instance.early_start[u]=self.my_instance.early_start[u]+eta
-        #    self.my_instance.late_start[u]=self.my_instance.late_start[u]-eta
-
         self.jy_opt=my_instance.my_params
         
         #self.my_instance.num_cust=int(self.my_instance.num_cust)
@@ -18,6 +13,11 @@ class jy_make_input_file_no_la:
         if self.jy_opt['use_ng']>0.5:
             self.ngGraph=ngGraph
 
+        self.DEBUG_bigMMultTest_Time=1
+        self.DEBUG_bigMMultTest_CAP=1
+        self.DEBUG_TIME_epsilon=0
+        self.DEBUG_CAP_epsilon=0
+        
         self.out_dict=dict()
         self.num_terms_per_bin=num_terms_per_bin
         self.make_all_delta()
@@ -178,11 +178,9 @@ class jy_make_input_file_no_la:
 
                 tup_time_v=str(tuple([time_name_v,name_uv_time]))
                 tup_dem_v=str(tuple([dem_name_v,name_uv_cap]))
-
-                #val_time_action=-self.my_instance.early_start[v]+self.my_instance.late_start[u]-self.my_instance.dist_mat_full[u,v]
-                val_time_action=self.exogName2Rhs[name_uv_time]-self.my_instance.dist_mat_full[u,v]
-                #val_dem_action=-self.my_instance.vehicle_capacity-self.my_instance.dem[u]#+.01
-                val_dem_action=self.exogName2Rhs[name_uv_cap]-self.my_instance.dem[u]#+.01
+                
+                val_time_action=-self.my_instance.dist_mat_full[u,v]+self.exogName2Rhs[name_uv_time]#+self.DEBUG_bigMMultTest_Time*(-self.my_instance.early_start[v]+self.my_instance.late_start[u])
+                val_dem_action=-self.my_instance.dem[u]+self.exogName2Rhs[name_uv_cap]#self.DEBUG_bigMMultTest_CAP*(-self.my_instance.vehicle_capacity)#+.01
                 val_time_u=1
                 val_dem_u=1
                 val_time_v=-1
@@ -193,9 +191,28 @@ class jy_make_input_file_no_la:
                 self.deltaCon2Contrib[tup_dem_u]=val_dem_u
                 self.deltaCon2Contrib[tup_time_v]=val_time_v
                 self.deltaCon2Contrib[tup_dem_v]=val_dem_v
-
-                
-                #input('hihi')
+                if 0<1:
+                    print('tup_time_v')
+                    print(tup_time_v)
+                    print('val_time_v')
+                    print(val_time_v)
+                    print('tup_time_u')
+                    print(tup_time_u)
+                    print('val_time_u')
+                    print(val_time_u)
+                    print('self.my_instance.late_start[u]')
+                    print(self.my_instance.late_start[u])
+                    print('self.my_instance.early_start[v]')
+                    print(self.my_instance.early_start[v])
+                    print('self.my_instance.dist_mat_full[u,v]')
+                    print(self.my_instance.dist_mat_full[u,v])
+                    print('self.my_instance.orig_dist_mat_full[u,v]')
+                    print(self.my_instance.orig_dist_mat_full[u,v])
+                    print('val_time_action')
+                    print(val_time_action)
+                    print('self.exogName2Rhs[name_uv_time]')
+                    print(self.exogName2Rhs[name_uv_time])
+                    input('hihi')
 
         self.out_dict['deltaCon2Contrib']=self.deltaCon2Contrib
         self.out_dict['actionCon2Contrib']=self.actionCon2Contrib
@@ -245,10 +262,10 @@ class jy_make_input_file_no_la:
                 name_uv_time='time_uv_'+str(u)+'_'+str(v)
                 self.allExogNames.append(name_uv_cap)
                 self.allExogNames.append(name_uv_time)
-                #self.exogName2Rhs[name_uv_cap] =-100000000#-self.my_instance.vehicle_capacity
-                #self.exogName2Rhs[name_uv_time]=-100000000#-(self.my_instance.early_start[v]-self.my_instance.late_start[u])
-                self.exogName2Rhs[name_uv_cap] =-self.my_instance.vehicle_capacity+self.my_instance.dem[u]
-                self.exogName2Rhs[name_uv_time]=-self.my_instance.early_start[v]+self.my_instance.late_start[u]
+                self.exogName2Rhs[name_uv_cap] =self.DEBUG_bigMMultTest_CAP*self.my_instance.vehicle_capacity
+                #self.exogName2Rhs[name_uv_time]=-round(self.my_instance.early_start[v]-self.my_instance.late_start[u],1)
+                #self.exogName2Rhs[name_uv_time]=self.DEBUG_bigMMultTest_Time*(-self.my_instance.early_start[u]-self.my_instance.early_start[v])
+                self.exogName2Rhs[name_uv_time]=self.DEBUG_bigMMultTest_Time*(self.my_instance.late_start[u]-self.my_instance.early_start[v])
 
         self.out_dict['allExogNames']=self.allExogNames
         self.out_dict['exogName2Rhs']=self.exogName2Rhs

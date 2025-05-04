@@ -118,6 +118,7 @@ class time_graph:
 	def __init__(self,my_vrp,time_thresh):
 		#dem_thresh has the intermediate thresholds to be used
 		self.my_vrp=my_vrp
+		
 		self.my_shift_bet_time_win=self.my_vrp.my_params['my_shift_bet_time_win']
 
 		self.Nc=my_vrp.num_cust
@@ -140,6 +141,10 @@ class time_graph:
 			if e1 not in self.E_novel_back:
 				print('e1')
 				print(e1)
+				print('self.node_list[45]')
+				print(self.node_list[45])
+				print('self.node_list[44]')
+				print(self.node_list[44])
 				input('errror here')
 		
 		for e2 in self.E_novel_back:
@@ -172,27 +177,12 @@ class time_graph:
 			for j in range(my_j_pos,-1,-1):
 				latest_arrival_allowed=self.node_2_late[v][j]
 				flag_cond=0
-				#if u==0 and v==5 and self.node_2_early[u][i]==629 and self.node_2_late[v][j]==534:
-				#	flag_cond=1
-				#if flag_cond==1:
-				#	print('earliest_arrival_from_i_to_v')
-				#	print(earliest_arrival_from_i_to_v)
-				#	print('latest_arrival_allowed')
-				#	print('earliest_arrival_from_i_CHILD_to_v')
-				#	print(earliest_arrival_from_i_CHILD_to_v)
-				#	input('---')
 				if earliest_arrival_from_i_to_v>= latest_arrival_allowed and latest_arrival_allowed>earliest_arrival_from_i_CHILD_to_v:#-.0001:
 					this_tup=tuple([self.node_list[u][i],self.node_list[v][j]])
 					self.E_novel_back.append(this_tup)
 					self.E.append(this_tup)
 					self.DEBUG_edges_uv_tup[tuple([u,v])].append(this_tup)
-
 					my_j_pos=j-1
-					#print('this_tup')
-					#print(this_tup)
-					#p#rint('my_dist')
-					#print(my_dist)
-					#input('---')
 					break
 			#if u==0 and 250>earliest_arrival_from_i_to_v:
 			#	input('---')

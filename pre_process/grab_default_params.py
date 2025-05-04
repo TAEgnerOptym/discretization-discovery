@@ -14,7 +14,7 @@ def grab_default_params():
 	my_params['use_compression']=True
 	my_params['max_iterations_loop_compress_project']=200
 	my_params['do_round_dist_times']=1
-	my_params['my_shift_bet_time_win']=1
+	my_params['my_shift_bet_time_win']=0.0001
 	my_params['num_terms_per_bin_init_construct']=10000
 	my_params['allOneBig_init']=1
 	my_params['min_inc_2_compress']=.01
