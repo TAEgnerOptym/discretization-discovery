@@ -15,6 +15,7 @@ import time
 from scipy.sparse import csr_matrix
 import pulp
 from solve_gurobi_lp import solve_gurobi_milp
+from solve_gurobi_lp import solve_gurobi_milp_bounds
 
 
 class baseline_solver:
@@ -53,6 +54,7 @@ class baseline_solver:
         self.OPT_do_ilp=OPT_do_ILP
 
         self.baseline_construct_LB_or_ILP(self.OPT_use_psi,self.OPT_do_ilp)
+        self.filter_constraints()
 
         if self.OPT_do_ilp==0:
             input('i not be ehere ')
@@ -236,12 +238,22 @@ class baseline_solver:
 
     def call_gurobi_milp_solver(self):
         
-        out_solution=solve_gurobi_milp(self.dict_var_name_2_obj,
-                   self.dict_var_con_2_lhs_exog,
-                   self.dict_con_name_2_LB,
-                   self.dict_var_con_2_lhs_eq,
-                   self.dict_con_name_2_eq,
-                   self.dict_var_name_2_is_binary,self.full_prob.jy_opt['max_ILP_time'])
+        if 1<0:
+            input('i want to be using bounds')
+            out_solution=solve_gurobi_milp(self.dict_var_name_2_obj,
+                    self.dict_var_con_2_lhs_exog,
+                    self.dict_con_name_2_LB,
+                    self.dict_var_con_2_lhs_eq,
+                    self.dict_con_name_2_eq,
+                    self.dict_var_name_2_is_binary,self.full_prob.jy_opt['max_ILP_time'])
+        else:
+            out_solution=solve_gurobi_milp_bounds(self.dict_var_name_2_obj,
+                self.CLEAN_dict_var_con_2_lhs_exog,
+                self.CLEAN_dict_con_name_2_LB,
+                self.CLEAN_dict_var_con_2_lhs_eq,
+                self.CLEAN_dict_con_name_2_eq,self.full_prob.delta_name_2_lb,self.full_prob.delta_name_2_ub,
+                self.dict_var_name_2_is_binary,self.full_prob.jy_opt['max_ILP_time'])
+
         self.milp_solution=out_solution['primal_solution']
         self.milp_solution_objective_value=out_solution['objective']
         self.MIP_lower_bound = out_solution['MIP_lower_bound']#model.ObjBound
@@ -522,3 +534,33 @@ class baseline_solver:
             con_name=v_con[1]
             self.dict_var_con_2_lhs_eq[tuple([var_name,con_name])]=self.action_integCon_2_contrib[v_con]
     
+
+    def filter_constraints(self):
+        self.ignore_set = set(self.full_prob.ineq_replaced_by_lb_ub)
+
+        # Filter exogenous constraint contributions
+        self.CLEAN_dict_var_con_2_lhs_exog = {
+            (var, con): coeff
+            for (var, con), coeff in self.dict_var_con_2_lhs_exog.items()
+            if con not in self.ignore_set
+        }
+
+        # Filter lower bounds
+        self.CLEAN_dict_con_name_2_LB= {
+            con: val for con, val in self.dict_con_name_2_LB.items()
+            if con not in self.ignore_set
+        }
+
+        # Filter equality constraint contributions
+        self.CLEAN_dict_var_con_2_lhs_eq = {
+            (var, con): coeff
+            for (var, con), coeff in self.dict_var_con_2_lhs_eq.items()
+            if con not in self.ignore_set
+        }
+
+        # Filter equality RHS values
+        self.CLEAN_dict_con_name_2_eq = {
+            con: val for con, val in self.dict_con_name_2_eq.items()
+            if con not in self.ignore_set
+        }
+

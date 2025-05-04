@@ -77,6 +77,12 @@ class full_solver:
         self.TOT_time_component_lps=dict()
         for h in self.graph_names:
             self.TOT_time_component_lps[h]=0
+
+        
+        self.delta_name_2_ub=full_input_dict['delta_name_2_ub']
+        self.delta_name_2_lb=full_input_dict['delta_name_2_lb']
+        self.ineq_replaced_by_lb_ub=full_input_dict['ineq_replaced_by_lb_ub']
+
         self.history_dict=dict()
         self.history_dict['lblp_lower']=[]
         self.history_dict['prob_sizes_at_start']=[]

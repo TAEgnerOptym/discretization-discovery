@@ -17,7 +17,7 @@ if 0<1:
     all_files.append("jy_r111.txt")
     all_files.append("jy_r112.txt")
 
-if 0<1:
+if 0>1:
     all_files.append("jy_rc101.txt")
     all_files.append("jy_rc102.txt")
     all_files.append("jy_rc103.txt")
@@ -28,7 +28,7 @@ if 0<1:
     all_files.append("jy_rc108.txt")
 
 
-if 0<1:
+if 0>1:
     all_files.append("jy_c101.txt")
     all_files.append("jy_c102.txt")
     all_files.append("jy_c103.txt")

@@ -116,6 +116,8 @@ class jy_make_input_file_no_la:
         print('hi making contrib')
         self.deltaCon2Contrib=dict()
         self.actionCon2Contrib=dict()
+        
+        
         for u in range(0,int(self.my_instance.num_cust)):
             name_time_ub='time_ub_'+str(u)
             name_time_lb='time_lb_'+str(u)
@@ -204,6 +206,9 @@ class jy_make_input_file_no_la:
         self.allExogNames=[]
         self.exogName2Rhs=dict()
         tot_dem=0
+        self.ineq_replaced_by_lb_ub=[]
+        self.delta_name_2_lb=dict()
+        self.delta_name_2_ub=dict()
         for u in range(0,int(self.my_instance.num_cust)):
             tot_dem=tot_dem+self.my_instance.dem[u]
             name_cover='exog_cover_'+str(u)
@@ -220,19 +225,32 @@ class jy_make_input_file_no_la:
             name_time_lb='time_lb_'+str(u)
             self.allExogNames.append(name_time_lb)
             self.exogName2Rhs[name_time_lb]=self.my_instance.late_start[u]
+            self.ineq_replaced_by_lb_ub.append(name_time_lb)
+            self.delta_name_2_lb['delta_timeRem_'+str(u)]=self.my_instance.late_start[u]
 
             name_time_ub='time_ub_'+str(u)
             self.allExogNames.append(name_time_ub)
             self.exogName2Rhs[name_time_ub]=-self.my_instance.early_start[u]
+            self.ineq_replaced_by_lb_ub.append(name_time_ub)
+            self.delta_name_2_ub['delta_timeRem_'+str(u)]=self.my_instance.early_start[u]
 
             name_cap_lb='cap_lb_'+str(u)
             self.allExogNames.append(name_cap_lb)
             self.exogName2Rhs[name_cap_lb]=self.my_instance.dem[u]
+            self.ineq_replaced_by_lb_ub.append(name_cap_lb)
+            self.delta_name_2_lb['delta_capRem_'+str(u)]=self.my_instance.dem[u]
+            
+
 
             name_cap_ub='cap_ub_'+str(u)
             self.allExogNames.append(name_cap_ub)
             self.exogName2Rhs[name_cap_ub]=-self.my_instance.vehicle_capacity
+            self.ineq_replaced_by_lb_ub.append(name_cap_ub)
         
+
+            
+            self.delta_name_2_ub['delta_capRem_'+str(u)]=self.my_instance.vehicle_capacity
+
         min_veh=np.ceil(tot_dem/self.my_instance.vehicle_capacity)
         self.exogName2Rhs['exog_min_veh_']=min_veh
         self.allExogNames.append('exog_min_veh_')
@@ -252,6 +270,11 @@ class jy_make_input_file_no_la:
 
         self.out_dict['allExogNames']=self.allExogNames
         self.out_dict['exogName2Rhs']=self.exogName2Rhs
+        self.out_dict['delta_name_2_ub']=self.delta_name_2_ub
+        self.out_dict['delta_name_2_lb']=self.delta_name_2_lb
+        self.out_dict['ineq_replaced_by_lb_ub']=self.ineq_replaced_by_lb_ub
+
+        
 
     def make_allActions(self):
         print('all action')

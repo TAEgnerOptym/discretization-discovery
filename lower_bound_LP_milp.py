@@ -25,7 +25,10 @@ from warm_start_lp import warm_start_lp_using_class
 from warm_start_lp import warm_start_lp_using_class_gurobi
 
 from solve_gurobi_lp import solve_gurobi_lp
+from solve_gurobi_lp import solve_gurobi_lp_bounds
 from solve_gurobi_lp import solve_gurobi_milp
+from solve_gurobi_lp import solve_gurobi_milp_bounds
+
 class lower_bound_LP_milp:
 
 
@@ -88,7 +91,7 @@ class lower_bound_LP_milp:
         self.times_lp_times['prior']=time.time()-t1
 
         self.construct_LB_or_ILP(self.OPT_use_psi,self.OPT_do_ilp)
-
+        self.filter_constraints()
         if self.OPT_do_ilp==0:
             
             
@@ -1064,12 +1067,38 @@ class lower_bound_LP_milp:
     def call_gurobi_solver(self):
     
         if self.full_prob.jy_opt['use_julians_custom_lp_solver']<0.5:
-            out_solution=solve_gurobi_lp(self.dict_var_name_2_obj,
-                    self.dict_var_con_2_lhs_exog,
-                    self.dict_con_name_2_LB,
-                    self.dict_var_con_2_lhs_eq,
-                    self.dict_con_name_2_eq)
-            
+
+            if 1<0:
+                input('i dont want to be here since i am usign bounds')
+
+                out_solution=solve_gurobi_lp(self.dict_var_name_2_obj,
+                        self.dict_var_con_2_lhs_exog,
+                        self.dict_con_name_2_LB,
+                        self.dict_var_con_2_lhs_eq,
+                        self.dict_con_name_2_eq)
+            else:
+                out_solution=solve_gurobi_lp_bounds(self.dict_var_name_2_obj,
+                    self.CLEAN_dict_var_con_2_lhs_exog,
+                    self.CLEAN_dict_con_name_2_LB,
+                    self.CLEAN_dict_var_con_2_lhs_eq,
+                    self.CLEAN_dict_con_name_2_eq,self.full_prob.delta_name_2_lb,self.full_prob.delta_name_2_ub)
+
+                debug_on=False
+                if debug_on:
+                    out_solution_2=solve_gurobi_lp(self.dict_var_name_2_obj,
+                            self.dict_var_con_2_lhs_exog,
+                            self.dict_con_name_2_LB,
+                            self.dict_var_con_2_lhs_eq,
+                            self.dict_con_name_2_eq)
+                    if abs(out_solution['objective']-out_solution_2['objective'])>0.001:
+                        print('v1')
+                        print(out_solution['objective'])
+                        print('v2')
+                        print(out_solution_2['objective'])
+                        input('errror ')
+                #self.delta_name_2_ub=full_input_dict['delta_name_2_ub']
+                #self.delta_name_2_lb=full_input_dict['delta_name_2_ub']
+                #self.ineq_replaced_by_lb_ub=full_input_dict['ineq_replaced_by_lb_ub']
 
             self.lp_dual_solution=out_solution['dual_solution']
             self.lp_primal_solution=out_solution['primal_solution']
@@ -1098,13 +1127,26 @@ class lower_bound_LP_milp:
                 self.new_actions_ignore.append(my_act)
 
     def call_gurobi_milp_solver(self):
-        
-        out_solution=solve_gurobi_milp(self.dict_var_name_2_obj,
+        out_solution=[]
+
+        if 1<0:
+            input('i dont want to be here since i am usign bounds')
+            out_solution=solve_gurobi_milp(self.dict_var_name_2_obj,
                    self.dict_var_con_2_lhs_exog,
                    self.dict_con_name_2_LB,
                    self.dict_var_con_2_lhs_eq,
                    self.dict_con_name_2_eq,
                    self.dict_var_name_2_is_binary,self.full_prob.jy_opt['max_ILP_time'])
+        else:
+            out_solution=solve_gurobi_milp_bounds(self.dict_var_name_2_obj,
+                self.CLEAN_dict_var_con_2_lhs_exog,
+                self.CLEAN_dict_con_name_2_LB,
+                self.CLEAN_dict_var_con_2_lhs_eq,
+                self.CLEAN_dict_con_name_2_eq,self.full_prob.delta_name_2_lb,self.full_prob.delta_name_2_ub,
+                self.dict_var_name_2_is_binary,self.full_prob.jy_opt['max_ILP_time'])
+
+
+        
         self.milp_solution=out_solution['primal_solution']
         self.milp_solution_objective_value=out_solution['objective']
         self.times_lp_times['GUR_time_pre']=out_solution['time_pre']
@@ -1183,4 +1225,32 @@ class lower_bound_LP_milp:
                 my_new_name=my_new_name.replace(" ", "_")
                 self.NAIVE_graph_node_2_agg_node[h][i]=my_new_name
 
-    
+    def filter_constraints(self):
+        self.ignore_set = set(self.full_prob.ineq_replaced_by_lb_ub)
+
+        # Filter exogenous constraint contributions
+        self.CLEAN_dict_var_con_2_lhs_exog = {
+            (var, con): coeff
+            for (var, con), coeff in self.dict_var_con_2_lhs_exog.items()
+            if con not in self.ignore_set
+        }
+
+        # Filter lower bounds
+        self.CLEAN_dict_con_name_2_LB= {
+            con: val for con, val in self.dict_con_name_2_LB.items()
+            if con not in self.ignore_set
+        }
+
+        # Filter equality constraint contributions
+        self.CLEAN_dict_var_con_2_lhs_eq = {
+            (var, con): coeff
+            for (var, con), coeff in self.dict_var_con_2_lhs_eq.items()
+            if con not in self.ignore_set
+        }
+
+        # Filter equality RHS values
+        self.CLEAN_dict_con_name_2_eq = {
+            con: val for con, val in self.dict_con_name_2_eq.items()
+            if con not in self.ignore_set
+        }
+
