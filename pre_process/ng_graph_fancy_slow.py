@@ -336,6 +336,9 @@ class ng_graph_fancy_slow:
     def LAish_remove_edges_slow(self):
         num_kill=0
         num_spared=0
+        num_self_self=0
+        num_empty_nj=0
+        num_just_u=0
         new_E=[]
         self.eff_front_tup_2_list=dict()
         self.dict_ord_name_2_ord=dict()
@@ -348,15 +351,18 @@ class ng_graph_fancy_slow:
             N_j=e[1][1]
             if u==v or u==self.Nc or v== self.Nc+1 :
                 #or  True==self.LAish_check_valid_edge(e):
+                num_self_self=num_self_self+1
                 new_E.append(e)
                 continue
             N_i=set(e[0][1])
             N_j=set(e[1][1])
             if len(N_j)==0:
                 new_E.append(e)
+                num_empty_nj=num_empty_nj+1
                 continue
             if len(N_j)==1 and u in N_j:
                 new_E.append(e)
+                num_just_u=num_just_u+1
                 continue
             poss_first=N_j-set([u])
             #print('poss_first')
@@ -394,7 +400,7 @@ class ng_graph_fancy_slow:
                         print(list_of_orders)
                         for my_order in list_of_orders:
                             print(my_order.my_order_name)
-                print('Killing e: u= '+str(e[0][0])+'  v=  '+str(e[1][0])+'  e='+str(e))
+                #print('Killing e: u= '+str(e[0][0])+'  v=  '+str(e[1][0])+'  e='+str(e))
                 num_kill=num_kill+1
             else: #did_add_ever==True:
                 new_E.append(e)
@@ -403,8 +409,8 @@ class ng_graph_fancy_slow:
         print(len(new_E))
         print('len(self.E)')
         print(len(self.E))
-        print('num_spared,num_kill')
-        print([num_spared,num_kill])
+        print('[num_spared,num_kill,num_self_self,num_empty_nj,num_just_u]')
+        print([num_spared,num_kill,num_self_self,num_empty_nj,num_just_u])
         self.E=new_E
         #input('all edges removed are avboce')
     def clean_order(self):

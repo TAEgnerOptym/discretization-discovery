@@ -5,8 +5,8 @@ from grab_default_params import grab_default_params
 from grab_params import grab_params
 from naive_pre import *
 from time_graph import time_graph
-#from dem_graph_2 import dem_graph
-from dem_graph import dem_graph
+from dem_graph_2 import dem_graph
+#from dem_graph import dem_graph
 from ng_graph import ng_graph
 from jy_make_input_file_no_la import jy_make_input_file_no_la
 import json
@@ -15,7 +15,10 @@ def make_problem_instance(input_file_path,my_params,my_json_file_path):
     dem_thresh=naive_get_dem_thresh_list(my_instance,(my_params['dem_step_sz']))
     time_thresh=naive_get_time_thresh_list(my_instance,(my_params['time_step_sz']))
     #print(my_instance.NC)
+    #input('start dem')
+
     my_dem_graph=dem_graph(my_instance,dem_thresh)
+    #input('done dem')
     my_time_graph=time_graph(my_instance,time_thresh)
     my_ng_graph=None
     if my_params['use_ng']>0.5:

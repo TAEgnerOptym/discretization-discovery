@@ -288,7 +288,7 @@ class projector:
             con_name_1='con_i_slack_pos_'+i
             #con_name_2='con_i_slack_neg_'+i
 
-            self.dict_PROJ_ineq_con_name_2_rhs[con_name_1]=-self.MF.jy_opt['epsilon']
+            self.dict_PROJ_ineq_con_name_2_rhs[con_name_1]=-self.MF.jy_opt['weight_slack_projector']#self.MF.jy_opt['epsilon']
             #self.dict_PROJ_ineq_con_name_2_rhs[con_name_2]=-self.MF.jy_opt['epsilon']
 
 

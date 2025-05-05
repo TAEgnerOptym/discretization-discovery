@@ -16,11 +16,11 @@ from compressor import compressor
 #from experimental_compressor_additive import compressor
 #from projector import projector
 #from experimental_projector_simp import projector
-#from experimental_projector_simp_eq import projector
+from experimental_projector_simp_eq import projector
 #from  import projector
 #from experimental_projector_simp_no_neg import projector
 
-from experimental_projector_simp_no_neg_w_removal import projector
+#from experimental_projector_simp_no_neg_w_removal import projector
 from baseline_solver import baseline_solver
 import json
 class full_solver:

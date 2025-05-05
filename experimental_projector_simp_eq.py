@@ -15,7 +15,7 @@ import pulp
 import random
 import time
 import bisect
-
+from solve_gurobi_lp import solve_gurobi_lp
 class projector:
 
     def __init__(self,my_full_solver,h):
@@ -68,16 +68,13 @@ class projector:
         self.proj_make_proj_flow_i_plus_minus()
         self.time_dict_proj['proj_make_proj_flow_i_plus_minus']=time.time()-t1
         t1=time.time()
-        debug_on=False
-        if debug_on==True:
-            #self.proj_make_equiv_flow()
-
-            self.make_primal_feas()
-            self.check_solution_feasibility()
-        if my_full_solver.jy_opt['use_Xpress']==False:
+        if my_full_solver.jy_opt['use_Xpress']==False and my_full_solver.jy_opt['use_gurobi']==False:
+            input('I should not be here')
             self.make_LP()
-        else:
+        if my_full_solver.jy_opt['use_Xpress']==True and my_full_solver.jy_opt['use_gurobi']==False:
             self.make_xpress_LP()
+        if  my_full_solver.jy_opt['use_gurobi']==True:
+            self.make_gur_LP_proj()
         t1=time.time()
         self.make_new_splits()
         self.time_dict_proj['make_new_splits']=time.time()-t1
@@ -451,6 +448,25 @@ class projector:
        # print('---')
         self.time_dict_proj['lp_post']=time.time()-t2
 
+
+    def make_gur_LP_proj(self):
+
+       
+        out_solution=solve_gurobi_lp(self.dict_PROJ_var_name_2_obj,
+                   self.dict_PROG_ineq_var_con_lhs,
+                   self.dict_PROJ_ineq_con_name_2_rhs,
+                   self.dict_PROG_eq_var_con_lhs,
+                   self.dict_PROJ_eq_con_name_2_rhs)
+        self.lp_dual_solution=out_solution['dual_solution']
+        self.lp_primal_solution=out_solution['primal_solution']
+        self.lp_objective=out_solution['objective']
+        self.time_dict_proj['GUR_time_pre']=out_solution['time_pre']
+        self.time_dict_proj['GUR_time_opt']=out_solution['time_opt']
+        self.time_dict_proj['GUR_time_post']=out_solution['time_post']
+        self.lp_time=out_solution['time_opt']
+        self.new_actions_ignore=[]
+
+
     def make_xpress_LP(self):
 
        # input('-in express lp--')
@@ -580,7 +596,7 @@ class projector:
         i_2_dual=dict()
         for i_orig in self.non_source_sink:
             i=i_orig[:]
-            if self.MF.jy_opt['use_Xpress']<0.5:
+            if self.MF.jy_opt['use_Xpress']<0.5 and self.MF.jy_opt['use_gurobi']<0.5 :
                 i= i.replace(" ", "_")
 
                 i= i.replace("[", "_")

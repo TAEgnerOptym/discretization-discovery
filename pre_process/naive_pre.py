@@ -13,9 +13,13 @@ def naive_get_dem_thresh_list(my_vrp,thresh_jmp):
 		#print('my_vrp.dem_full[u]')
 		#print(my_vrp.dem_full[u])
 		for d_end in np.arange(my_vrp.dem_full[u], d0 + thresh_jmp, thresh_jmp):
-			my_list.append(d_end)
+			my_list.append(round(d_end,5))
 		dem_thresh_list.append(my_list)
-
+		#print('dem_thresh_list')
+		#print(dem_thresh_list)
+		#print('thresh_jmp')
+		#print(thresh_jmp)
+		#input('--')
 	return dem_thresh_list
 
 def naive_get_time_thresh_list(my_vrp,thresh_jmp):
@@ -53,16 +57,18 @@ def naive_get_LA_neigh(my_vrp,num_la):
 
 	Nc=my_vrp.num_cust
 	DM=my_vrp.dist_mat
+	#DM=my_vrp.orig_dist_mat_full[:Nc,:Nc]
 	LA_neigh_list=[[]]*Nc
 	LA_neigh_list_unsorted=[[]]*Nc
 	for u in range(0,Nc):
-		#this_ord=np.argsort(DM[u,:])
-		this_ord=np.argsort(DM[:,u])
+		
+		this_ord=np.argsort(DM[u,:])
+		#this_ord=np.argsort(DM[:,u])
 
 		this_list=[];
 		for i in range(0,num_la):
-			#if DM[u,this_ord[i]]<np.inf:
-			if DM[this_ord[i],u]<np.inf:
+			if DM[u,this_ord[i]]<np.inf:
+			#if DM[this_ord[i],u]<np.inf:
 			
 				this_list=this_list+[this_ord[i]]
 			else:

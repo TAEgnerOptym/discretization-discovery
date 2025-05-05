@@ -79,7 +79,9 @@ class vrp_instance_class:
 		self.depot_start_time=100000
 		if input_matrix.shape[1]==6:
 			self.depot_start_time=input_matrix[0,3]
-
+		if my_params['num_multiplys_demand']>0:
+			for i in range(0,my_params['num_multiplys_demand']):
+				input_matrix[:,2]=input_matrix[:,2]*10
 		self.vehicle_capacity=input_matrix[0,2]
 		
 		self.num_cust=np.min([my_params['num_cust_use'],input_matrix.shape[0]-1])
@@ -94,6 +96,8 @@ class vrp_instance_class:
 		self.dem=input_matrix[1:self.num_cust+1,2]
 		self.dem_full=np.concatenate([input_matrix[1:(self.num_cust+1),2],np.zeros(2)],0)
 
+		
+			
 
 		if input_matrix.shape[1]==6:
 			self.early_start=input_matrix[1:self.num_cust+1,3]

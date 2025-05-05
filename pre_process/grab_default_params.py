@@ -7,6 +7,7 @@ def grab_default_params():
 	my_params['deactivate_time_graph']=False
 	my_params['deactivate_demand_graph']=False
 	my_params['epsilon']=.0001
+	my_params['weight_slack_projector']=.0000001
 	my_params['weight_compress']=.01	#my_params['max_ILP_time']=300
 	my_params['num_cust_use']=25
 	my_params['dem_step_sz']=1
@@ -42,4 +43,5 @@ def grab_default_params():
 	my_params["use_gurobi"]=0
 	my_params["max_ILP_time"]=1000
 	my_params['use_fancy_ng_graph']=1
+	my_params['num_multiplys_demand']=0
 	return my_params
