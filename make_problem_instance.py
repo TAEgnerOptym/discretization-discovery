@@ -5,13 +5,14 @@ from grab_default_params import grab_default_params
 from grab_params import grab_params
 from naive_pre import *
 from time_graph import time_graph
+#from dem_graph_2 import dem_graph
 from dem_graph import dem_graph
 from ng_graph import ng_graph
 from jy_make_input_file_no_la import jy_make_input_file_no_la
 import json
 def make_problem_instance(input_file_path,my_params,my_json_file_path):
     my_instance=vrp_instance_class(input_file_path,my_params)
-    dem_thresh=naive_get_dem_thresh_list(my_instance,int(my_params['dem_step_sz']))
+    dem_thresh=naive_get_dem_thresh_list(my_instance,(my_params['dem_step_sz']))
     time_thresh=naive_get_time_thresh_list(my_instance,(my_params['time_step_sz']))
     #print(my_instance.NC)
     my_dem_graph=dem_graph(my_instance,dem_thresh)
@@ -23,7 +24,13 @@ def make_problem_instance(input_file_path,my_params,my_json_file_path):
         #print('staritng ng making ')
         #print(ng_neigh_by_cust)
         #input('--')
-        my_ng_graph=ng_graph(my_instance,ng_neigh_by_cust)
+        if my_params['use_fancy_ng_graph']<0.5:
+            my_ng_graph=ng_graph(my_instance,ng_neigh_by_cust)
+        else:
+            from ng_graph_fancy_slow import ng_graph_fancy_slow
+
+            my_ng_graph=ng_graph_fancy_slow(my_instance,ng_neigh_by_cust)
+
         #print('done ng making ')
     data=[]
     my_object_no_la=jy_make_input_file_no_la(my_instance,my_dem_graph,my_time_graph,int(my_params['num_terms_per_bin_init_construct']),my_ng_graph)

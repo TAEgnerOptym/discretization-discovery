@@ -41,4 +41,5 @@ def grab_default_params():
 	my_params["doExrtraRemovalEdgesLB"]=0
 	my_params["use_gurobi"]=0
 	my_params["max_ILP_time"]=1000
+	my_params['use_fancy_ng_graph']=1
 	return my_params

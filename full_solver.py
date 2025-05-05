@@ -16,7 +16,7 @@ from compressor import compressor
 #from experimental_compressor_additive import compressor
 #from projector import projector
 #from experimental_projector_simp import projector
-from experimental_projector_simp_eq import projector
+#from experimental_projector_simp_eq import projector
 #from  import projector
 #from experimental_projector_simp_no_neg import projector
 
@@ -166,8 +166,15 @@ class full_solver:
             out_sol=dict()
             for my_delta in self.all_delta:
                 out_sol[my_delta]=my_ilp_sol[my_delta]
+
+            tot_cost=0
             for my_act in self.all_actions:
                 out_sol[my_act]=my_ilp_sol[my_act]
+                if my_ilp_sol[my_act]>0.5:
+                    print(my_act)
+                    tot_cost=tot_cost+self.action_2_cost[my_act]
+            print('tot_cost')
+            print(tot_cost)
             for my_prim in self.all_primitive_vars:
                 if my_prim in my_ilp_sol:
                     out_sol[my_prim]=my_ilp_sol[my_prim]
