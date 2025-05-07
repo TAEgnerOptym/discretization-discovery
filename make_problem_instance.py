@@ -37,8 +37,30 @@ def make_problem_instance(input_file_path,my_params,my_json_file_path):
         #print('done ng making ')
     data=[]
     my_object_no_la=jy_make_input_file_no_la(my_instance,my_dem_graph,my_time_graph,int(my_params['num_terms_per_bin_init_construct']),my_ng_graph)
+    
+    if my_params['use_time_graph']<0.5:
+        print('removing time')
+        del my_object_no_la.out_dict['h2sinkid']['timeGraph']
+        del my_object_no_la.out_dict['h2SourceId']['timeGraph']
+        del my_object_no_la.out_dict['graphName2Nodes']['timeGraph']
+        del my_object_no_la.out_dict['initGraphNode2AggNode']['timeGraph']
+        del my_object_no_la.out_dict['hij2P']['timeGraph']
+        my_object_no_la.out_dict['allGraphNames'].remove('timeGraph')
+
+    if my_params['use_dem_graph']<0.5:
+        print('removign demand')
+        del my_object_no_la.out_dict['h2sinkid']['capGraph']
+        del my_object_no_la.out_dict['h2SourceId']['capGraph']
+        del my_object_no_la.out_dict['graphName2Nodes']['capGraph']
+        del my_object_no_la.out_dict['initGraphNode2AggNode']['capGraph']
+        del my_object_no_la.out_dict['hij2P']['capGraph']
+        my_object_no_la.out_dict['allGraphNames'].remove('capGraph')
+        #del my_object_no_la.out_dict['allGraphNames']['capGraph']
+
+    
     data=my_object_no_la.out_dict
 
+    
 
     with open(my_json_file_path, 'w') as file:
         json.dump(data, file)

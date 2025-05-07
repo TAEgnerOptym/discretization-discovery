@@ -76,7 +76,7 @@ if 0>1:
 #all_files.append("jy_c109.txt")
 
 in_fold="data/"
-out_fold="output_first_gir__tst/out_"
+out_fold="no_cap/out_"
 my_json_input_path="mid_jnk"
 param_file_path="my_params_50.json"
 for my_file in all_files:

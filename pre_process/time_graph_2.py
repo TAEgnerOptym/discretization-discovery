@@ -6,7 +6,7 @@ class time_graph:
 	def check_if_con_poss(self,t1,t2,dist_term):
 
 		my_state=False
-		if  (t1-dist_term)>=t2-.0001:
+		if  (t1-dist_term)>=t2:#-.0000001:
 			my_state=True
 		return my_state
 	def check_add_edge(self,i,j):
@@ -22,6 +22,18 @@ class time_graph:
 
 		i_has_child=(ti_minus>MV.late_start_full[u]) and (u<Nc)
 		j_has_parent=(tj_plus<MV.early_start_full[v]) and (v<Nc)
+		i_has_child_1=(self.node_list[u][0]!=i) and (u<Nc)
+		j_has_parent_1=(self.node_list[v][-1]!=j) and (v<Nc)
+		if i_has_child!=i_has_child_1 or j_has_parent_1!=j_has_parent:
+			print('[i_has_child,j_has_parent,i_has_child_1,j_has_parent_1]')
+			print([i_has_child,j_has_parent,i_has_child_1,j_has_parent_1])
+			print('i')
+			print(i)
+			print('j')
+			print(j)
+			print('self.node_list[v]')
+			print(self.node_list[v])
+			input('--')
 		cond2=False
 		cond3=False
 		cond1=False
@@ -35,9 +47,16 @@ class time_graph:
 		else:
 			#cond1=(ti_minus-self.my_shift_bet_time_win==tj_plus)
 			cond1=.0001>np.abs(ti_minus-self.my_shift_bet_time_win-tj_plus)
-		#print('[cond1,cond2,cond3]')
-		#print([cond1,cond2,cond3])
-
+		if 1<0:
+			print('[cond1,cond2,cond3]')
+			print([cond1,cond2,cond3])
+			print('tj_plus:'+str(tj_plus))
+			print('ti_plus:'+str(ti_plus))
+			print('tj_minus:'+str(tj_minus))
+			print('ti_minus:'+str(ti_minus))
+			print('MV.early_start_full[v]')
+			print(MV.early_start_full[v])
+			print('---')
 		did_add=False
 
 		if cond1==True and cond2==False and cond3==False:
@@ -125,7 +144,7 @@ class time_graph:
 		self.time_thresh=time_thresh
 		self.make_nodes()
 		self.NEW_make_edges()
-		debug_on=False
+		debug_on=True
 		if debug_on==True:
 			self.make_edges()
 			self.debug_do_check_agree()
@@ -141,10 +160,17 @@ class time_graph:
 			if e1 not in self.E_novel_back:
 				print('e1')
 				print(e1)
-				print('self.node_list[45]')
-				print(self.node_list[45])
-				print('self.node_list[44]')
-				print(self.node_list[44])
+				u=e1[0][0]
+				v=e1[1][0]
+				my_dist=self.my_vrp.dist_mat_full[u,v]
+				print('[u,v]')
+				print([u,v])
+				print('my_dist')
+				print(my_dist)
+				print('self.node_list[u]')
+				print(self.node_list[u])
+				print('self.node_list[v]')
+				print(self.node_list[v])
 				input('errror here')
 		
 		for e2 in self.E_novel_back:
@@ -169,6 +195,11 @@ class time_graph:
 			earliest_arrival_from_i_CHILD_to_v=-np.inf
 			if i>0:
 				earliest_arrival_from_i_CHILD_to_v=self.node_2_early[u][i-1]-my_dist
+			#print('trying' )
+			#print("u = "+str(u))
+			#print("i = "+str(i))
+			#print("earliest_arrival_from_i_to_v = "+str(earliest_arrival_from_i_to_v))
+			#print("earliest_arrival_from_i_CHILD_to_v = "+str(earliest_arrival_from_i_CHILD_to_v))
 			for j in range(my_j_pos,-1,-1):
 				latest_arrival_allowed=self.node_2_late[v][j]
 				flag_cond=0
@@ -178,6 +209,9 @@ class time_graph:
 					self.E.append(this_tup)
 					self.DEBUG_edges_uv_tup[tuple([u,v])].append(this_tup)
 					my_j_pos=j-1
+					break
+			#if u==0 and 250>earliest_arrival_from_i_to_v:
+			#	input('---')
 
 	def NEW_make_edges(self):
 		MV=self.my_vrp

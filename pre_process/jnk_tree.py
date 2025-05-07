@@ -169,6 +169,11 @@ class time_graph:
 			earliest_arrival_from_i_CHILD_to_v=-np.inf
 			if i>0:
 				earliest_arrival_from_i_CHILD_to_v=self.node_2_early[u][i-1]-my_dist
+			#print('trying' )
+			#print("u = "+str(u))
+			#print("i = "+str(i))
+			#print("earliest_arrival_from_i_to_v = "+str(earliest_arrival_from_i_to_v))
+			#print("earliest_arrival_from_i_CHILD_to_v = "+str(earliest_arrival_from_i_CHILD_to_v))
 			for j in range(my_j_pos,-1,-1):
 				latest_arrival_allowed=self.node_2_late[v][j]
 				flag_cond=0
@@ -178,6 +183,9 @@ class time_graph:
 					self.E.append(this_tup)
 					self.DEBUG_edges_uv_tup[tuple([u,v])].append(this_tup)
 					my_j_pos=j-1
+					break
+			#if u==0 and 250>earliest_arrival_from_i_to_v:
+			#	input('---')
 
 	def NEW_make_edges(self):
 		MV=self.my_vrp

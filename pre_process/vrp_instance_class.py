@@ -135,7 +135,7 @@ class vrp_instance_class:
 			self.dist_2_depot[i]=self.get_dist_2_depot(i)
 			
 			self.early_start[i]=min([self.early_start[i],self.depot_start_time-self.dist_2_depot[i]])
-			
+			self.early_start_full[i]=self.early_start[i]
 			for j in range(0,self.num_cust):
 				self.dist_mat[i,j]=self.get_dist_cust_2_cust(i,j)
 		self.dist_mat_full=np.zeros((self.num_cust+2,self.num_cust+2));

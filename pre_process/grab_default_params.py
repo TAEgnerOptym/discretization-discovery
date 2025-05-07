@@ -43,5 +43,7 @@ def grab_default_params():
 	my_params["use_gurobi"]=0
 	my_params["max_ILP_time"]=1000
 	my_params['use_fancy_ng_graph']=1
+	my_params['use_dem_graph']=1
+	my_params['use_time_graph']=1
 	my_params['num_multiplys_demand']=0
 	return my_params

@@ -165,6 +165,8 @@ class full_solver:
             my_ilp_sol=self.my_lower_bound_ILP.milp_solution
             out_sol=dict()
             for my_delta in self.all_delta:
+                if my_delta.startswith('delta_timeRem'):
+                    print(my_delta+"  "+str(my_ilp_sol[my_delta]))
                 out_sol[my_delta]=my_ilp_sol[my_delta]
 
             tot_cost=0
@@ -322,7 +324,7 @@ class full_solver:
                 print('breaking do to no split')
                 break
         #input('done entire call')
-        if 1>0:#did_compress_call==False and use_compression==True and iter>0:
+        if use_compression>0.5:#1>0:#did_compress_call==False and use_compression==True and iter>0:
             #input('here')
             print('Doing final Clean up operations')
             self.my_lower_bound_LP=lower_bound_LP_milp(self,self.graph_node_2_agg_node,False,False)
