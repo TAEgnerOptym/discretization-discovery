@@ -319,6 +319,7 @@ class lower_bound_LP_milp:
         all_new_entries_ignore = []
         vars_names_ignore_set = set(self.vars_names_ignore)  # For O(1) lookups
         dict_update = {}  # Collect all new entries for one bulk update
+        dict_update_non_null = {}  # Collect all new entries for one bulk update
 
         for h in self.graph_names:
             for q in self.h_q_2_q_id[h]:
@@ -328,11 +329,12 @@ class lower_bound_LP_milp:
                     dict_update[var_name] = 0
                     if p in vars_names_ignore_set:
                         all_new_entries_ignore.append(var_name)
-
+                    if p !=self.null_action:
+                        dict_update_non_null[var_name] = 0
         # Single update call
         self.dict_var_name_2_obj.update(dict_update)
         if self.full_prob.jy_opt['all_vars_binary']==True:
-            for var_name in dict_update:
+            for var_name in dict_update_non_null:
                 self.dict_var_name_2_is_binary[var_name]=1
         # Final time record
         self.times_lp_times['help_construct_LB_make_vars_6'] = time.time() - t1
@@ -1146,7 +1148,7 @@ class lower_bound_LP_milp:
                 self.dict_var_name_2_is_binary,self.full_prob.jy_opt['max_ILP_time'])
 
 
-        
+        self.gurobi_MILP_str=out_solution['gurobi_log_string']
         self.milp_solution=out_solution['primal_solution']
         self.milp_solution_objective_value=out_solution['objective']
         self.times_lp_times['GUR_time_pre']=out_solution['time_pre']

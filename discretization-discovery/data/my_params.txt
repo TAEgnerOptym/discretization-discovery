@@ -1,2 +1,0 @@
-
-{"num_LA": 0, "num_cust_use": 25,"turn_off_time_windows":0, "max_ILP_time":30,"do_naive_ILP":0,"do_dem_time_extra":0,"use_fancy_time_bounds":0,"use_integer_y":0,"use_tau_2_from_correct":0,"my_time_divisor":1,"turnNewFancy_on":0,"use_flow_graph":1}

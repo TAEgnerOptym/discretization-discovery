@@ -397,7 +397,7 @@ class full_solver:
             self.history_dict['OUR_ilp_objective']=new_Ilp_value
             self.history_dict['OUR_MIP_Lower_Bound']=self.my_lower_bound_ILP.MIP_lower_bound
             self.history_dict['OUR_ilp_time']=self.my_lower_bound_ILP.milp_time
-            
+            self.history_dict['OUR_gurobi_MILP_str']=self.my_lower_bound_ILP.gurobi_MILP_str
             print('final solution objective')
             print(new_Ilp_value)
             if self.jy_opt['run_baseline']==True:

@@ -6,6 +6,20 @@ from gurobipy import GRB
 from collections import defaultdict
 import time
 
+import io
+import sys
+
+class Tee(io.TextIOBase):
+    def __init__(self, *streams):
+        self.streams = streams
+    def write(self, data):
+        for s in self.streams:
+            s.write(data)
+        return len(data)
+    def flush(self):
+        for s in self.streams:
+            s.flush()
+
 
 def solve_gurobi_lp(dict_var_name_2_obj,
                     dict_var_con_2_lhs_exog,
@@ -254,7 +268,7 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
         with gp.Model("converted_MILP", env=env) as model:
             model.setParam("OutputFlag", 0)
             model.setParam("TimeLimit", max_ILP_time)
-
+            model.setParam("LogFile", "../ALL_JSON_BIG/gurobi_log.txt")
             # Add variables, using binary type where needed
             var_dict = {}
             for name, obj_coeff in safe_var_obj.items():
@@ -263,20 +277,21 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
                 vtype = GRB.BINARY if name in safe_binary_set else GRB.CONTINUOUS
                 var_dict[name] = model.addVar(lb=lb, ub=ub, obj=obj_coeff, vtype=vtype, name=name)
 
-            #if >0:
-            #    count_1=0
-            #    count_2=0
-            #    for v_name in safe_binary_set:
-            #        safe_name = v_name
-            #        v=var_dict[v_name]
-            #        orig_name = var_name_rev[safe_name]
-            #        
-            #        if orig_name.startswith("act"):
-            #            v.BranchPriority = 100
-            #            count_1=count_1+1
-            #        else:
-            #            v.BranchPriority = 1
-            #            count_2=count_2+1
+            if  any(not var_name_rev[v].startswith("act") for v in safe_binary_set):
+                #input('HERE')
+                count_1=0
+                count_2=0
+                for v_name in safe_binary_set:
+                    safe_name = v_name
+                    v=var_dict[v_name]
+                    orig_name = var_name_rev[safe_name]
+                    
+                    if orig_name.startswith("act"):
+                        v.BranchPriority = 100
+                        count_1=count_1+1
+                    else:
+                        v.BranchPriority = 1
+                        count_2=count_2+1
                 print('[count_1,count_2]')
                 print([count_1,count_2])
             model.update()
@@ -306,9 +321,19 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
 
             time_pre = time.time() - time_pre
             model.setParam("OutputFlag", 1)
+            log_buffer = io.StringIO()
+
+            # Set up Tee to write to both stdout and buffer
+            tee = Tee(sys.__stdout__, log_buffer)
+            sys.stdout = tee
             time_opt = time.time()
             model.optimize()
             time_opt = time.time() - time_opt
+            sys.stdout = sys.__stdout__
+
+            # Extract the log from memory
+            gurobi_log_string = log_buffer.getvalue()
+            log_buffer.close()
             time_post = time.time()
             MIP_lower_bound=model.ObjBound
             #if model.status != GRB.OPTIMAL:
@@ -325,7 +350,8 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
                 "time_pre": time_pre,
                 "time_opt": time_opt,
                 "time_post": time_post,
-                "MIP_lower_bound":MIP_lower_bound
+                "MIP_lower_bound":MIP_lower_bound,
+                "gurobi_log_string":gurobi_log_string
             }
 
 
