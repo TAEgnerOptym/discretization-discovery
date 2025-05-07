@@ -1,0 +1,100 @@
+#ReadME
+#to run the code call 
+
+#main_simple with the following argumetns
+#input_file_path:  path to the input file
+#output_file_path:  path to the output file
+#my_json_input_path:  Path to the location where we will store teh input file generated for the solver
+#param_file_path:  Path to the options file
+
+
+The exampel call is 
+/usr/local/bin/python3 /Users/julian/Documents/GIt_cmu_codes/discretization-discovery/main_simple.py data/jy_c102.txt duck_json yuck.json my_params.json
+
+
+The options file has the following options to play with 
+
+#epsilon:  tiny positive number used for evalution operations in the code
+my_params['epsilon']=.0001
+#weight_compress the weight associated with comrpession in the compression code 
+my_params['weight_compress']=.01	
+#num_cust_use:  this is the nubmer of custoemrs to use from the input fiel
+my_params['num_cust_use']=25
+#dem_step_sz:  finest granularity for the demand graph
+my_params['dem_step_sz']=1
+#time_step_sz:  finest granularity for the time graph
+my_params['time_step_sz']=10
+#use_compression:  turns on compression operations
+my_params['use_compression']=True
+#max_iterations_loop_compress_project:  maximum number of itterations of the loop that calls comrpession and expansion
+my_params['max_iterations_loop_compress_project']=200
+#allOneBig_init:  Set to one to put all terms (except the source and sink) in the same bin
+my_params['allOneBig_init']=True
+#num_terms_per_bin_init_construct:  has teh number of nodes that get put in a bin for a given custoemr in the itnial construction.  This is ignored if allOneBig_init is used.  
+my_params['num_terms_per_bin_init_construct']=10000
+
+#min_inc_2_compress:  minimum amount to increase the dual objective by in order to apply compression
+my_params['min_inc_2_compress']=.01
+#save graph each iter
+my_params['save_graph_each_iter']=0 #set to one to do this
+#set to true to use Xpress
+my_params['use_Xpress']=True
+#xpress_file_loc:  location of the express file
+my_params['run_baseline']=True #set to true to run the  baseline solver at the end 
+#
+my_params['verbose']=False#prints the time break down of compoennet
+#xpress file locaiton
+my_params['xpress_file_loc']='/Users/julian/Documents/FICO\ Xpress\ Config/xpauth.xpr'
+
+my_params['use_NG_graph']=1 #set to one to use the ng -graph to eliminate cycles
+my_params['num_NG']=4 #number of ng-neighbors to use 
+my_params['use_classic_compress']=0 #set to one to do classic compression
+
+my_params['in_demo_mode']=0 #set to one in order to  have pause statemnetns prior to start of run and prior to calling ilp and baesline
+my_params['do_ilp']=1# set ot one to do ILP, 0 otherwise
+At every iteration  we produce the state of the code so that you can keep track currently  it looks as follows.  I put description after
+
+ITER FINISHE:  40 #iteration number 
+new_lp_value=  189.15  #current lower bound lp
+did_compress_call:  True  #did a compression call this round=True; or proejction otherwise 
+lp project time nan #times spent solving projection.  nan if this is not done this round.  
+lp compress time 0.07399201393127441 #times spent solving compression.  nan if this is not done this round.  
+lplb time 0.06635808944702148  #time spent solving the lower bound lp
+Graph Sizes (in terms of number of compressed nodes) are below: #sizes of the graphs for time and capacity af the round is done  
+h:   timeGraph is of size:   26
+h:   capGraph is of size:   4
+prob_sizes_at_start  #sizes of the graphs for time and capacity before the the round is started 
+{'timeGraph': 31, 'capGraph': 5}
+
+#the output is provided in a term called history dictionary
+
+#it has fieleds as follows.
+#for each 
+#out_sol is a dicitonary desciring the solution 
+#out_sol[my_delta] has for each delta terms its value 
+#out_sol[my_act] has each activity term the associated value
+#out_sol[my_prim] has each primitive value 
+#there is also a dicitonary which ahs followign fields 
+
+
+self.history_dict['lblp_lower'] #lower bound at each iteraiton
+self.history_dict['prob_sizes_at_start'] #graph sizes at each iteration
+self.history_dict['did_compress'] #did compress at each iter
+self.history_dict['lp_time_compress'] #LP time compress  at each iter
+self.history_dict['lp_time_project']  #LP time projection bound LP time  at each iter
+self.history_dict['lp_time_LB'] #Lower bound LP time  at each iter
+self.history_dict['ilp_time'] #ilp time at the end
+self.history_dict['lp_value_project'] #lp values for projections at each iteration
+self.history_dict['lp_value_compress'] #lp values for compression at each iteration
+self.history_dict['sum_lp_value_project'] #sum of LP valeus for projection at each iteraiton
+self.history_dict['sum_lp_time_project']#sum of time at  at each iteraiton
+
+self.history_dict['ilp_objective'] #ilp objective
+self.history_dict['ilp_time'] #ilp time
+self.history_dict['final_sizes'] #final sizes after the last compression
+self.history_dict['final_graph_node_2_agg_node'] #mapping of each graph, node to tis compressed node
+        
+self.history_dict['BASELINE_ILP_sol_obj']# baseline milp solution objective
+self.history_dict['BASELINE_milp_solution'] #baseline MILP solution
+self.history_dict['BASELINE_milp_time'] #baseline MILP solve time
+#
