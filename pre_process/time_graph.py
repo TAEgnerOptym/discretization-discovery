@@ -118,7 +118,8 @@ class time_graph:
 	def __init__(self,my_vrp,time_thresh):
 		#dem_thresh has the intermediate thresholds to be used
 		self.my_vrp=my_vrp
-		
+		self.DEBUG_extra_edges=[]
+		self.DEBUG_normal_edges=[]
 		self.my_shift_bet_time_win=self.my_vrp.my_params['my_shift_bet_time_win']
 
 		self.Nc=my_vrp.num_cust
@@ -131,6 +132,21 @@ class time_graph:
 			self.debug_do_check_agree()
 		#print('in here')
 		#print('--')
+		#print('self.DEBUG_extra_edges')
+		#print(self.DEBUG_extra_edges)
+		print('len(self.DEBUG_extra_edges)')
+		print(len(self.DEBUG_extra_edges))
+		print('self.DEBUG_normal_edges')
+		print(len(self.DEBUG_normal_edges))
+#
+#
+#
+		#print('self.DEBUG_edges_uv_tup[50,49]')
+		#print(self.DEBUG_edges_uv_tup[50,49])
+		#print('self.DEBUG_edges_uv_tup[49,49]')
+		#print(self.DEBUG_edges_uv_tup[49,49])
+		#print('self.node_list[49]')
+		#print(self.node_list[49])
 		#input('---')
 
 	def debug_do_check_agree(self):
@@ -162,7 +178,11 @@ class time_graph:
 		Nv_j=len(self.node_list[v])
 		self.DEBUG_edges_uv_tup[tuple([u,v])]=[]
 		my_j_pos=Nv_j-1
+
+
 		for i in range(Nu_i-1,-1,-1):
+			in_extra_mode=False
+
 			#print('self.node_2_early[u]')
 			#print(self.node_2_early[u])
 			earliest_arrival_from_i_to_v=self.node_2_early[u][i]-my_dist
@@ -172,12 +192,27 @@ class time_graph:
 			for j in range(my_j_pos,-1,-1):
 				latest_arrival_allowed=self.node_2_late[v][j]
 				flag_cond=0
+				#if j>0:
+				#	tup_must_exist=tuple([self.node_list[v][j],self.node_list[v][j-1]])
+				#	if tup_must_exist not in self.E:
+				#		print('tup_must_exist')
+				#		print(tup_must_exist)
+				#		input('found it this is interesting ')
 				if earliest_arrival_from_i_to_v>= latest_arrival_allowed and latest_arrival_allowed>earliest_arrival_from_i_CHILD_to_v:#-.0001:
 					this_tup=tuple([self.node_list[u][i],self.node_list[v][j]])
 					self.E_novel_back.append(this_tup)
 					self.E.append(this_tup)
 					self.DEBUG_edges_uv_tup[tuple([u,v])].append(this_tup)
 					my_j_pos=j-1
+					if in_extra_mode:
+						self.DEBUG_extra_edges.append(this_tup)
+						
+					else:
+						self.DEBUG_normal_edges.append(this_tup)
+						if u==self.Nc or v==self.Nc+1 or self.my_vrp.my_params['DEBUG_ALLOW_DUMB_EDGES']<0.5:
+							break
+					in_extra_mode=True
+					#break
 
 	def NEW_make_edges(self):
 		MV=self.my_vrp

@@ -263,20 +263,20 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
                 vtype = GRB.BINARY if name in safe_binary_set else GRB.CONTINUOUS
                 var_dict[name] = model.addVar(lb=lb, ub=ub, obj=obj_coeff, vtype=vtype, name=name)
 
-            if 1>0:
-                count_1=0
-                count_2=0
-                for v_name in safe_binary_set:
-                    safe_name = v_name
-                    v=var_dict[v_name]
-                    orig_name = var_name_rev[safe_name]
-                    
-                    if orig_name.startswith("act"):
-                        v.BranchPriority = 100
-                        count_1=count_1+1
-                    else:
-                        v.BranchPriority = 1
-                        count_2=count_2+1
+            #if >0:
+            #    count_1=0
+            #    count_2=0
+            #    for v_name in safe_binary_set:
+            #        safe_name = v_name
+            #        v=var_dict[v_name]
+            #        orig_name = var_name_rev[safe_name]
+            #        
+            #        if orig_name.startswith("act"):
+            #            v.BranchPriority = 100
+            #            count_1=count_1+1
+            #        else:
+            #            v.BranchPriority = 1
+            #            count_2=count_2+1
                 print('[count_1,count_2]')
                 print([count_1,count_2])
             model.update()
