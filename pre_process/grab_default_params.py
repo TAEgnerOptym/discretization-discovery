@@ -47,4 +47,5 @@ def grab_default_params():
 	my_params['use_time_graph']=1
 	my_params['num_multiplys_demand']=0
 	my_params['DEBUG_ALLOW_DUMB_EDGES']=0
+	my_params['add_all_ng_split_at_end']=0
 	return my_params

@@ -387,6 +387,23 @@ class full_solver:
         print('sum(self.history_dict[sum_lp_time_project].values())')
         print(np.nansum(np.array(self.history_dict['sum_lp_time_project'])))
         print('TOT_time_component_lps')
+
+
+        if self.jy_opt['add_all_ng_split_at_end']>0.5:
+            ng_source=self.h_2_source_id['ngGraph']
+            ng_sink=self.h_2_sink_id['ngGraph']
+            
+            all_ng_non_nodes=set(self.graph_node_2_agg_node['ngGraph'].keys())-set([ng_source,ng_sink])
+            counter=0
+            print('self.graph_node_2_agg_node[ng_graph][ng_source]')
+            print(self.graph_node_2_agg_node['ngGraph'][ng_source])
+            print('self.graph_node_2_agg_node[ng_graph][ng_sink]')
+            print(self.graph_node_2_agg_node['ngGraph'][ng_sink])
+            input('--')
+            for i in all_ng_non_nodes:
+                self.graph_node_2_agg_node['ngGraph'][i]=str(counter)
+                counter=counter+1
+
         self.history_dict['final_sizes']=self.count_size()
         self.history_dict['final_graph_node_2_agg_node']=self.graph_node_2_agg_node
         if self.jy_opt['do_ilp']>0.5:

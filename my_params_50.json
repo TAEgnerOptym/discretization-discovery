@@ -1,0 +1,41 @@
+{
+    "num_cust_use":50,
+    "num_thresh_split_projector":20,
+    "weight_slack_projector":0.00001,
+    "allOneBig_init":1,
+    "use_classic_compress":1,
+    "use_classic_compress_last":1,
+    "time_step_sz":0.5,
+    "num_NG":8,
+    "dem_step_sz":1,
+    "all_vars_binary":1,
+    "num_multiplys_demand":0,
+    "use_dem_graph":0,
+    "use_time_graph":1,
+    "use_ng":1,
+    
+    
+    "doExrtraRemovalEdgesLB":0,
+    "roundingDiscretization_num_digits_keep":3,
+    "use_Xpress":0,
+    "use_gurobi":1,
+    "lplb_solver":4,
+    "proj_solver":4,
+    "compress_solver":1,
+    "use_julians_custom_lp_solver":0,
+    
+    "threshold_split":0.01,
+    
+    "do_ilp":1,
+    "run_baseline":0,
+    "save_graph_each_iter":0,
+    "num_terms_per_bin_init_construct":10,
+    "max_iterations_loop_compress_project":100,
+    
+    "verbose":0,
+    "use_compression":1,
+    "min_inc_2_compress":0.1,
+    "in_demo_mode":0,
+    "offset_cost_edge_project":0,
+    "max_ILP_time":1000
+    }
