@@ -393,12 +393,15 @@ class jy_make_input_file_no_la:
             if self.jy_opt['use_ng']>0.5:
                 my_count=0
                 for i in self.ngGraph.node_list[u]:
+                    num_ng_forbidden=len(i[1])
+                    #print(my_tmp)
+                    #input('my_tmp')
                     self.graphName2Nodes['ngGraph'].append(str(i))
                     bin_num=int(my_count/self.num_terms_per_bin)
                     if self.jy_opt['allOneBig_init']>0.5:
                         bin_num=50
                         #input('--')
-                    self.initGraphNode2AggNode['ngGraph'][str(i)]='ng_'+str(u_use)+'_'+str(bin_num)
+                    self.initGraphNode2AggNode['ngGraph'][str(i)]='ng_'+str(u_use)+'_'+str(num_ng_forbidden)
                     my_count=my_count+1
 
 

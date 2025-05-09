@@ -71,6 +71,17 @@ class full_solver:
         self.h_2_sink_id=full_input_dict['h2sinkid']
         #self.init_agg_graph_node_2_agg_node:  rganize first by h then by  node name then by the aggregated node
         self.graph_node_2_agg_node=full_input_dict['initGraphNode2AggNode']
+        self.orig_init_graph_node_2_agg_node=dict()
+        for h in self.graph_node_2_agg_node:
+            self.orig_init_graph_node_2_agg_node[h]=dict()
+            for i in self.graph_node_2_agg_node[h]:
+                self.orig_init_graph_node_2_agg_node[h][i]=str(self.graph_node_2_agg_node[h][i])
+                #if h=='ngGraph':
+                    #print('self.graph_node_2_agg_node[h][i]')
+                    #print(self.graph_node_2_agg_node[h][i])
+                    #print('i')
+                    #print(i)
+                    #input('--')
         #self.agg_graph_agg_node_2_node=full_input_dict['init_agg_graph_agg_node_2_node']
 
         self.graph_names=full_input_dict['allGraphNames']
@@ -201,6 +212,9 @@ class full_solver:
 
     def apply_complete_algorithm(self):
         incumbant_lp=-np.inf
+
+        #self.count_size(False)
+        #input('---')
         #self.my_lower_bound_LP=lower_bound_LP_milp(self,self.graph_node_2_agg_node,True,False)
         #input('ready')
         iter=0
@@ -267,6 +281,9 @@ class full_solver:
                 #input('done compression ')
                 incumbant_lp=new_lp_value
             #else:
+            if self.jy_opt['restore_after_each_step']>0.5:
+                self.split_based_init()
+
             self.time_list_outer['part2']=time.time()-t1
             t1=time.time()
             this_prob_sizes_mid=self.count_size()
@@ -395,15 +412,28 @@ class full_solver:
             
             all_ng_non_nodes=set(self.graph_node_2_agg_node['ngGraph'].keys())-set([ng_source,ng_sink])
             counter=0
-            print('self.graph_node_2_agg_node[ng_graph][ng_source]')
-            print(self.graph_node_2_agg_node['ngGraph'][ng_source])
-            print('self.graph_node_2_agg_node[ng_graph][ng_sink]')
-            print(self.graph_node_2_agg_node['ngGraph'][ng_sink])
-            input('--')
+            #print('self.graph_node_2_agg_node[ng_graph][ng_source]')
+            #print(self.graph_node_2_agg_node['ngGraph'][ng_source])
+            #print('self.graph_node_2_agg_node[ng_graph][ng_sink]')
+            #print(self.graph_node_2_agg_node['ngGraph'][ng_sink])
+            #input('--')
             for i in all_ng_non_nodes:
                 self.graph_node_2_agg_node['ngGraph'][i]=str(counter)
                 counter=counter+1
+        
+        if self.jy_opt['do_split_based_init']>0.5:
+            #print('OLD STUFF')
 
+            #self.count_size(False)
+            #print('OLD STUFF')
+            self.split_based_init()
+            #print('NEW STUFF')
+
+            self.count_size(False)
+            #print('NEW STUFF')
+
+            #input('--')
+        self.count_size(False)
         self.history_dict['final_sizes']=self.count_size()
         self.history_dict['final_graph_node_2_agg_node']=self.graph_node_2_agg_node
         if self.jy_opt['do_ilp']>0.5:
@@ -448,3 +478,26 @@ class full_solver:
             #self.history_dict['my_base_milp_solution']=my_base.milp_solution
             #self.history_dict['milp_solution_objective_value']=milp_solution_objective_value
         self.prepare_ILP_solution()
+
+
+
+    def split_based_init(self):
+        self.NEW_graph_node_2_agg_node=dict()
+        for h in self.graph_names:
+            self.NEW_graph_node_2_agg_node[h]=dict()
+            non_sourc_sink_nodes_of_h=set(self.graph_node_2_agg_node[h])-set([self.h_2_sink_id[h],self.h_2_source_id[h]])
+
+            self.NEW_graph_node_2_agg_node[h][self.h_2_sink_id[h]]=self.graph_node_2_agg_node[h][self.h_2_sink_id[h]]
+            self.NEW_graph_node_2_agg_node[h][self.h_2_source_id[h]]=self.graph_node_2_agg_node[h][self.h_2_source_id[h]]
+            for i in non_sourc_sink_nodes_of_h:
+                old_name=self.graph_node_2_agg_node[h][i]
+                init_name=self.orig_init_graph_node_2_agg_node[h][i]
+                new_name=old_name+"_"+init_name
+                #print('old_name')
+                #print(old_name)
+                #print('init_name')
+                #print(init_name)
+                #print('new_name')
+                #print(new_name)
+                self.NEW_graph_node_2_agg_node[h][i]=new_name
+        self.graph_node_2_agg_node=self.NEW_graph_node_2_agg_node

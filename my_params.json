@@ -2,10 +2,10 @@
 "num_cust_use":50,
 "num_thresh_split_projector":20,
 "weight_slack_projector":0.00001,
-"allOneBig_init":1,
+"allOneBig_init":0,
 "use_classic_compress":1,
 "use_classic_compress_last":1,
-"time_step_sz":0.5,
+"time_step_sz":0.1,
 "num_NG":8,
 "dem_step_sz":1,
 "all_vars_binary":1,
@@ -16,6 +16,9 @@
 "use_fancy_ng_graph":1,
 "DEBUG_ALLOW_DUMB_EDGES":0,
 "add_all_ng_split_at_end":0,
+"do_split_based_init":1,
+"restore_after_each_step":1,
+"num_terms_per_bin_init_construct":100,
 
 
 "doExrtraRemovalEdgesLB":0,
@@ -32,8 +35,7 @@
 "do_ilp":1,
 "run_baseline":0,
 "save_graph_each_iter":0,
-"num_terms_per_bin_init_construct":10,
-"max_iterations_loop_compress_project":100,
+"max_iterations_loop_compress_project":10,
 
 "verbose":0,
 "use_compression":1,

@@ -322,6 +322,13 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
             time_pre = time.time() - time_pre
             model.setParam("OutputFlag", 1)
             log_buffer = io.StringIO()
+            if 1<0:
+                model.setParam("Cuts", 0)
+                model.setParam("Heuristics", 0)
+                model.setParam("CutPasses", 0)
+                model.setParam("Presolve", 2)  # Leave presolve on, it's helpful
+                #model.setParam("NodeMethod", 1)  # Use dual simplex in the tree
+                model.update()
 
             # Set up Tee to write to both stdout and buffer
             tee = Tee(sys.__stdout__, log_buffer)
