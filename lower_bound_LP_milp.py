@@ -11,7 +11,7 @@ import matplotlib.patches as mpatches
 import xpress as xp
 import networkx as nx
 import time
-
+import re
 from scipy.sparse import csr_matrix
 import pulp
 import sys
@@ -92,6 +92,8 @@ class lower_bound_LP_milp:
 
         self.construct_LB_or_ILP(self.OPT_use_psi,self.OPT_do_ilp)
         self.filter_constraints()
+
+            
         if self.OPT_do_ilp==0:
             
             
@@ -100,6 +102,8 @@ class lower_bound_LP_milp:
                 self.make_LP()
                 
             if self.full_prob.jy_opt['use_gurobi']>0.5:# and self.full_prob.jy_opt['use_gurobi']==False:
+                #if self.full_prob.jy_opt['think_compress'] and len(self.full_prob.all_actions_ever_seen)>0:
+                #    self.THINK_aggregate_constraints_dictionary()
                 self.call_gurobi_solver()
                 self.naive_compress_get_pi_by_h_node()
                 self.naive_compress_make_f_2_new_f()
@@ -116,6 +120,13 @@ class lower_bound_LP_milp:
                     self.Naive_make_i_2_new_f()
                     self.times_lp_times['after_compression']=time.time()-t1
         else:
+
+            #if self.full_prob.jy_opt['think_compress']>0.5:
+                
+               
+            #    self.THINK_aggregate_constraints_dictionary()
+            #    input('STARTING LP_PRE')
+
             if self.full_prob.jy_opt['use_gurobi']>0.5:
                 self.call_gurobi_milp_solver()
             if self.full_prob.jy_opt['use_gurobi']<0.5 and self.full_prob.jy_opt['use_Xpress']==True:
@@ -769,6 +780,8 @@ class lower_bound_LP_milp:
         #self.milp_solution = {var_name: milp_prob.getSolution(var_name) for var_name in var_dict}
         self.milp_solution_status = milp_prob.getProbStatus()
         self.milp_solution_objective_value = milp_prob.getObjVal()
+        self.MIP_lower_bound = milp_prob.getAttrib('bestbound')
+
         self.times_lp_times['post_XMILP']=time.time()-t3
 
     def make_LP(self):
@@ -1068,7 +1081,7 @@ class lower_bound_LP_milp:
 
     def call_gurobi_solver(self):
     
-        if self.full_prob.jy_opt['use_julians_custom_lp_solver']<0.5:
+        if len(self.full_prob.all_actions_ever_seen)<10 or  self.full_prob.jy_opt['use_julians_custom_lp_solver']<0.5:
 
             if 1<0:
                 input('i dont want to be here since i am usign bounds')
@@ -1112,6 +1125,8 @@ class lower_bound_LP_milp:
             
         else:
             #
+            #self.actions_ignore_2=set(self.all_actions)-self.full_prob.all_actions_ever_seen
+            #self.actions_ignore_2=self.actions_ignore_2.union(self.full_prob.all_actions_not_source_sink_connected)
             GUR_CLASS_lp_prob,time_lp_1=warm_start_lp_using_class_gurobi(self.dict_var_name_2_obj,
                     self.dict_var_con_2_lhs_exog,
                     self.dict_con_name_2_LB,
@@ -1131,21 +1146,13 @@ class lower_bound_LP_milp:
     def call_gurobi_milp_solver(self):
         out_solution=[]
 
-        if 1<0:
-            input('i dont want to be here since i am usign bounds')
-            out_solution=solve_gurobi_milp(self.dict_var_name_2_obj,
-                   self.dict_var_con_2_lhs_exog,
-                   self.dict_con_name_2_LB,
-                   self.dict_var_con_2_lhs_eq,
-                   self.dict_con_name_2_eq,
-                   self.dict_var_name_2_is_binary,self.full_prob.jy_opt['max_ILP_time'])
-        else:
-            out_solution=solve_gurobi_milp_bounds(self.dict_var_name_2_obj,
-                self.CLEAN_dict_var_con_2_lhs_exog,
-                self.CLEAN_dict_con_name_2_LB,
-                self.CLEAN_dict_var_con_2_lhs_eq,
-                self.CLEAN_dict_con_name_2_eq,self.full_prob.delta_name_2_lb,self.full_prob.delta_name_2_ub,
-                self.dict_var_name_2_is_binary,self.full_prob.jy_opt['max_ILP_time'])
+        
+        out_solution=solve_gurobi_milp_bounds(self.dict_var_name_2_obj,
+            self.CLEAN_dict_var_con_2_lhs_exog,
+            self.CLEAN_dict_con_name_2_LB,
+            self.CLEAN_dict_var_con_2_lhs_eq,
+            self.CLEAN_dict_con_name_2_eq,self.full_prob.delta_name_2_lb,self.full_prob.delta_name_2_ub,
+            self.dict_var_name_2_is_binary,self.full_prob.jy_opt['max_ILP_time'])
 
 
         self.gurobi_MILP_str=out_solution['gurobi_log_string']
@@ -1157,6 +1164,10 @@ class lower_bound_LP_milp:
         self.milp_time=out_solution['time_opt']
         self.MIP_lower_bound=out_solution['MIP_lower_bound']
         self.new_actions_ignore=[]
+
+
+
+
 
 
     def naive_compress_get_pi_by_h_node(self):
@@ -1256,3 +1267,84 @@ class lower_bound_LP_milp:
             if con not in self.ignore_set
         }
 
+    def THINK_aggregate_constraints_dictionary(self):
+        input('DONT EXECUTE ME')
+        cons_remove=[]
+        con_merge=[]
+        LP_SOL_LAST=self.full_prob.my_lower_bound_LP.lp_primal_solution
+        act_2_finest=dict(set([]))
+        finest_2_act=dict()
+        #source_id=self.full_prob.jy_opt['']
+        special_cons_keep=dict()
+        special_cons_merge=dict()
+        special_cons_keep_all=[]
+        special_cons_merge_all=[]
+        all_con_names_remove=[]
+        all_con_names_remove_2_new_con_name=dict()
+        REVERSE_all_con_names_remove_2_new_con_name=dict()
+        Nc=self.full_prob.jy_opt['num_cust_use']
+        one_big_merge=False
+        if self.full_prob.jy_opt['think_compress']>1.5:
+            one_big_merge=True
+        for u in range(0,Nc+1):
+            special_cons_merge[u]=[]
+            special_cons_keep[u]=[]
+            for v in range(0,Nc+2):
+                act_name='act_'+str(u)+'_'+str(v)
+                if act_name in self.full_prob.all_non_null_action:
+                    if act_name in self.full_prob.all_actions_ever_seen:#LP_SOL_LAST[act_name]>0:
+                        special_cons_keep[u].append(act_name)
+                        special_cons_keep_all.append(act_name)
+                    else:
+                        special_cons_merge[u].append(act_name)
+                        for h in self.graph_names:
+                            con_name = 'action_match_h='+h+'_p='+act_name
+                            all_con_names_remove.append(con_name)
+                            new_name='NEW_action_match_h='+h+'u='+str(u)
+                            if one_big_merge==True:
+                                new_name='NEW_action_match_h='+h+'u=ALL'
+                            all_con_names_remove_2_new_con_name[con_name]=new_name
+                            if new_name not in REVERSE_all_con_names_remove_2_new_con_name:
+                                REVERSE_all_con_names_remove_2_new_con_name[new_name]=[]
+                            REVERSE_all_con_names_remove_2_new_con_name[new_name].append(con_name)
+        NEW_dict_var_con_2_lhs_eq=dict()
+        for (var, con), coeff in self.dict_var_con_2_lhs_eq.items():
+            if con in all_con_names_remove_2_new_con_name:
+                new_con = all_con_names_remove_2_new_con_name[con]
+                new_key = (var, new_con)
+            else:
+                new_key = (var, con)
+            
+            NEW_dict_var_con_2_lhs_eq[new_key] = coeff
+    
+        renamed_cons = set(all_con_names_remove_2_new_con_name)
+        new_cons_set = set(all_con_names_remove_2_new_con_name.values())
+
+        # Build new dict in one go
+        NEW_con_name_2_eq = {
+            con: val for con, val in self.dict_con_name_2_eq.items() if con not in renamed_cons
+        }
+        print('len(NEW_con_name_2_eq)')
+        print(len(NEW_con_name_2_eq))
+        print('len(dict_con_name_2_eq)')
+        print(len(self.dict_con_name_2_eq))
+        # Add zero entries for each new constraint name
+        NEW_con_name_2_eq.update({con: 0 for con in new_cons_set})
+        self.dict_con_name_2_eq=NEW_con_name_2_eq
+        self.dict_var_con_2_lhs_eq=NEW_dict_var_con_2_lhs_eq
+        print('len(self.full_prob.all_actions_ever_seen)')
+        print(len(self.full_prob.all_actions_ever_seen))
+        print('len(self.full_prob.all_non_null_action)')
+        print(len(self.full_prob.all_non_null_action))
+        print('DOING THIS REMOVAL OPERATION')
+        print('DOING THIS REMOVAL OPERATION')
+        print('DOING THIS REMOVAL OPERATION')
+        print('DOING THIS REMOVAL OPERATION')
+        print('DOING THIS REMOVAL OPERATION')
+        print('DOING THIS REMOVAL OPERATION')
+        print('DOING THIS REMOVAL OPERATION')
+        print('DOING THIS REMOVAL OPERATION')
+        print('DOING THIS REMOVAL OPERATION')
+        print('DOING THIS REMOVAL OPERATION')
+        print('DOING THIS REMOVAL OPERATION')
+        #input('---')

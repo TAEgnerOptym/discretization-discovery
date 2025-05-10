@@ -11,6 +11,7 @@ import networkx as nx
 import time
 from scipy.sparse import csr_matrix
 from lower_bound_LP_milp import lower_bound_LP_milp
+#from exper_lower_bound_LP_MILP import lower_bound_LP_milp
 import pulp
 from compressor import compressor
 #from experimental_compressor_additive import compressor
@@ -76,14 +77,7 @@ class full_solver:
             self.orig_init_graph_node_2_agg_node[h]=dict()
             for i in self.graph_node_2_agg_node[h]:
                 self.orig_init_graph_node_2_agg_node[h][i]=str(self.graph_node_2_agg_node[h][i])
-                #if h=='ngGraph':
-                    #print('self.graph_node_2_agg_node[h][i]')
-                    #print(self.graph_node_2_agg_node[h][i])
-                    #print('i')
-                    #print(i)
-                    #input('--')
-        #self.agg_graph_agg_node_2_node=full_input_dict['init_agg_graph_agg_node_2_node']
-
+                
         self.graph_names=full_input_dict['allGraphNames']
         self.TOT_time_component_lps=dict()
         for h in self.graph_names:
@@ -108,16 +102,8 @@ class full_solver:
         self.history_dict['sum_lp_value_project']=[]
         self.history_dict['sum_lp_time_project']=[]
         self.history_dict['history_of_graphs_by_iter']=[]
-
-        #self.set_jy_options()
         
         self.apply_complete_algorithm()
-
-       
-    #def set_jy_options(self):
-    #    self.jy_opt=dict()
-    #    self.jy_opt['epsilon']=.0001
-    #    self.jy_opt['weight_compress']=.01
 
     def apply_splitting(self):
         did_split=False
@@ -227,7 +213,8 @@ class full_solver:
         tot_comp_lp_time=0
         
         self.actions_ignore=self.all_actions_not_source_sink_connected
-
+        self.all_actions_ever_seen=set([])#set(self.all_non_null_action.copy())#set()
+        #self.all_actions_ever_seen=set(self.all_non_null_action.copy())#set()
         while iter<self.jy_opt['max_iterations_loop_compress_project']:
             self.time_list_outer=dict()
             iter=iter+1
@@ -240,7 +227,12 @@ class full_solver:
             self.my_lower_bound_LP=lower_bound_LP_milp(self,self.graph_node_2_agg_node,False,False)
             self.time_list_outer['part0.5']=time.time()-t1
             print('DONE lower bound computing ')
-
+            
+            for p in self.all_non_null_action:
+                if self.my_lower_bound_LP.lp_primal_solution[p]>0:
+                    self.all_actions_ever_seen.add(p)
+            
+            #self.THINK_get_p_h_mapping()
             self.actions_ignore=self.my_lower_bound_LP.new_actions_ignore.copy()
             t1=time.time()
             lblp_time=self.my_lower_bound_LP.lp_time
@@ -444,7 +436,8 @@ class full_solver:
             self.history_dict['OUR_ilp_objective']=new_Ilp_value
             self.history_dict['OUR_MIP_Lower_Bound']=self.my_lower_bound_ILP.MIP_lower_bound
             self.history_dict['OUR_ilp_time']=self.my_lower_bound_ILP.milp_time
-            self.history_dict['OUR_gurobi_MILP_str']=self.my_lower_bound_ILP.gurobi_MILP_str
+            if self.jy_opt['use_gurobi']>0.5:
+                self.history_dict['OUR_gurobi_MILP_str']=self.my_lower_bound_ILP.gurobi_MILP_str
             print('final solution objective')
             print(new_Ilp_value)
             if self.jy_opt['run_baseline']==True:
@@ -501,3 +494,4 @@ class full_solver:
                 #print(new_name)
                 self.NEW_graph_node_2_agg_node[h][i]=new_name
         self.graph_node_2_agg_node=self.NEW_graph_node_2_agg_node
+    

@@ -5,7 +5,7 @@ import numpy as np
 
 class jy_fast_lp:
     
-    def __init__(self,lp_prob, var_dict, all_possible_forbidden_names,init_forbiden_names, K=20, verbose=False,remove_choice=3,alg_use=1,debug_on=False,min_improvement_dump=.1,epsilon=.0001):
+    def __init__(self,lp_prob, var_dict, all_possible_forbidden_names,init_forbiden_names, K=200, verbose=True,remove_choice=2,alg_use=1,debug_on=False,min_improvement_dump=.1,epsilon=.0001):
         
         self.lp_prob=lp_prob
         self.var_dict=var_dict
@@ -56,7 +56,6 @@ class jy_fast_lp:
         iter=0
         if self.verbose==True:
             input('about to start the internal lp solver')
-        #self.verbose=True
         while True:
             iter=iter+1
             self.compute_bound()
@@ -90,6 +89,10 @@ class jy_fast_lp:
                 print(len(self.forbidden_vars_with_neg_red_cost) )
                 print('len(forbidden_var_names)')
                 print(len(self.forbidden_var_names))
+                print('self.hist[time_iter][-1]')
+                print(self.hist['time_iter'][-1])
+                print('sum(self.hist[time_iter])')
+                print(sum(self.hist['time_iter']))
                 print('---')
              
 

@@ -49,4 +49,6 @@ def grab_default_params():
 	my_params['DEBUG_ALLOW_DUMB_EDGES']=0
 	my_params['add_all_ng_split_at_end']=0
 	my_params['do_split_based_init']=0
+	my_params["think_compress"]=0
+	
 	return my_params

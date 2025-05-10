@@ -323,10 +323,13 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
             model.setParam("OutputFlag", 1)
             log_buffer = io.StringIO()
             if 1<0:
-                model.setParam("Cuts", 0)
-                model.setParam("Heuristics", 0)
-                model.setParam("CutPasses", 0)
-                model.setParam("Presolve", 2)  # Leave presolve on, it's helpful
+                model.setParam("Cuts", 0)                # Disable all cutting planes
+                model.setParam("Heuristics", 0)          # Disable primal heuristics
+                model.setParam("CutPasses", 0)           # No passes even beyond root
+                model.setParam("Presolve", 2)            # Leave presolve on (it's cheap and useful)
+                model.setParam("NodeMethod", 1)          # Use dual simplex in nodes
+                model.setParam("Method", 1)              # Use dual simplex for LPs
+                model.setParam("StartNodeLimit", 1)  # Leave presolve on, it's helpful
                 #model.setParam("NodeMethod", 1)  # Use dual simplex in the tree
                 model.update()
 
