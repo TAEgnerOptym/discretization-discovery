@@ -333,49 +333,54 @@ class full_solver:
                 print('breaking do to no split')
                 break
         #input('done entire call')
-        if use_compression>0.5:#1>0:#did_compress_call==False and use_compression==True and iter>0:
+        if  use_compression>0.5:#1>0:#did_compress_call==False and use_compression==True and iter>0:
             #input('here')
-            print('Doing final Clean up operations')
-            self.my_lower_bound_LP=lower_bound_LP_milp(self,self.graph_node_2_agg_node,False,False)
-            prob_sizes_at_start=self.count_size()
+            if self.history_dict['sum_lp_value_project'][-1]>.001:
+                print('Doing final Clean up operations')
+                self.my_lower_bound_LP=lower_bound_LP_milp(self,self.graph_node_2_agg_node,False,False)
+                prob_sizes_at_start=self.count_size()
 
-            lblp_time=self.my_lower_bound_LP.lp_time
-            new_lp_value=self.my_lower_bound_LP.lp_objective
-            did_compress_call=True
-            proj_objective_componentLps=dict()
-            proj_time_component_lps=dict()
-            compress_lp_time=0
-            compress_lp_val=np.nan
-            for h in self.graph_names:
-                proj_objective_componentLps[h]=np.nan
-                proj_time_component_lps[h]=np.nan
-            if self.jy_opt['use_classic_compress_last']<0.5:
-                [compress_lp_time,compress_lp_val]=self.ApplyCompresssion()
-            else:
-                self.graph_node_2_agg_node=self.my_lower_bound_LP.NAIVE_graph_node_2_agg_node
-            
-            self.history_dict['lblp_lower'].append(new_lp_value)
-            self.history_dict['prob_sizes_at_start'].append(prob_sizes_at_start)
-            self.history_dict['did_compress'].append(did_compress_call)
-            self.history_dict['lp_time_compress'].append(compress_lp_time)
-            self.history_dict['lp_time_project'].append(proj_time_component_lps)
-            self.history_dict['lp_time_LB'].append(lblp_time)
-            self.history_dict['lp_value_project'].append(proj_objective_componentLps)
-            self.history_dict['lp_value_compress'].append(compress_lp_val)
-            self.history_dict['sum_lp_value_project'].append(sum(proj_objective_componentLps.values()))
-            self.history_dict['sum_lp_time_project'].append(sum(proj_time_component_lps.values()))
-            if self.jy_opt['save_graph_each_iter']>0.5:
-                self.augment_history_graphs()
+                lblp_time=self.my_lower_bound_LP.lp_time
+                new_lp_value=self.my_lower_bound_LP.lp_objective
+                did_compress_call=True
+                proj_objective_componentLps=dict()
+                proj_time_component_lps=dict()
+                compress_lp_time=0
+                compress_lp_val=np.nan
+                for h in self.graph_names:
+                    proj_objective_componentLps[h]=np.nan
+                    proj_time_component_lps[h]=np.nan
+                if self.jy_opt['use_classic_compress_last']<0.5:
+                    [compress_lp_time,compress_lp_val]=self.ApplyCompresssion()
+                else:
+                    self.graph_node_2_agg_node=self.my_lower_bound_LP.NAIVE_graph_node_2_agg_node
+                if self.jy_opt['restore_after_each_step']>0.5:
+                    self.split_based_init()
+
+                self.count_size(False)
+
+                self.history_dict['lblp_lower'].append(new_lp_value)
+                self.history_dict['prob_sizes_at_start'].append(prob_sizes_at_start)
+                self.history_dict['did_compress'].append(did_compress_call)
+                self.history_dict['lp_time_compress'].append(compress_lp_time)
+                self.history_dict['lp_time_project'].append(proj_time_component_lps)
+                self.history_dict['lp_time_LB'].append(lblp_time)
+                self.history_dict['lp_value_project'].append(proj_objective_componentLps)
+                self.history_dict['lp_value_compress'].append(compress_lp_val)
+                self.history_dict['sum_lp_value_project'].append(sum(proj_objective_componentLps.values()))
+                self.history_dict['sum_lp_time_project'].append(sum(proj_time_component_lps.values()))
+                if self.jy_opt['save_graph_each_iter']>0.5:
+                    self.augment_history_graphs()
             print('-----')
             print('-----')
             print('-----')
             print('FINAL CLEANUP FINISHE:  ')
-            print('new_lp_value=  '+str(new_lp_value))
-            print('did_compress_call:  '+str(did_compress_call))
-            print('lp project time '+str(self.history_dict['sum_lp_time_project'][-1]))
-            print('lp compress time '+str(self.history_dict['lp_time_compress'][-1]))
+            print('new_lp_value=  '+str(self.history_dict['lblp_lower'][-1]))
+            #print('did_compress_call:  '+str(did_compress_call))
+            #print('lp project time '+str(self.history_dict['sum_lp_time_project'][-1]))
+            #print('lp compress time '+str(self.history_dict['lp_time_compress'][-1]))
             print('lplb time '+str(self.history_dict['lp_time_LB'][-1]))
-            print('sum_lp_value_project '+str(self.history_dict['sum_lp_value_project'][-1]))
+            #print('sum_lp_value_project '+str(self.history_dict['sum_lp_value_project'][-1]))
 
             self.count_size(False)
             print('prob_sizes_at_start')
@@ -404,22 +409,13 @@ class full_solver:
             
             all_ng_non_nodes=set(self.graph_node_2_agg_node['ngGraph'].keys())-set([ng_source,ng_sink])
             counter=0
-            #print('self.graph_node_2_agg_node[ng_graph][ng_source]')
-            #print(self.graph_node_2_agg_node['ngGraph'][ng_source])
-            #print('self.graph_node_2_agg_node[ng_graph][ng_sink]')
-            #print(self.graph_node_2_agg_node['ngGraph'][ng_sink])
-            #input('--')
             for i in all_ng_non_nodes:
                 self.graph_node_2_agg_node['ngGraph'][i]=str(counter)
                 counter=counter+1
         
         if self.jy_opt['do_split_based_init']>0.5:
-            #print('OLD STUFF')
-
-            #self.count_size(False)
-            #print('OLD STUFF')
+            
             self.split_based_init()
-            #print('NEW STUFF')
 
             self.count_size(False)
             #print('NEW STUFF')
@@ -428,6 +424,29 @@ class full_solver:
         self.count_size(False)
         self.history_dict['final_sizes']=self.count_size()
         self.history_dict['final_graph_node_2_agg_node']=self.graph_node_2_agg_node
+        
+        if 1<0:
+            input('-penultimate 0 -')
+            self.my_lower_bound_LP=lower_bound_LP_milp(self,self.graph_node_2_agg_node,False,False)
+            lblp_time_1=self.my_lower_bound_LP.lp_time
+            print('-----')
+            print('-----')
+            print('-----')
+            print('-----')
+            print('-----')
+            input('-penultimate 1 -')
+            self.graph_node_2_agg_node=self.my_lower_bound_LP.NAIVE_graph_node_2_agg_node
+            self.my_lower_bound_LP=lower_bound_LP_milp(self,self.graph_node_2_agg_node,False,False)
+            lblp_time_2=self.my_lower_bound_LP.lp_time
+            print('-----')
+            print('-----')
+            print('-----')
+            print('-----')
+            print('-----')
+            print('[lblp_time_1,lblp_time_2]')
+            print([lblp_time_1,lblp_time_2])
+            input('-final-')
+
         if self.jy_opt['do_ilp']>0.5:
             print('starting ILP')
 

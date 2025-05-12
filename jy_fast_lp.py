@@ -5,7 +5,7 @@ import numpy as np
 
 class jy_fast_lp:
     
-    def __init__(self,lp_prob, var_dict, all_possible_forbidden_names,init_forbiden_names, K=200, verbose=True,remove_choice=2,alg_use=1,debug_on=False,min_improvement_dump=.1,epsilon=.0001):
+    def __init__(self,lp_prob, var_dict, all_possible_forbidden_names,init_forbiden_names, K=6000, verbose=True,remove_choice=2,alg_use=1,debug_on=False,min_improvement_dump=.1,epsilon=.0001):
         
         self.lp_prob=lp_prob
         self.var_dict=var_dict
@@ -31,6 +31,10 @@ class jy_fast_lp:
             self.backup_lp()
         
         if verbose==True:
+            print('self.hist[time_iter]')
+            print(self.hist['time_iter'])
+            print('self.hist[lp]')
+            print(self.hist['lp'])
             input('done call')
 
 
@@ -157,6 +161,8 @@ class jy_fast_lp:
         
     def compute_bound(self):
         lp_prob=self.lp_prob
+        lp_prob.setOutputEnabled(1)
+        lp_prob.controls.defaultalg = 2
         t_start = time.time()
         lp_prob.solve()
         t_end = time.time()

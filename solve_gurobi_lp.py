@@ -58,7 +58,7 @@ def solve_gurobi_lp(dict_var_name_2_obj,
 
     with gp.Env(params=options) as env:
         with gp.Model("converted_LP", env=env) as model:
-            model.setParam("OutputFlag", 0)  # Suppress solver output
+            model.setParam("OutputFlag", 1)  # Suppress solver output
 
             # Step 1: Add variables
             var_dict = {
@@ -201,7 +201,7 @@ def solve_gurobi_milp(dict_var_name_2_obj,
             model.ModelSense = GRB.MINIMIZE
 
             time_pre = time.time() - time_pre
-            model.setParam("OutputFlag", 1)
+            model.setParam("OutputFlag", 0)
             time_opt = time.time()
             model.optimize()
             time_opt = time.time() - time_opt
@@ -294,6 +294,7 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
                         count_2=count_2+1
                 print('[count_1,count_2]')
                 print([count_1,count_2])
+            #model.setParam("VarBranch", 2)
             model.update()
 
             # Group and add constraints
@@ -322,6 +323,9 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
             time_pre = time.time() - time_pre
             model.setParam("OutputFlag", 1)
             log_buffer = io.StringIO()
+            print('writing ')
+            model.write("model_name.mps")
+            print('done writing')
             if 1<0:
                 model.setParam("Cuts", 0)                # Disable all cutting planes
                 model.setParam("Heuristics", 0)          # Disable primal heuristics
@@ -330,7 +334,9 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
                 model.setParam("NodeMethod", 1)          # Use dual simplex in nodes
                 model.setParam("Method", 1)              # Use dual simplex for LPs
                 model.setParam("StartNodeLimit", 1)  # Leave presolve on, it's helpful
+                model.setParam("VarBranch", 2)  #STRONG BRANCHING 
                 #model.setParam("NodeMethod", 1)  # Use dual simplex in the tree
+               
                 model.update()
 
             # Set up Tee to write to both stdout and buffer
@@ -408,8 +414,8 @@ def solve_gurobi_lp_bounds(dict_var_name_2_obj,
 
     with gp.Env(params=options) as env:
         with gp.Model("converted_LP", env=env) as model:
-            model.setParam("OutputFlag", 0)  # Suppress solver output
-
+            model.setParam("OutputFlag", 1)  # Suppress solver output
+            #model.setParam("Method", 1)
             # Step 1: Add variables
             var_dict = {}
             for name, obj_coeff in safe_var_obj.items():

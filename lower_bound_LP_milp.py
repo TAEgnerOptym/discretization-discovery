@@ -1081,7 +1081,7 @@ class lower_bound_LP_milp:
 
     def call_gurobi_solver(self):
     
-        if len(self.full_prob.all_actions_ever_seen)<10 or  self.full_prob.jy_opt['use_julians_custom_lp_solver']<0.5:
+        if len(self.full_prob.history_dict['lp_time_compress'])<1 or  self.full_prob.jy_opt['use_julians_custom_lp_solver']<0.5:
 
             if 1<0:
                 input('i dont want to be here since i am usign bounds')
