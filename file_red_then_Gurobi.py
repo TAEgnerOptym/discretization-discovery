@@ -26,21 +26,26 @@ with gp.Env(params=options) as env:
         model.update()
         if 1<0:
             model.setParam("OutputFlag", 1)  # Show solver log (optional)
-            
+            #model.setParam("SimplexPricing", )
             model.setParam("Cuts", 0)                # Disable all cutting planes
-            model.setParam("Heuristics", 1)          # Disable primal heuristics
+            #model.setParam("Heuristics", 0)          # Disable primal heuristics
             model.setParam("CutPasses", 0)           # No passes even beyond root
             #model.setParam("Presolve", 2)            # Leave presolve on (it's cheap and useful)
             #model.setParam("NodeMethod", 1)          # Use dual simplex in nodes
             #model.setParam("Method", 1)              # Use dual simplex for LPs
             #model.setParam("StartNodeLimit", 1)  # Leave presolve on, it's helpful
-            model.setParam("VarBranch", 1) 
+            #model.setParam("VarBranch", 1) 
         print('LP done')
         model.optimize()
         input('optimal LP done')
-
+        cur_val=dict()
         for var in bin_vars:
             var.VType = GRB.BINARY
+            
+        lp_primal_solution = {
+            v: v.X for v in bin_vars
+        }
+        input('--')
         model.update()
         model.optimize()
 

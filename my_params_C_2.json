@@ -1,6 +1,6 @@
 {
 "num_cust_use":100,
-"num_thresh_split_projector":20,
+"num_thresh_split_projector":4,
 "weight_slack_projector":0.00001,
 "allOneBig_init":0,
 "use_classic_compress":1,
@@ -16,9 +16,9 @@
 "use_fancy_ng_graph":1,
 "DEBUG_ALLOW_DUMB_EDGES":0,
 "add_all_ng_split_at_end":0,
-"do_split_based_init":0,
+"do_split_based_init":1,
 "restore_after_each_step":1,
-"num_terms_per_bin_init_construct":5,
+"num_terms_per_bin_init_construct":20,
 "think_compress":0,
 
 "doExrtraRemovalEdgesLB":0,

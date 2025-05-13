@@ -92,8 +92,8 @@ class jy_fast_lp_gurobi:
         self.dict_con_name_2_eq=dict_con_name_2_eq
         self.running_removal=False
         #self.call_current_solver()
-        #self.call_solver_warm_start()
-        self.call_solver_one_big_extra()
+        self.call_solver_warm_start()
+        #self.call_solver_one_big_extra()
         #self.call_solver_warm_start_alternative()
         #self.call_solver_warm_epsilon()
         input('all done')
@@ -251,10 +251,10 @@ class jy_fast_lp_gurobi:
                 }
 
                 # Example: print readable basis for variables
-                for var, status in zip(model.getVars(), v_basis):
-                    safe_name = var.VarName
-                    original_name = self.var_name_rev_map.get(safe_name, safe_name)  # fallback to safe_name
-                    print(f"{original_name}: {basis_status_map.get(status, 'Unknown')}")#self.add_all_vars()
+                #for var, status in zip(model.getVars(), v_basis):
+                #    safe_name = var.VarName
+                #    original_name = self.var_name_rev_map.get(safe_name, safe_name)  # fallback to safe_name
+                #    print(f"{original_name}: {basis_status_map.get(status, 'Unknown')}")#self.add_all_vars()
                 cur_val=dict()
                 for v in self.vars_list:
                     cur_val[v]=v.X

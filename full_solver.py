@@ -335,7 +335,7 @@ class full_solver:
         #input('done entire call')
         if  use_compression>0.5:#1>0:#did_compress_call==False and use_compression==True and iter>0:
             #input('here')
-            if self.history_dict['sum_lp_value_project'][-1]>.001:
+            if did_compress_call==False or self.history_dict['sum_lp_value_project'][-1]>.001:
                 print('Doing final Clean up operations')
                 self.my_lower_bound_LP=lower_bound_LP_milp(self,self.graph_node_2_agg_node,False,False)
                 prob_sizes_at_start=self.count_size()
@@ -354,8 +354,8 @@ class full_solver:
                     [compress_lp_time,compress_lp_val]=self.ApplyCompresssion()
                 else:
                     self.graph_node_2_agg_node=self.my_lower_bound_LP.NAIVE_graph_node_2_agg_node
-                if self.jy_opt['restore_after_each_step']>0.5:
-                    self.split_based_init()
+                #if self.jy_opt['restore_after_each_step']>0.5:
+                #    self.split_based_init()
 
                 self.count_size(False)
 
