@@ -60,6 +60,8 @@ class projector:
         t1=time.time()
         self.proj_make_actions_match_exog()
         self.time_dict_proj['proj_make_actions_match_exog']=time.time()-t1
+        
+        #self.proj_make_equiv_flow()
         #t1=time.time()
         #self.proj_make_equv_class_consist()
         #self.time_dict_proj['proj_make_equv_class_consist']=time.time()-t1
@@ -109,10 +111,13 @@ class projector:
             if f!=self.this_fg_source:
                 con_name_f='f_flo_zero_'+str(f)
                 self.dict_PROG_eq_var_con_lhs[tuple([var_name,con_name_f])]=1
-
+                if con_name_f not in self.dict_PROJ_eq_con_name_2_rhs:
+                    self.dict_PROJ_eq_con_name_2_rhs[con_name_f]=0
             if g!=self.this_fg_sink:
                 con_name_g='f_flo_zero_'+g
                 self.dict_PROG_eq_var_con_lhs[tuple([var_name,con_name_g])]=-1
+                if con_name_g not in self.dict_PROJ_eq_con_name_2_rhs:
+                    self.dict_PROJ_eq_con_name_2_rhs[con_name_g]=0
       
     def get_non_zero_terms_p(self):
         

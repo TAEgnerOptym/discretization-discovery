@@ -66,9 +66,9 @@ class jy_fast_lp_gurobi:
                  K=20, verbose=True, remove_choice=3, alg_use=1, debug_on=False,
                  min_improvement_dump=0.1, epsilon=1e-4):
 
-        print('verbose')
-        print(verbose)
-        input('--')
+        #print('verbose')
+        #print(verbose)
+        #input('--')
         self.options = {
                 "WLSACCESSID": "8f7bb9d6-8fe5-4349-9dd3-6abbaa9199a0",
                 "WLSSECRET": "cb02810a-e0e2-4a1f-8fc0-fd375f65fc65",
@@ -96,7 +96,7 @@ class jy_fast_lp_gurobi:
         #self.call_solver_one_big_extra()
         #self.call_solver_warm_start_alternative()
         #self.call_solver_warm_epsilon()
-        input('all done')
+        #input('all done')
     def formulate_mapping(self,model):
         dict_var_name_2_obj=self.dict_var_name_2_obj
         dict_var_con_2_lhs_exog=self.dict_var_con_2_lhs_exog
@@ -218,10 +218,11 @@ class jy_fast_lp_gurobi:
         input('--')
     def call_solver_warm_start(self):
         options=self.options
+        random_num=np.random.randint(10000000)
         with gp.Env(params=options) as env:
             with gp.Model("converted_LP", env=env) as model:
                 model.setParam("OutputFlag", 1)
-                model.setParam("Method", 0)
+                #model.setParam("Method", 0)
                 self.formulate_mapping(model)
                 model.update()
                 self.add_expressions(model)
@@ -234,7 +235,9 @@ class jy_fast_lp_gurobi:
                 print("FIRST")
                 print("FIRST")
                 print("FIRST")
-
+                phase_1_path="../Optym_gurobi_files/phase_1_file_num"+str(random_num)+".mps"
+                #phase_2_path="../Optym_gurobi_files/phase_2_file_num"+str(random_num)+".mps"
+                #model.write(phase_1_path)
                 t1=time.time()
                 model.optimize()
                 t1=time.time()-t1
@@ -262,13 +265,35 @@ class jy_fast_lp_gurobi:
                 #model.reset()
                 #model.setParam("Method", 1)  # dual simplex
                 #model.setParam("Crossover", 0) 
-                
+                #varaible hints:  
                     #else:
                     #    v.Start=cur_val[v]
                 for v in self.vars_list:
                     if v.ub<gp.GRB.INFINITY:
                         v.ub = gp.GRB.INFINITY#gp.GRB.INFINITY
                 model.update()
+                #model.reset()
+                #model.update()
+                if 1>0:
+                    epsilon=.00001
+                    for var in model.getVars():
+                        noise = random.uniform(0, epsilon)  # new random value for each var
+                        var.Obj += noise  # update objective coefficient
+                        model.update()
+                if 1<0:
+                    z = obj_1  # Or set z = some custom upper bound
+
+    # 2. Get all variables and objective coefficients
+                    vars = model.getVars()
+                    obj_expr = gp.LinExpr()
+
+                    for v in vars:
+                        coeff = v.Obj  # Objective coefficient
+                        if coeff != 0:
+                            obj_expr.addTerms(coeff, v)
+
+                    # 3. Add the constraint: c^T x <= z
+                    model.addConstr(obj_expr <= z, name="objective_cut")
 
                 print("SECOND")
                 print("SECOND")
@@ -277,7 +302,8 @@ class jy_fast_lp_gurobi:
                 print("SECOND")
                 print("SECOND")
                 print("SECOND")
-                
+                #model.write(phase_2_path)
+
                 t2=time.time()
                 model.optimize()
                 t2=time.time()-t2
@@ -288,7 +314,7 @@ class jy_fast_lp_gurobi:
                 print([t1,t2])
                 print('[obj_1,obj_2]')
                 print([obj_1,obj_2])
-                input('---')
+                #input('---')
     def call_current_solver(self):
         options=self.options
 
@@ -389,7 +415,13 @@ class jy_fast_lp_gurobi:
             constrs = [my_constr for my_constr in constrs if my_constr.getAttr("ConstrName") not in self.cons_2_remove]
         rev_map = self.con_name_rev_map
         
-        self.lp_dual_solution = dict(zip((rev_map[c.ConstrName] for c in constrs), pi_values))
+        #self.lp_dual_solution = dict(zip((rev_map[c.ConstrName] for c in constrs), pi_values))
+        self.lp_dual_solution = dict(
+            zip(
+                (rev_map[c.ConstrName] for c in constrs if c.ConstrName in rev_map),
+                (pi for c, pi in zip(constrs, pi_values) if c.ConstrName in rev_map)
+            )
+        )
 
         self.lp_objective=self.lp_obj_val
         # Identify forbidden vars with nonzero primal values

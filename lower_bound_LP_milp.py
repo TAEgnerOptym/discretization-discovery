@@ -322,8 +322,8 @@ class lower_bound_LP_milp:
                 g=tup_fg[1]
                 var_name='EDGE_h='+h+'_f='+f+'_g='+g
                 self.dict_var_name_2_obj[var_name]=0
-                #if self.full_prob.jy_opt['all_vars_binary']==True:
-                #    self.dict_var_name_2_is_binary[var_name]=1
+                if (self.full_prob.jy_opt['allOneBig_init']==False and self.full_prob.jy_opt['do_split_based_init']==True) and self.full_prob.jy_opt['all_vars_binary']==True:
+                    self.dict_var_name_2_is_binary[var_name]=1
         self.times_lp_times['help_construct_LB_make_vars_5']=time.time()-t1
         t1=time.time()
         t1 = time.time()
@@ -340,7 +340,7 @@ class lower_bound_LP_milp:
                     dict_update[var_name] = 0
                     if p in vars_names_ignore_set:
                         all_new_entries_ignore.append(var_name)
-                    if p !=self.null_action:
+                    if p !=self.null_action: #or (self.full_prob.jy_opt['allOneBig_init']==False and self.full_prob.jy_opt['do_split_based_init']==True):
                         dict_update_non_null[var_name] = 0
         # Single update call
         self.dict_var_name_2_obj.update(dict_update)

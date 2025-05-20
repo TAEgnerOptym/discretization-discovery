@@ -1,0 +1,24 @@
+
+Gurobi 12.0.1 (mac64[arm]) logging started Sat May 17 14:41:44 2025
+
+Set parameter LogFile to value "gurobi_branching_direct.log"
+Set parameter VarBranch to value 0
+Set parameter Cuts to value 0
+Set parameter CutPasses to value 0
+Set parameter DisplayInterval to value 1
+Set parameter Threads to value 1
+Read MPS format model from file R_104_just_flip.mps
+Reading time = 0.03 seconds
+converted_MILP: 13388 rows, 48454 columns, 158962 nonzeros
+Gurobi Optimizer version 12.0.1 build v12.0.1rc0 (mac64[arm] - Darwin 24.4.0 24E263)
+
+CPU model: Apple M1
+Thread count: 8 physical cores, 8 logical processors, using up to 1 threads
+
+Non-default parameters:
+VarBranch  0
+Cuts  0
+CutPasses  0
+DisplayInterval  1
+Threads  1
+

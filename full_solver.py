@@ -148,12 +148,57 @@ class full_solver:
             #sz_vec.append(h)
         return my_count_size
 
-
     def ApplyCompresssion(self):
+
+        max_iter=2
+        
+        compress_lp_time=0
+        compress_lp_time_list=[]
+        print('starting_fancy_compression')
+        prior_first_compression_size=self.count_size()
+
+        self.graph_node_2_agg_node=self.my_lower_bound_LP.NAIVE_graph_node_2_agg_node
+        cur_size=self.count_size()
+        post_first_compression_size=self.count_size()
+        while True:
+            self.my_lower_bound_LP=lower_bound_LP_milp(self,self.graph_node_2_agg_node,False,False)
+            self.my_compressor=compressor(self)
+            
+            self.graph_node_2_agg_node=self.my_compressor.NEW_graph_node_2_agg_node
+            compress_lp_time+=self.my_compressor.lp_time
+            compress_lp_time_list.append(self.my_compressor.lp_time)
+            compress_lp_val=self.my_compressor.lp_objective
+            NEW_my_count_size=self.count_size()
+            max_iter=max_iter-1
+            do_break=True
+            for h in self.graph_names:
+                if NEW_my_count_size[h]>cur_size[h]:
+                    input('error here')
+                if NEW_my_count_size[h]<cur_size[h]:
+                    do_break=False
+            if max_iter<=0 or do_break:
+                break
+            cur_size=NEW_my_count_size
+        #input('done fancyCOmpression')
+        for h in self.graph_names:
+            print(h+"  prior_first_compression_size="+str(prior_first_compression_size[h]))
+            print(h+"  post_first_compression_size="+str(post_first_compression_size[h]))
+            print(h+"  cur_size="+str(cur_size[h]))
+                  
+        return [compress_lp_time,compress_lp_val]
+
+
+    def OLD_ApplyCompresssion(self):
+        print('before sizes')
+        self.count_size(False)
         self.my_compressor=compressor(self)
+        
         self.graph_node_2_agg_node=self.my_compressor.NEW_graph_node_2_agg_node
         compress_lp_time=self.my_compressor.lp_time
         compress_lp_val=self.my_compressor.lp_objective
+        print('after sizes')
+        self.count_size(False)
+        input('-done comrpession--')
         return [compress_lp_time,compress_lp_val]
     
     def prepare_ILP_solution(self):
@@ -262,7 +307,6 @@ class full_solver:
                 #input('starting compression ')
                 if self.jy_opt['use_classic_compress']<0.5:
                     print('Staritng COmpression ')
-
                     [compress_lp_time,compress_lp_val]=self.ApplyCompresssion()
                     print('DOEN Staritng COmpression ')
 
@@ -425,29 +469,9 @@ class full_solver:
         self.history_dict['final_sizes']=self.count_size()
         self.history_dict['final_graph_node_2_agg_node']=self.graph_node_2_agg_node
         
-        if 1<0:
-            input('-penultimate 0 -')
-            self.my_lower_bound_LP=lower_bound_LP_milp(self,self.graph_node_2_agg_node,False,False)
-            lblp_time_1=self.my_lower_bound_LP.lp_time
-            print('-----')
-            print('-----')
-            print('-----')
-            print('-----')
-            print('-----')
-            input('-penultimate 1 -')
-            self.graph_node_2_agg_node=self.my_lower_bound_LP.NAIVE_graph_node_2_agg_node
-            self.my_lower_bound_LP=lower_bound_LP_milp(self,self.graph_node_2_agg_node,False,False)
-            lblp_time_2=self.my_lower_bound_LP.lp_time
-            print('-----')
-            print('-----')
-            print('-----')
-            print('-----')
-            print('-----')
-            print('[lblp_time_1,lblp_time_2]')
-            print([lblp_time_1,lblp_time_2])
-            input('-final-')
-
         if self.jy_opt['do_ilp']>0.5:
+            print('sizes at ILP call')
+            self.count_size(False)
             print('starting ILP')
 
             self.my_lower_bound_ILP=lower_bound_LP_milp(self,self.graph_node_2_agg_node,True,False)

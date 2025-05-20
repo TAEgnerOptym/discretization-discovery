@@ -11,42 +11,54 @@ options = {
 
 # Path to your model file (.lp, .mps, etc.)
 model_path = "model_name.mps"  # change as needed
+#model_path = "9000_bin_model_name.mps"  # change as needed
 
 # Load model inside customized environment
 with gp.Env(params=options) as env:
     with gp.read(model_path, env=env) as model:
 
-        bin_vars=[]
-        for var in model.getVars():
-            if var.VType == GRB.BINARY:
-                bin_vars.append(var)
-                var.VType = GRB.CONTINUOUS
-                var.LB = 0.0
-                var.UB = GRB.INFINITY
-        model.update()
+        #bin_vars=[]
+        #for var in model.getVars():
+        #    if var.VType == GRB.BINARY:
+        #        bin_vars.append(var)
+        #        var.VType = GRB.CONTINUOUS
+        #        var.LB = 0.0
+        #        var.UB = GRB.INFINITY
+        #model.update()
         if 1<0:
             model.setParam("OutputFlag", 1)  # Show solver log (optional)
             #model.setParam("SimplexPricing", )
             model.setParam("Cuts", 0)                # Disable all cutting planes
-            #model.setParam("Heuristics", 0)          # Disable primal heuristics
+            model.setParam("Heuristics", 0)          # Disable primal heuristics
+            model.setParam('TimeLimit',1000)
             model.setParam("CutPasses", 0)           # No passes even beyond root
             #model.setParam("Presolve", 2)            # Leave presolve on (it's cheap and useful)
             #model.setParam("NodeMethod", 1)          # Use dual simplex in nodes
             #model.setParam("Method", 1)              # Use dual simplex for LPs
             #model.setParam("StartNodeLimit", 1)  # Leave presolve on, it's helpful
             #model.setParam("VarBranch", 1) 
-        print('LP done')
-        model.optimize()
-        input('optimal LP done')
-        cur_val=dict()
-        for var in bin_vars:
-            var.VType = GRB.BINARY
+        #print('LP done')
+        #model.optimize()
+        #input('optimal LP done')
+        #cur_val=dict()
+        #for var in bin_vars:
+        #    var.VType = GRB.BINARY
             
-        lp_primal_solution = {
-            v: v.X for v in bin_vars
-        }
-        input('--')
+        #lp_primal_solution = {
+        #    v: v.X for v in getVars()
+        #}
         model.update()
+        model.optimize()
+        ilp_primal_solution = {
+            v: v.X for v in model.getVars()
+        }
+        for var, value in ilp_primal_solution.items():
+            var.start = value  # Gurobi uses `.start` for warm-starting
+
+        # Step 3: Re-optimize using the start
+        model.reset()
+        model.setParam('TimeLimit',10000)
+
         model.optimize()
 
         # Check result

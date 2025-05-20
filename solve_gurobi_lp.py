@@ -58,7 +58,7 @@ def solve_gurobi_lp(dict_var_name_2_obj,
 
     with gp.Env(params=options) as env:
         with gp.Model("converted_LP", env=env) as model:
-            model.setParam("OutputFlag", 1)  # Suppress solver output
+            model.setParam("OutputFlag", 0)  # Suppress solver output
 
             # Step 1: Add variables
             var_dict = {
@@ -143,7 +143,10 @@ def solve_gurobi_milp(dict_var_name_2_obj,
     con_names_eq = list(dict_con_name_2_eq.keys())
     all_con_names = list(set(con_names_exog) | set(con_names_eq))
 
-    var_name_map = {v: f"v{i}" for i, v in enumerate(var_names)}
+    #var_name_map = {v: f"v{i}" for i, v in enumerate(var_names)}
+    var_name_map = {
+        v: v if len(v) < 30 else f"v{i}"
+        for i, v in enumerate(var_names)}
     con_name_map = {c: f"c{i}" for i, c in enumerate(all_con_names)}
     var_name_rev = {v_alias: v for v, v_alias in var_name_map.items()}
     con_name_rev = {c_alias: c for c, c_alias in con_name_map.items()}
@@ -166,7 +169,7 @@ def solve_gurobi_milp(dict_var_name_2_obj,
 
     with gp.Env(params=options) as env:
         with gp.Model("converted_MILP", env=env) as model:
-            model.setParam("OutputFlag", 0)
+            model.setParam("OutputFlag", 1)
             model.setParam("TimeLimit", max_ILP_time)
 
             # Add variables, using binary type where needed
@@ -241,7 +244,10 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
     con_names_eq = list(dict_con_name_2_eq.keys())
     all_con_names = list(set(con_names_exog) | set(con_names_eq))
 
-    var_name_map = {v: f"v{i}" for i, v in enumerate(var_names)}
+    #var_name_map = {v: f"v{i}" for i, v in enumerate(var_names)}
+    var_name_map = {
+        v: v if len(v) < 30 else f"v{i}"
+        for i, v in enumerate(var_names)}
     con_name_map = {c: f"c{i}" for i, c in enumerate(all_con_names)}
     var_name_rev = {v_alias: v for v, v_alias in var_name_map.items()}
     con_name_rev = {c_alias: c for c, c_alias in con_name_map.items()}
@@ -277,6 +283,8 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
                 vtype = GRB.BINARY if name in safe_binary_set else GRB.CONTINUOUS
                 var_dict[name] = model.addVar(lb=lb, ub=ub, obj=obj_coeff, vtype=vtype, name=name)
 
+
+
             if  any(not var_name_rev[v].startswith("act") for v in safe_binary_set):
                 #input('HERE')
                 count_1=0
@@ -292,8 +300,12 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
                     else:
                         v.BranchPriority = 1
                         count_2=count_2+1
+                
                 print('[count_1,count_2]')
                 print([count_1,count_2])
+            #print('len(safe_binary_set)')
+            #print(len(safe_binary_set))
+            #input('hihi')
             #model.setParam("VarBranch", 2)
             model.update()
 
@@ -352,8 +364,8 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
             log_buffer.close()
             time_post = time.time()
             MIP_lower_bound=model.ObjBound
-            #if model.status != GRB.OPTIMAL:
-            #    raise RuntimeError("Gurobi did not find an optimal MILP solution.")
+            if model.status != GRB.OPTIMAL:
+                raise RuntimeError("Gurobi did not find an optimal MILP solution.")
 
             # Extract primal solution and objective only (no duals in MILP)
             primal_solution = {var_name_rev[var.VarName]: var.X for var in model.getVars()}
@@ -414,7 +426,7 @@ def solve_gurobi_lp_bounds(dict_var_name_2_obj,
 
     with gp.Env(params=options) as env:
         with gp.Model("converted_LP", env=env) as model:
-            model.setParam("OutputFlag", 1)  # Suppress solver output
+            model.setParam("OutputFlag", 0)  # Suppress solver output
             #model.setParam("Method", 1)
             # Step 1: Add variables
             var_dict = {}
@@ -479,7 +491,7 @@ def solve_gurobi_lp_bounds(dict_var_name_2_obj,
 
             objective = model.ObjVal
             time_post = time.time() - time_post
-
+            
             return {
                 "primal_solution": primal_solution,
                 "dual_solution": dual_solution,

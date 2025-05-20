@@ -2,13 +2,13 @@ from call_and_run_code import call_and_run_code
 
 import argparse
 
-default_input='data/jy_C104.txt'
+default_input='data/jy_R104.txt'
 default_option_path='my_params_C.json'
 default_option_path='my_params_C_2.json'
-#default_option_path='my_params_C_3.json'
+default_option_path='my_params_C_3.json'
 
 #default_input='data/jy_R104.txt'
-#default_option_path='my_params.json'
+default_option_path='my_params.json'
 
 default_my_json='../ALL_JSON_BIG/sample_json_input_description.json'
 default_out_file_path='../ALL_JSON_BIG/sample_json_output.json'

@@ -27,29 +27,40 @@ class compressor:
         self.graph_names=self.MF.graph_names
         self.time_compressor=dict()
         self.time_compressor['prior']=time.time()-t1
+        #print('making compresor prob 1')
         t1=time.time()
         self.get_dual_dict()
         self.time_compressor['get_dual_dict']=time.time()-t1
+        #print('making compresor prob 2')
+
         t1=time.time()
         self.copy_lp_terms()
         self.time_compressor['copy_lp_terms']=time.time()-t1
+        #print('making compresor prob 3')
+
         t1=time.time()
         self.remove_flow_in_flow_out_terms()
         self.time_compressor['remove_flow_in_flow_out_terms']=time.time()-t1
+        #print('making compresor prob 4')
+
         t1=time.time()
         self.add_new_RHS_terms()
         self.time_compressor['add_new_RHS_terms']=time.time()-t1
+        #print('making compresor prob 5')
         t1=time.time()
         self.add_new_ineq_terms()
         self.time_compressor['add_new_ineq_terms']=time.time()-t1
+        #print('making compresor prob 6')
         t1=time.time()
         self.check_solution_feasibility()
         self.time_compressor['check_solution_feasibility']=time.time()-t1
+        #print('making compresor prob 7')
         if my_full_solver.jy_opt['use_Xpress']==False and my_full_solver.jy_opt['use_gurobi']==False:
             self.make_LP()
         if my_full_solver.jy_opt['use_Xpress']==True and my_full_solver.jy_opt['use_gurobi']==False:
             self.make_xpress_LP()
         if  my_full_solver.jy_opt['use_gurobi']==True:
+            
             self.make_gur_lp()
 
             
@@ -131,7 +142,7 @@ class compressor:
             return
 
         # Compute the linkage matrix using SciPy's hierarchical clustering.
-        Z = linkage(data, method="average")
+        Z = linkage(data, method="ward")
         
         cluster_id_2_member = {}
         for i in range(n):
@@ -148,6 +159,16 @@ class compressor:
             # The new cluster contains all leaves from the clusters idx1 and idx2.
             cluster_id_2_member[new_cluster_id] = cluster_id_2_member[idx1] + cluster_id_2_member[idx2]
         
+        if 1<0:
+            K=10
+            keys_to_remove = [key for key, members in cluster_id_2_member.items() if len(members) > K]
+            #print('before')
+            #print(len(cluster_id_2_member))
+            for key in keys_to_remove:
+                del cluster_id_2_member[key]
+            #print('after')
+            #print(len(cluster_id_2_member))
+            #input('--')
         member_2_cluster_id=dict()
         for my_node in X:
             member_2_cluster_id[my_node]=[]
@@ -239,7 +260,55 @@ class compressor:
         #print('self.graph_names')
         #print(self.graph_names)
         #input('counter')
+
     def add_new_ineq_terms(self):
+        def clean(s):
+            return s.replace(" ", "_").replace("(", "_").replace(")", "_")
+
+        counterMe = 0
+        dict_var_con_2_lhs_exog = self.dict_var_con_2_lhs_exog
+        dict_con_name_2_LB = self.dict_con_name_2_LB
+
+        for h in self.graph_names:
+            agg_source = self.graph_node_2_agg_node[h][self.MF.h_2_source_id[h]]
+            agg_sink = self.graph_node_2_agg_node[h][self.MF.h_2_sink_id[h]]
+            H_leaf_f = self.H_leaf_2_list_ell[h]
+            q_dict = self.myLBObj.h_fg_2_q[h]
+
+            for f, g in q_dict:
+                if f == g:
+                    continue
+
+                var_name = f'EDGE_h={h}_f={f}_g={g}'
+
+                # Update for f ≠ agg_source
+                if f != agg_source:
+                    for ell in H_leaf_f.get(f, []):
+                        con_1 = clean(f'Hier_flow_in_out_pos_h={h}_ell={ell}')
+                        con_2 = clean(f'Hier_flow_in_out_neg_h={h}_ell={ell}')
+                        tup_1 = (var_name, con_1)
+                        tup_2 = (var_name, con_2)
+
+                        dict_var_con_2_lhs_exog[tup_1] = dict_var_con_2_lhs_exog.get(tup_1, 0) + 1
+                        dict_var_con_2_lhs_exog[tup_2] = dict_var_con_2_lhs_exog.get(tup_2, 0) - 1
+
+                        counterMe += 1
+
+                # Update for g ≠ agg_sink
+                if g != agg_sink:
+                    for ell in H_leaf_f.get(g, []):
+                        con_1 = clean(f'Hier_flow_in_out_pos_h={h}_ell={ell}')
+                        con_2 = clean(f'Hier_flow_in_out_neg_h={h}_ell={ell}')
+                        tup_1 = (var_name, con_1)
+                        tup_2 = (var_name, con_2)
+
+                        dict_var_con_2_lhs_exog[tup_1] = dict_var_con_2_lhs_exog.get(tup_1, 0) - 1
+                        dict_var_con_2_lhs_exog[tup_2] = dict_var_con_2_lhs_exog.get(tup_2, 0) + 1
+
+                        counterMe += 1
+
+
+    def OLD_add_new_ineq_terms(self):
         counterMe=0
         for h in self.graph_names:
             agg_source=self.graph_node_2_agg_node[h][self.MF.h_2_source_id[h]]
