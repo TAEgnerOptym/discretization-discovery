@@ -17,7 +17,8 @@ from compressor import compressor
 #from experimental_compressor_additive import compressor
 #from projector import projector
 #from experimental_projector_simp import projector
-from experimental_projector_simp_eq import projector
+#from experimental_projector_simp_eq import projector
+from exper_proj_new import projector
 #from  import projector
 #from experimental_projector_simp_no_neg import projector
 
@@ -206,10 +207,11 @@ class full_solver:
         if self.jy_opt['do_ilp']>0.5:
             my_ilp_sol=self.my_lower_bound_ILP.milp_solution
             out_sol=dict()
-            for my_delta in self.all_delta:
-                if my_delta.startswith('delta_timeRem'):
-                    print(my_delta+"  "+str(my_ilp_sol[my_delta]))
-                out_sol[my_delta]=my_ilp_sol[my_delta]
+            if self.jy_opt['use_delta_in_milp']==True:
+                for my_delta in self.all_delta:
+                #    if my_delta.startswith('delta_timeRem'):
+                #        print(my_delta+"  "+str(my_ilp_sol[my_delta]))
+                    out_sol[my_delta]=my_ilp_sol[my_delta]
 
             tot_cost=0
             for my_act in self.all_actions:

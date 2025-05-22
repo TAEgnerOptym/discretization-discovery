@@ -14,7 +14,7 @@ def force_integer(model):
 
 
 import gurobipy as gp
-def solve_with_lazy_delta_constraints(model: gp.Model,do_remove,do_bring_back,do_force_integer):
+def solve_with_lazy_delta_constraints(model: gp.Model,do_remove,do_bring_back,do_force_integer,do_make_linear):
     """
     Solves a MIP where delta constraints are treated as lazy constraints at the root node.
     These are activated after root node processing to preserve cuts and warm start.
@@ -39,6 +39,9 @@ def solve_with_lazy_delta_constraints(model: gp.Model,do_remove,do_bring_back,do
     
     if do_force_integer==True:
         force_integer(model)
+    if do_make_linear==True:
+        for var in model.getVars():
+            var.VType = gp.GRB.CONTINUOUS
     if do_remove==True:
         delta_con_data = []
         for constr in delta_constraints:
@@ -55,7 +58,7 @@ def solve_with_lazy_delta_constraints(model: gp.Model,do_remove,do_bring_back,do
 
     # Step 2: Solve root node only (cutting planes allowed)
     #cut_params = {
-    #    "Cuts":             -1,   # –1=auto (default), 0=off, 1=moderate, 2=aggressive
+     #   "Cuts":             2,   # –1=auto (default), 0=off, 1=moderate, 2=aggressive
         #"LiftProjectCuts":  2,
         #"ImpliedCuts":      2,
         #"CliqueCuts":       2,
@@ -71,7 +74,7 @@ def solve_with_lazy_delta_constraints(model: gp.Model,do_remove,do_bring_back,do
     #    model.setParam(name, value)
 
         
-    #model.setParam("MIPFocus", 2)
+    model.setParam("MIPFocus", 3)
     #model.setParam("Cuts", 0)
     model.setParam("NodeLimit", 100000)        # Only solve root node
     model.setParam("OutputFlag", 1)
@@ -113,10 +116,12 @@ model_path="R104_super_fine.mps"
 #model_path="NO_FANCY_COMPRESS_model_name.mps"
 #model_path="../optym_gurobi_file_ILP/C_104_100_10.mps"
 #model_path="model_name.mps"
-
-do_remove=True
+#model_path="model_name.mps"
+model_path="R_112_model_name.mps"
+do_remove=False
 do_bring_back=False
-do_force_integer=False
+do_force_integer=True
+do_make_linear=False
 with gp.Env(params=options) as env:
     with gp.read(model_path, env=env) as model:
         model.setParam("DisplayInterval", 1)
@@ -124,7 +129,7 @@ with gp.Env(params=options) as env:
         #model.optimize()
         #input('---')
         #model.update()
-        solve_with_lazy_delta_constraints(model,do_remove,do_bring_back,do_force_integer)
+        solve_with_lazy_delta_constraints(model,do_remove,do_bring_back,do_force_integer,do_make_linear)
          
 
         #model.optimize()

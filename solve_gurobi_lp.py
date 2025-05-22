@@ -97,7 +97,8 @@ def solve_gurobi_lp(dict_var_name_2_obj,
             model.optimize()
             time_opt = time.time() - time_opt
             print('DONE Gur LP')
-
+            if time_opt>20:
+                model.write('LONG_proj.mps')
             time_post = time.time()
 
             if model.status != GRB.OPTIMAL:
@@ -235,7 +236,7 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
                       dict_var_con_2_lhs_eq,
                       dict_con_name_2_eq,
                       dict_var_name_2_LB,dict_var_name_2_UB,
-                      dict_binary_vars,max_ILP_time=1000):
+                      dict_binary_vars,dict_var_name_2_is_integer,max_ILP_time=1000):
     time_pre = time.time()
 
     # Step 0: Name remapping for Gurobi safety
@@ -261,6 +262,9 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
     safe_LB = {con_name_map[k]: v for k, v in dict_con_name_2_LB.items()}
     safe_EQ = {con_name_map[k]: v for k, v in dict_con_name_2_eq.items()}
     safe_binary_set = {var_name_map[v] for v in dict_binary_vars}
+    #print('dict_var_name_2_is_integer')
+    #print(dict_var_name_2_is_integer)
+    safe_integer_set = {var_name_map[v] for v in dict_var_name_2_is_integer}
     safe_var_LB = {var_name_map[k]: v for k, v in dict_var_name_2_LB.items()}
     safe_var_UB = {var_name_map[k]: v for k, v in dict_var_name_2_UB.items()}
 
@@ -280,7 +284,20 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
             for name, obj_coeff in safe_var_obj.items():
                 lb = safe_var_LB.get(name, 0.0)
                 ub = safe_var_UB.get(name, GRB.INFINITY)
-                vtype = GRB.BINARY if name in safe_binary_set else GRB.CONTINUOUS
+                #vtype = GRB.BINARY if name in safe_binary_set else GRB.CONTINUOUS
+                vtype=[]
+                if name in safe_binary_set:
+                    vtype = GRB.BINARY
+                elif name in safe_integer_set:
+                    vtype = GRB.INTEGER
+                else:
+                    vtype = GRB.CONTINUOUS
+                
+                #if vtype == GRB.CONTINUOUS:
+                    #if 
+                    #print('var_name_rev[name]')
+                    #print(var_name_rev[name])
+                    #input('--')
                 var_dict[name] = model.addVar(lb=lb, ub=ub, obj=obj_coeff, vtype=vtype, name=name)
 
 
@@ -364,8 +381,8 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
             log_buffer.close()
             time_post = time.time()
             MIP_lower_bound=model.ObjBound
-            if model.status != GRB.OPTIMAL:
-                raise RuntimeError("Gurobi did not find an optimal MILP solution.")
+            #if model.status != GRB.OPTIMAL:
+            #    raise RuntimeError("Gurobi did not find an optimal MILP solution.")
 
             # Extract primal solution and objective only (no duals in MILP)
             primal_solution = {var_name_rev[var.VarName]: var.X for var in model.getVars()}
@@ -400,7 +417,10 @@ def solve_gurobi_lp_bounds(dict_var_name_2_obj,
     con_names_eq = list(dict_con_name_2_eq.keys())
     all_con_names = list(set(con_names_exog) | set(con_names_eq))
 
-    var_name_map = {v: f"v{i}" for i, v in enumerate(var_names)}
+    #var_name_map = {v: f"v{i}" for i, v in enumerate(var_names)}
+    var_name_map = {
+        v: v if len(v) < 99 else f"v{i}"
+        for i, v in enumerate(var_names)}
     con_name_map = {c: f"c{i}" for i, c in enumerate(all_con_names)}
 
     var_name_rev = {v_alias: v for v, v_alias in var_name_map.items()}
@@ -491,7 +511,7 @@ def solve_gurobi_lp_bounds(dict_var_name_2_obj,
 
             objective = model.ObjVal
             time_post = time.time() - time_post
-            
+
             return {
                 "primal_solution": primal_solution,
                 "dual_solution": dual_solution,

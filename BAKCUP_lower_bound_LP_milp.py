@@ -91,15 +91,11 @@ class lower_bound_LP_milp:
         self.times_lp_times['prior']=time.time()-t1
 
         self.construct_LB_or_ILP(self.OPT_use_psi,self.OPT_do_ilp)
-
-        if ( self.OPT_do_ilp==0 and self.full_prob.jy_opt['use_delta_in_lp']==False) or (self.OPT_do_ilp!=0 and self.full_prob.jy_opt['use_delta_in_milp']==False):
-            self.remove_remove_delta_and_delta_con()
         self.filter_constraints()
+
             
         if self.OPT_do_ilp==0:
             
-            #if self.full_prob.jy_opt['use_delta_in_lp']==False:
-            #    input('hi')
             
             if self.full_prob.jy_opt['use_Xpress']==False and self.full_prob.jy_opt['use_gurobi']==False:
                 input('i shouold not be here')
@@ -109,8 +105,6 @@ class lower_bound_LP_milp:
                 #if self.full_prob.jy_opt['think_compress'] and len(self.full_prob.all_actions_ever_seen)>0:
                 #    self.THINK_aggregate_constraints_dictionary()
                 self.call_gurobi_solver()
-                self.get_ij_poss_active()
-
                 self.naive_compress_get_pi_by_h_node()
                 self.naive_compress_make_f_2_new_f()
                 self.Naive_make_i_2_new_f()
@@ -127,8 +121,6 @@ class lower_bound_LP_milp:
                     self.times_lp_times['after_compression']=time.time()-t1
         else:
 
-            #if self.full_prob.jy_opt['use_delta_in_lp']==False:
-            #    self.remove_remove_delta_and_delta_con()
             #if self.full_prob.jy_opt['think_compress']>0.5:
                 
                
@@ -173,69 +165,6 @@ class lower_bound_LP_milp:
             #print('self.DEBUG_len')
             #print(self.DEBUG_len)
             #input('look here')
-    
-    def remove_remove_delta_and_delta_con(self):
-        print('rmoving')
-        delta_vars = set()
-        affected_cons = set()
-
-        for (var_name, con_name), coeff in self.dict_var_con_2_lhs_exog.items():
-            if "delta" in var_name and coeff != 0:
-                delta_vars.add(var_name)
-                affected_cons.add(con_name)
-                #if con_name=='time_uv_0_1':
-                #    print((var_name, con_name))
-                #    input('added' )
-        #print('affected_cons')
-        #print(affected_cons)
-        #print('var_name')
-        #input('---')
-        # Optional: show what you found
-        #print("Delta variables:", delta_vars)
-        #print("Constraints affected:", affected_cons)
-
-        # Step 2: Remove delta variables from all relevant dictionaries
-
-        dicts_to_clean = [
-            self.dict_var_name_2_obj,
-            #self.dict_var_con_2_lhs_exog,
-            #self.dict_var_con_2_lhs_eq,
-            self.dict_var_name_2_is_binary,
-            #self.dict_con_name_2_LB
-            #self.delta_name_2_lb,
-            #self.delta_name_2_ub,
-        ]
-
-        for d in dicts_to_clean:
-            for var in delta_vars:
-                d.pop(var, None)
-
-        dicts_to_clean = [
-            #self.dict_var_name_2_obj,
-            #self.dict_var_con_2_lhs_exog,
-            #self.dict_var_con_2_lhs_eq,
-            #self.dict_var_name_2_is_binary,
-            self.dict_con_name_2_LB
-            #self.delta_name_2_lb,
-            #self.delta_name_2_ub,
-        ]
-
-        for d in dicts_to_clean:
-            for con in affected_cons:
-                d.pop(con, None)
-        # Remove entries from dicts with (var_name, con_name) keys
-        dicts_with_tuple_keys = [
-            self.dict_var_con_2_lhs_exog,
-        ]
-
-        for d in dicts_with_tuple_keys:
-            keys_to_remove = [k for k in d if k[1] in affected_cons]
-            for k in keys_to_remove:
-                del d[k]
-            
-
-        # Remove affected constraints from constraint-bound dictionaries
-
     def make_agg_node_2_nodes(self):
         self.agg_node_2_nodes = {
             h: {
@@ -362,8 +291,6 @@ class lower_bound_LP_milp:
         use_psi=self.OPT_use_psi
         do_ilp=self.OPT_do_ilp
         self.dict_var_name_2_is_binary=defaultdict(int)
-        self.dict_var_name_2_is_integer=defaultdict(int)
-
         self.names_binary=[]
         if use_psi==True and do_ilp==True:
             for var_name in self.all_primitive_vars:
@@ -395,9 +322,8 @@ class lower_bound_LP_milp:
                 g=tup_fg[1]
                 var_name='EDGE_h='+h+'_f='+f+'_g='+g
                 self.dict_var_name_2_obj[var_name]=0
-                #if (self.full_prob.jy_opt['allOneBig_init']==False and self.full_prob.jy_opt['do_split_based_init']==True) and self.full_prob.jy_opt['all_vars_binary']==True:
-                if self.full_prob.jy_opt['all_vars_binary']==True:
-                    self.dict_var_name_2_is_integer[var_name]=1
+                if (self.full_prob.jy_opt['allOneBig_init']==False and self.full_prob.jy_opt['do_split_based_init']==True) and self.full_prob.jy_opt['all_vars_binary']==True:
+                    self.dict_var_name_2_is_binary[var_name]=1
         self.times_lp_times['help_construct_LB_make_vars_5']=time.time()-t1
         t1=time.time()
         t1 = time.time()
@@ -412,17 +338,13 @@ class lower_bound_LP_milp:
                 for p in q:
                     var_name = prefix + p
                     dict_update[var_name] = 0
-                    
                     if p in vars_names_ignore_set:
                         all_new_entries_ignore.append(var_name)
-                    #if p !=self.null_action: #or (self.full_prob.jy_opt['allOneBig_init']==False and self.full_prob.jy_opt['do_split_based_init']==True):
-                    dict_update_non_null[var_name] = 0
+                    if p !=self.null_action: #or (self.full_prob.jy_opt['allOneBig_init']==False and self.full_prob.jy_opt['do_split_based_init']==True):
+                        dict_update_non_null[var_name] = 0
         # Single update call
         self.dict_var_name_2_obj.update(dict_update)
         if self.full_prob.jy_opt['all_vars_binary']==True:
-            #print('dict_update_non_null')
-            #print(dict_update_non_null)
-            #input('yoyo')
             for var_name in dict_update_non_null:
                 self.dict_var_name_2_is_binary[var_name]=1
         # Final time record
@@ -568,6 +490,21 @@ class lower_bound_LP_milp:
         self.dict_var_con_2_lhs_eq.update(constraints_1)
         self.dict_var_con_2_lhs_eq.update(constraints_2)
         
+    def OLD_construct_constraints_actions_match_compact(self):
+        for h in self.graph_names:
+            for p in self.all_non_null_action:
+                con_name='action_match_h='+h+"_p="+p
+                self.dict_var_con_2_lhs_eq[tuple([p,con_name])]=-1
+        
+        for h in self.graph_names:
+            for q in self.h_q_2_fg[h]:
+                
+                for p in q:
+                    if p!=self.null_action:
+                        con_name_2='action_match_h='+h+"_p="+p
+                        var_name_2='fill_PQ_h='+h+'_q='+str(q)+'_p='+p
+                        self.dict_var_con_2_lhs_eq[tuple([var_name_2,con_name_2])]=1
+    
     def construct_constraints_actions_match_flow(self):
         # Build constraints from actions (p in q) with value -1.
         
@@ -595,6 +532,32 @@ class lower_bound_LP_milp:
         self.dict_var_con_2_lhs_eq.update(new_entries)
 
 
+    def OLD_construct_constraints_actions_match_flow(self):
+        my_count=0
+        my_count_2=0
+        my_counter_list=[]
+        print('starting ')
+        for h in self.graph_names:
+            print('h')
+            print(h)
+            print('len(self.h_q_2_fg[h])')
+            print(len(self.h_q_2_fg[h]))
+            for q in self.h_q_2_fg[h]:
+                con_name='equiv_class='+h+"_q="+str(q)
+                for p in q:
+                    var_name_2='fill_PQ_h='+h+'_q='+str(q)+'_p='+p
+                    self.dict_var_con_2_lhs_eq[tuple([var_name_2,con_name])]=-1
+                    my_count=my_count+1
+                for e in self.h_q_2_fg[h][q]:
+                    f=e[0]
+                    g=e[1]
+
+                    var_name_edge='EDGE_h='+h+'_f='+f+'_g='+g
+                    self.dict_var_con_2_lhs_eq[tuple([var_name_edge,con_name])]=1
+                    my_count_2=my_count_2+1
+        print("my_count:  "+str(my_count))
+        print("my_count_2:  "+str(my_count_2))
+        input('----')
     def construct_LB_or_ILP(self,use_psi,do_ilp):
         self.OPT_use_psi=use_psi
         self.OPT_do_ilp=do_ilp
@@ -736,18 +699,26 @@ class lower_bound_LP_milp:
         # If a variable is binary, declare it as such, otherwise as continuous (nonnegative).
         var_dict = {}
 
-        
-        vars_list = [
-        xp.var(
-            name=name,
-            lb=0,
-            vartype=(xp.binary if dict_var_name_2_is_binary.get(name, 0) else xp.continuous)
-        )
-        for name in dict_var_name_2_obj
-        ]
-        for var in vars_list:
-            var_dict[var.name]=var
-        milp_prob.addVariable(*vars_list) 
+        if 1<0:
+            vars_list = [xp.var(name=name, lb=0) for name in dict_var_name_2_obj]
+
+            for var_name, obj_coeff in dict_var_name_2_obj.items():
+                if dict_var_name_2_is_binary.get(var_name, 0):
+                    var_dict[var_name] = milp_prob.addVariable(name=var_name, vartype=xp.binary)
+                else:
+                    var_dict[var_name] = milp_prob.addVariable(name=var_name, lb=0)
+        else:
+            vars_list = [
+            xp.var(
+                name=name,
+                lb=0,
+                vartype=(xp.binary if dict_var_name_2_is_binary.get(name, 0) else xp.continuous)
+            )
+            for name in dict_var_name_2_obj
+            ]
+            for var in vars_list:
+                var_dict[var.name]=var
+            milp_prob.addVariable(*vars_list) 
         # Define the objective function: minimize sum(objective_coefficient * variable)
         objective = xp.Sum(dict_var_name_2_obj[var_name] * var_dict[var_name] 
                             for var_name in dict_var_name_2_obj)
@@ -1121,16 +1092,11 @@ class lower_bound_LP_milp:
                         self.dict_var_con_2_lhs_eq,
                         self.dict_con_name_2_eq)
             else:
-                delta_name_2_lb=dict()
-                delta_name_2_ub=dict()
-                if self.full_prob.jy_opt['use_delta_in_lp']==True:
-                    delta_name_2_lb=self.full_prob.delta_name_2_lb
-                    delta_name_2_ub=self.full_prob.delta_name_2_ub
                 out_solution=solve_gurobi_lp_bounds(self.dict_var_name_2_obj,
                     self.CLEAN_dict_var_con_2_lhs_exog,
                     self.CLEAN_dict_con_name_2_LB,
                     self.CLEAN_dict_var_con_2_lhs_eq,
-                    self.CLEAN_dict_con_name_2_eq,delta_name_2_lb,delta_name_2_ub)
+                    self.CLEAN_dict_con_name_2_eq,self.full_prob.delta_name_2_lb,self.full_prob.delta_name_2_ub)
 
                 debug_on=False
                 if debug_on:
@@ -1180,17 +1146,13 @@ class lower_bound_LP_milp:
     def call_gurobi_milp_solver(self):
         out_solution=[]
 
-        delta_name_2_lb=dict()
-        delta_name_2_ub=dict()
-        if self.full_prob.jy_opt['use_delta_in_milp']==True:
-            delta_name_2_lb=self.full_prob.delta_name_2_lb
-            delta_name_2_ub=self.full_prob.delta_name_2_ub
+        
         out_solution=solve_gurobi_milp_bounds(self.dict_var_name_2_obj,
             self.CLEAN_dict_var_con_2_lhs_exog,
             self.CLEAN_dict_con_name_2_LB,
             self.CLEAN_dict_var_con_2_lhs_eq,
-            self.CLEAN_dict_con_name_2_eq,delta_name_2_lb,delta_name_2_ub,
-            self.dict_var_name_2_is_binary,self.dict_var_name_2_is_integer,self.full_prob.jy_opt['max_ILP_time'])
+            self.CLEAN_dict_con_name_2_eq,self.full_prob.delta_name_2_lb,self.full_prob.delta_name_2_ub,
+            self.dict_var_name_2_is_binary,self.full_prob.jy_opt['max_ILP_time'])
 
 
         self.gurobi_MILP_str=out_solution['gurobi_log_string']
@@ -1386,45 +1348,3 @@ class lower_bound_LP_milp:
         print('DOING THIS REMOVAL OPERATION')
         print('DOING THIS REMOVAL OPERATION')
         #input('---')
-
-    def get_ij_poss_active(self):
-        x=self.lp_primal_solution
-        chars_to_remove = "()',"
-        translation_table = str.maketrans('', '', chars_to_remove)
-        
-        
-        #for key in x:
-        #    if "EDGE_h=timeGraph_f" in str(key):  # convert key to string in case it's a tuple or other type
-        #        print(key)
-        fg_2_val=dict()
-        for h in self.graph_names:
-            for fg in self.h_fg_2_ij[h]:
-                f=fg[0]
-                g=fg[1]
-                #print('fg')
-                #print(fg)
-                #print('f')
-                #print(f)
-                #print('g')
-                #print(g)
-                var_name_1='EDGE_h='+h+'_f='+f+'_g='+g
-                #print('var_name_1')
-                #print(var_name_1)
-                #v#ar_name=var_name_1.translate(translation_table)
-                fg_2_val[tuple([f,g])]=x[var_name_1]
-        
-        self.maybe_mapping=dict()
-        for h in self.graph_names:
-            self.maybe_mapping[h]=dict()
-            for ij in self.h_ij_2_fg[h].keys():
-                i=ij[0]
-                j=ij[1]
-                f=self.graph_node_2_agg_node[h][i]
-                g=self.graph_node_2_agg_node[h][j]
-                is_same=self.null_action in self.hij_2_P[h][ij]
-                
-                if f==g or fg_2_val[tuple([f,g])]>.00001:# or is_same:
-                    self.maybe_mapping[h][ij]=1
-                else:
-                    self.maybe_mapping[h][ij]=0
-

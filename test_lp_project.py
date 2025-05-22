@@ -9,7 +9,8 @@ options = {
     }
 #model_path="../Optym_gurobi_files_R107_LP/phase_1_file_num8417073.mps"
 #model_path="../optym_gurobi_file_ILP/C_104_50_458.mps"
-model_path="../ALL_JSON_BIG/QQbig_30.mps"
+#model_path="../ALL_JSON_BIG/QQbig_30.mps"
+model_path="LONG_proj.mps"
 #model_path="tryMe.mps"
 #model_path="R_104_fany.mps"
 #model_path="R_104_just_flip.mps"
@@ -19,9 +20,8 @@ with gp.Env(params=options) as env:
         
         delta_vars = [v for v in model.getVars() if "Proj" in v.VarName]
        
-        model.setParam("Presolve", 2)          # Aggressive
-        #model.setParam("Crash", 1)             # Try a good starting basis
-        model.setParam("DualReductions", 1) 
-        model.setParam("Method", 1)  # Dual simplex
-        model.setParam("Crossover", 0)
+        #model.setParam("Method", 1)         # Use dual simplex
+        #model.setParam("Crossover", 0)      # Skip crossover if using barrier
+        model.setParam("Presolve", 2)       # Aggressive presolve
+        #model.setParam("ScaleFlag", 1)      # Enable scaling
         model.optimize()
