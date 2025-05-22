@@ -91,11 +91,12 @@ class lower_bound_LP_milp:
         self.times_lp_times['prior']=time.time()-t1
 
         self.construct_LB_or_ILP(self.OPT_use_psi,self.OPT_do_ilp)
-
         if ( self.OPT_do_ilp==0 and self.full_prob.jy_opt['use_delta_in_lp']==False) or (self.OPT_do_ilp!=0 and self.full_prob.jy_opt['use_delta_in_milp']==False):
             self.remove_remove_delta_and_delta_con()
+        t1=time.time()
         self.filter_constraints()
-            
+        self.times_lp_times['filetering']=time.time()-t1
+
         if self.OPT_do_ilp==0:
             
             #if self.full_prob.jy_opt['use_delta_in_lp']==False:
@@ -109,11 +110,19 @@ class lower_bound_LP_milp:
                 #if self.full_prob.jy_opt['think_compress'] and len(self.full_prob.all_actions_ever_seen)>0:
                 #    self.THINK_aggregate_constraints_dictionary()
                 self.call_gurobi_solver()
+                t1=time.time()
                 self.get_ij_poss_active()
-
+                self.times_lp_times['allPostOpps4']=time.time()-t1
+                t1=time.time()
                 self.naive_compress_get_pi_by_h_node()
+                self.times_lp_times['allPostOpps3']=time.time()-t1
+                t1=time.time()
                 self.naive_compress_make_f_2_new_f()
+                self.times_lp_times['allPostOpps2']=time.time()-t1
+                t1=time.time()
                 self.Naive_make_i_2_new_f()
+                self.times_lp_times['allPostOpps1']=time.time()-t1
+
 
             if self.full_prob.jy_opt['use_gurobi']<0.5 and self.full_prob.jy_opt['use_Xpress']==True:
                 #input('i dont want to be here im trying to paly gurobi')
@@ -172,7 +181,7 @@ class lower_bound_LP_milp:
                 print(f"{key}: {val}")
             #print('self.DEBUG_len')
             #print(self.DEBUG_len)
-            #input('look here')
+            input('look here')
     
     def remove_remove_delta_and_delta_con(self):
         print('rmoving')
@@ -1387,35 +1396,40 @@ class lower_bound_LP_milp:
         print('DOING THIS REMOVAL OPERATION')
         #input('---')
 
-    def get_ij_poss_active(self):
+    def OLD_get_ij_poss_active(self):
         x=self.lp_primal_solution
-        chars_to_remove = "()',"
-        translation_table = str.maketrans('', '', chars_to_remove)
-        
-        
-        #for key in x:
-        #    if "EDGE_h=timeGraph_f" in str(key):  # convert key to string in case it's a tuple or other type
-        #        print(key)
-        fg_2_val=dict()
+        fg_2_val=defaultdict(float)
+        f_out_val=set([])
+        g_in_val=set([])
+        both_val=set([])
+        t1=time.time()
         for h in self.graph_names:
-            for fg in self.h_fg_2_ij[h]:
-                f=fg[0]
-                g=fg[1]
-                #print('fg')
-                #print(fg)
-                #print('f')
-                #print(f)
-                #print('g')
-                #print(g)
-                var_name_1='EDGE_h='+h+'_f='+f+'_g='+g
-                #print('var_name_1')
-                #print(var_name_1)
-                #v#ar_name=var_name_1.translate(translation_table)
-                fg_2_val[tuple([f,g])]=x[var_name_1]
+            for f, g in self.h_fg_2_ij[h]:
+                if f==g:
+                    continue
+                var_name = f"EDGE_h={h}_f={f}_g={g}"
+                val = x[var_name]
+                #print('val')
+                #print(val)
+                fg_2_val[(f, g)] += val
+                if val>0.001:
+                    f_out_val.add(f)
+                    g_in_val.add(g)
+                    both_val.add(f)
+                    both_val.add(g)
         
+
+        t_first=time.time()-t1
+        t_sec=time.time()      
         self.maybe_mapping=dict()
+        #can_same_link=dict()
+#
+#        for h in self.graph_names:
+#            can_same_link[h]=dict()
+#            for i in self.graph_node_2_agg_node[h]:
+#                can_same_link[h][i]=1
         for h in self.graph_names:
-            self.maybe_mapping[h]=dict()
+            self.maybe_mapping[h]=defaultdict(float)
             for ij in self.h_ij_2_fg[h].keys():
                 i=ij[0]
                 j=ij[1]
@@ -1423,8 +1437,67 @@ class lower_bound_LP_milp:
                 g=self.graph_node_2_agg_node[h][j]
                 is_same=self.null_action in self.hij_2_P[h][ij]
                 
-                if f==g or fg_2_val[tuple([f,g])]>.00001:# or is_same:
+                #if  is_same or f==g or fg_2_val[tuple([f,g])]>0 or f in both_val or g in both_val:#or f_out_val[f]>0.0001 or g_in_val[g]>.00001):# or is_same:# or is_same:
+                if   f==g or is_same or fg_2_val[tuple([f,g])]>0 or f in both_val or g in both_val:#or f_out_val[f]>0.0001 or g_in_val[g]>.00001):# or is_same:# or is_same:
+                #if   f==g or is_same  or f in both_val or g in both_val:#or f_out_val[f]>0.0001 or g_in_val[g]>.00001):# or is_same:# or is_same:
                     self.maybe_mapping[h][ij]=1
-                else:
-                    self.maybe_mapping[h][ij]=0
+                #else:
+                #    self.maybe_mapping[h][ij]=0
+                    #if is_same and can_same_link[h][i]>0:
+                    #    can_same_link[h][i]=can_same_link[h][i]-1
+                    #    self.maybe_mapping[h][ij]=1
+        t_sec=time.time()-t_sec
+        print('[t_first,t_sec]')
+        print([t_first,t_sec])
+        #input('---')
 
+
+    def get_ij_poss_active(self):
+        x=self.lp_primal_solution
+        fg_2_val=defaultdict(float)
+        f_out_val=set([])
+        g_in_val=set([])
+        both_val=set([])
+        t1=time.time()
+        for h in self.graph_names:
+            for f, g in self.h_fg_2_ij[h]:
+                if f==g:
+                    continue
+                var_name = f"EDGE_h={h}_f={f}_g={g}"
+                val = x[var_name]
+                #print('val')
+                #print(val)
+                fg_2_val[(f, g)] += val
+                if val>0.000001:
+                    f_out_val.add(f)
+                    g_in_val.add(g)
+                    both_val.add(f)
+                    both_val.add(g)
+        t_first=time.time()-t1
+        t_sec=time.time()      
+        self.maybe_mapping=dict()
+        
+        for h in self.graph_names:
+            ij_list = self.h_ij_2_fg[h].keys()
+            agg_node_map = self.graph_node_2_agg_node[h]
+            hij_P = self.hij_2_P[h]
+            #print('type')
+            #print(type(ij_list))
+            #print('type')
+            #print(type(agg_node_map))
+            same_group_ij = {ij for ij in ij_list if agg_node_map[ij[0]] == agg_node_map[ij[1]]}
+            null_action_ij = {ij for ij in ij_list if self.null_action in hij_P[ij]}
+            f_in_both_val = {ij for ij in ij_list if agg_node_map[ij[0]] in both_val}
+            g_in_both_val = {ij for ij in ij_list if agg_node_map[ij[1]] in both_val}
+
+            active_ij = same_group_ij | null_action_ij | f_in_both_val | g_in_both_val
+
+            # Initialize maybe_mapping[h] as a defaultdict with default value 0
+            self.maybe_mapping[h]=active_ij
+            #self.maybe_mapping[h] =defaultdict(int)
+            #for ij in active_ij:
+            #    self.maybe_mapping[h][ij] = 1            
+        t_sec=time.time()-t_sec
+        print('[t_first,t_sec]')
+        print([t_first,t_sec])
+        #input('---')

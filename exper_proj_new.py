@@ -49,6 +49,7 @@ class projector:
         self.time_dict_proj['prior']=time.time()-t1
         t1=time.time()
         self.get_non_zero_terms_p()
+        self.get_poss_slack_terms()
         self.time_dict_proj['get_non_zero_terms_p']=time.time()-t1
         t1=time.time()
         self.get_non_zero_terms_ij_i()
@@ -131,7 +132,14 @@ class projector:
                 self.non_zero_p_plus_null.append(p)
             if lp_primal_solution[p]>DEBUG_thresh:
                 DEBUG_non_zero_p.append(p)
-        
+    
+    def get_poss_slack_terms(self):
+
+        #self.nodes_source_is_connected_to  = [ij[1] for ij in self.hij_2_P_orig if ij[0] == self.compact_source]
+        self.nodes_sink_is_connected_to  = [ij[0] for ij in self.hij_2_P_orig if ij[1] == self.compact_sink]
+        #print('len(self.nodes_source_is_connected_to )')
+        #print(len(self.nodes_source_is_connected_to ))
+        #input('--')
     def get_non_zero_terms_ij_i(self):
         # Clear results
         self.non_zero_ij = []
@@ -148,7 +156,7 @@ class projector:
             filtered = [p for p in P_list if p in non_zero_set]
             if filtered:  # If the filtered list is non-empty:
                 # Append (i,j) to non_zero_ij.
-                if self.MF.jy_opt['turn_off_non_active_fg_project']>0.5 and self.my_lp.maybe_mapping[self.h][ij]<0.5:
+                if self.MF.jy_opt['turn_off_non_active_fg_project']>0.5 and ij not in self.my_lp.maybe_mapping[self.h]:#[ij]#<0.5:
                     kill_count=kill_count+1
                     continue
                 noKill_count=noKill_count+1
@@ -159,14 +167,18 @@ class projector:
                 # Use setdefault to update q_2_NZ_ij in one shot.
                 self.q_2_NZ_ij.setdefault(sorted_q, []).append(ij)
 
-        
-        #print('noKill_count,kill_count')
-        #3print([noKill_count,kill_count])
-        #input('---')
+
+        if self.MF.jy_opt['turn_off_non_active_fg_project']>0.5:
+            print('noKill_count,kill_count')
+            print([noKill_count,kill_count])
+            print('h')
+            print(self.h)
+            #input('---')
     def proj_make_vars(self):
 
 
-        for i in self.graph_node_2_agg_node:
+        #for i in self.graph_node_2_agg_node:
+        for i in self.nodes_sink_is_connected_to:
             my_var_1_name='Proj_slack_pos_'+str(i)
             self.dict_PROJ_var_name_2_obj[my_var_1_name]=1
             
@@ -183,57 +195,7 @@ class projector:
         #        my_var='Proj_q'+str(q)+'_p=_'+p
         #        self.dict_PROJ_var_name_2_obj[my_var]=0
     
-    def make_primal_feas(self):
-        #assumes one customr per node
-        
-        self.default_primal_solution=dict()
-        for var in self.dict_PROJ_var_name_2_obj:
-            self.default_primal_solution[var]=0
-        for i in self.graph_node_2_agg_node:
-            my_var_1_name='Proj_slack_pos_'+str(i)
-            self.default_primal_solution[my_var_1_name]=100000
-        
-        h=self.h
-        edges_fg=self.my_lp.h_fg_2_ij[h].keys()
-        lp_primal_solution=self.MF.my_lower_bound_LP.lp_primal_solution
-        self.non_zero_f=set([])
-        self.non_zero_fg=[]
-        for e in edges_fg:
-            f=e[0]
-            g=e[1]
-            var_name_fg='EDGE_h='+h+'_f='+f+'_g='+g
-            if lp_primal_solution[var_name_fg]>self.MF.jy_opt['epsilon']:
-                did_find=0
-                for ij in self.my_lp.h_fg_2_ij[h][e]:
-                    i=ij[0]
-                    j=ij[1]
-                    if ij in self.non_zero_ij:
-                        did_find=True
-                        my_var_ij='Proj_ij_i'+i+'_j=_'+j
-                        if self.default_primal_solution[my_var_ij]>0:
-                            input('error here')
-                        self.default_primal_solution[my_var_ij]=lp_primal_solution[var_name_fg]
-                        q=self.Nz_ij_2_q[ij]
-                        if len(q)!=1:
-                            print('ij')
-                            print(ij)
-                            print('q')
-                            print(q)
-                            input('error in this spot1')
-                        for p in q:
-                            if p not in self.non_zero_p_plus_null or len(q)>1:
-                                input('error ths spot 3')
-                            var_name_2='Proj_q'+str(q)+'_p=_'+p
-                            #p#rint('var_name_2')
-                            #print(var_name_2)
-                            #print('my_var_ij')
-                            #print(my_var_ij)
-                            self.default_primal_solution[var_name_2]+=lp_primal_solution[var_name_fg]
-                            break
-                        break
-        
-
-
+    
     def proj_make_actions_match_exog(self):
 
         for p in self.non_zero_p:
@@ -254,18 +216,21 @@ class projector:
     def proj_make_proj_flow_i_plus_minus(self):
 
         for i in self.non_source_sink:
-            
-            con_name='con_i_slack_pos_'+i
+            #print(i)
+            #input('--') 
+            con_name='con_i_slack_pos_'+str(i)
 
             self.dict_PROJ_ineq_con_name_2_rhs[con_name]=0
 
+        #for i in self.non_source_sink:#nodes_source_is_connected_to:   
+        for i in self.nodes_sink_is_connected_to:#nodes_source_is_connected_to:   
+            con_name='con_i_slack_pos_'+str(i)
 
-            my_var_1_name='Proj_slack_pos_'+i
-            #my_var_2_name='Proj_slack_neg_'+i
-            #my_var_2_name='Proj_slack_pos_'+i
-
+            my_var_1_name='Proj_slack_pos_'+str(i)
+            #print('my_var_1_name')
+            #print(my_var_1_name)
+            #input('---')
             self.dict_PROG_ineq_var_con_lhs[tuple([my_var_1_name,con_name])]=1
-            #self.dict_PROG_eq_var_con_lhs[tuple([my_var_2_name,con_name])]=-1
 
 
         for ij in self.non_zero_ij:

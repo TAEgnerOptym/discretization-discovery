@@ -75,7 +75,7 @@ def solve_with_lazy_delta_constraints(model: gp.Model,do_remove,do_bring_back,do
 
         
     model.setParam("MIPFocus", 3)
-    #model.setParam("Cuts", 0)
+    model.setParam("Cuts", 2)
     model.setParam("NodeLimit", 100000)        # Only solve root node
     model.setParam("OutputFlag", 1)
     model.update()
@@ -116,8 +116,8 @@ model_path="R104_super_fine.mps"
 #model_path="NO_FANCY_COMPRESS_model_name.mps"
 #model_path="../optym_gurobi_file_ILP/C_104_100_10.mps"
 #model_path="model_name.mps"
-#model_path="model_name.mps"
-model_path="R_112_model_name.mps"
+model_path="model_name.mps"
+#model_path="R_112_model_name.mps"
 do_remove=False
 do_bring_back=False
 do_force_integer=True
@@ -126,8 +126,8 @@ with gp.Env(params=options) as env:
     with gp.read(model_path, env=env) as model:
         model.setParam("DisplayInterval", 1)
         print('changing options')
-        #model.optimize()
-        #input('---')
+        model.optimize()
+        input('---')
         #model.update()
         solve_with_lazy_delta_constraints(model,do_remove,do_bring_back,do_force_integer,do_make_linear)
          

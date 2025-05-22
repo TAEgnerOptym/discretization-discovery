@@ -262,9 +262,9 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
     safe_LB = {con_name_map[k]: v for k, v in dict_con_name_2_LB.items()}
     safe_EQ = {con_name_map[k]: v for k, v in dict_con_name_2_eq.items()}
     safe_binary_set = {var_name_map[v] for v in dict_binary_vars}
-    #print('dict_var_name_2_is_integer')
-    #print(dict_var_name_2_is_integer)
+    
     safe_integer_set = {var_name_map[v] for v in dict_var_name_2_is_integer}
+    #safe_binary_integer_set=
     safe_var_LB = {var_name_map[k]: v for k, v in dict_var_name_2_LB.items()}
     safe_var_UB = {var_name_map[k]: v for k, v in dict_var_name_2_UB.items()}
 
@@ -300,7 +300,7 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
                     #input('--')
                 var_dict[name] = model.addVar(lb=lb, ub=ub, obj=obj_coeff, vtype=vtype, name=name)
 
-
+        
 
             if  any(not var_name_rev[v].startswith("act") for v in safe_binary_set):
                 #input('HERE')
@@ -317,9 +317,12 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
                     else:
                         v.BranchPriority = 1
                         count_2=count_2+1
-                
-                print('[count_1,count_2]')
-                print([count_1,count_2])
+                for v_name in safe_integer_set:
+                    orig_name = var_name_rev[v_name]
+                    v=var_dict[v_name]
+                    v.BranchPriority = 1
+                    #print('[count_1,count_2]')
+                    #print([count_1,count_2])
             #print('len(safe_binary_set)')
             #print(len(safe_binary_set))
             #input('hihi')
