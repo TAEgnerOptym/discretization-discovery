@@ -75,9 +75,13 @@ class graph_based_separ:
         for q in self.dict_valid_ineq_name_2_rhs:
             con_name='Valid_ineq_'+str(q)
             self.dict_con_name_2_LB[con_name]=self.dict_valid_ineq_name_2_rhs[q]
+            slack_var_name='SLACK_VALID_'+str(q)
+            self.dict_var_con_2_lhs_exog[tuple([slack_var_name,con_name])]=1
             for e in self.dict_valid_ineq_name_edge_2_coeff[q]:
                 var_name='EDGE_VAR_'+str(e)
                 coeff=self.dict_valid_ineq_name_edge_2_coeff[q][e]
+                if coeff>0:
+                    input('error')
                 self.dict_var_con_2_lhs_exog[tuple([var_name,con_name])]=coeff
     def make_match(self):
         print('making match constraints')
@@ -120,7 +124,7 @@ class Separ_object:
         self.non_source_sink_nodes=self.my_graph_based_separ.non_source_sink_nodes#et(self.nodes)-set([self.my_graph_based_separ.source_node,self.my_graph_based_separ.sink_node])
 
         self.x_mag=x_mag
-        self.magnanti_epsilon=.0001
+        self.magnanti_epsilon=0#.0001
         self.get_vars_cons_keep()
         self.out_solution=solve_gurobi_lp(self.COMP_dict_var_name_2_obj,
                     self.COMP_dict_var_con_2_lhs_exog,
@@ -128,6 +132,16 @@ class Separ_object:
                     self.COMP_dict_var_con_2_lhs_eq,
                     self.COMP_dict_con_name_2_eq)
         self.dual_solution=self.out_solution['dual_solution']
+        print('objective')
+        print(self.out_solution['objective'])
+        self.lp_primal_new=self.out_solution['primal_solution']
+        print('printing solution')
+        for p in self.lp_primal_new:
+            if self.lp_primal_new[p]>0.01:
+                print(p+':  '+str(self.lp_primal_new[p]))
+        print('objective')
+        print(self.out_solution['objective'])
+        input('---')
         self.generate_cut()
 
 
@@ -142,7 +156,11 @@ class Separ_object:
             var_name='act_'+str(u)+'_'+str(v)
             if self.x[var_name]+self.x_mag[var_name]>0:
                 self.active_x[uv]=self.x[var_name]+(self.magnanti_epsilon*self.x_mag[var_name])
-
+                #print('self.active_x[uv]')
+                #print(self.active_x[uv])
+                #print('uv')
+                #print(uv)
+                #input('ADDING HERE')
         self.vars_keep=[]
         self.cons_keep=[]
         self.cons_keep_eq=[]
@@ -164,17 +182,45 @@ class Separ_object:
             for e in self.my_graph_based_separ.uv_2_E[uv]:
                 var_name='EDGE_VAR_'+str(e)
                 self.vars_keep.append(var_name)
+        num_ineq_found=0
         for q in G.dict_valid_ineq_name_2_rhs:
             #for e in self.dict_valid_ineq_name_edge_2_coeff[q]:
             dict1=G.dict_valid_ineq_name_edge_2_coeff[q]
-            cardinality = len(dict1.keys() & self.vars_keep)
+            cardinality = len(set(dict1.keys()) & {v.replace("EDGE_VAR_", "") for v in self.vars_keep})
+            #cardinality = len(set(dict1.keys()) & set(self.vars_keep))
+            #print('len(dict1.keys() )')
+            #print(len(dict1.keys() ))
+            #3print('len(self.vars_keep)')
+            #p#rint(len(self.vars_keep))
+            #print('cardinality')
+            #print(cardinality)
+            #print('type(self.vars_keep))')
+            ##print(type(self.vars_keep))
+            #print('type(dict1.keys())')
+            #print(type(dict1.keys()))
             if cardinality>0:
                 var_name='SLACK_VALID_'+str(q)
                 con_name='Valid_ineq_'+str(q)
                 self.vars_keep.append(var_name)
                 self.cons_keep.append(con_name)
                 self.valid_cons_keep.append(con_name)
-
+                #print('q')
+                #for (this_var_name, this_con_name), value in self.my_graph_based_separ.dict_var_con_2_lhs_exog.items():
+                #    if this_con_name == con_name:
+                #        print((this_var_name, this_con_name), value)                #print(q)
+                #print('con_name')
+                #print(con_name)
+                #print('self.my_graph_based_separ.dict_con_name_2_LB[[con_name]]')
+                #print(self.my_graph_based_separ.dict_con_name_2_LB[con_name])
+                #input('found one')
+                num_ineq_found=num_ineq_found+1
+            #else:
+            #    print('this is not wrong but should not happen always')
+            #    print('this is not wrong but should not happen always')
+                
+        print('num_ineq_found')
+        print(num_ineq_found)
+        input('ineq_found')
         self.COMP_dict_var_name_2_obj= {k: G.dict_var_2_obj[k] for k in self.vars_keep}
 
         self.COMP_dict_con_name_2_LB={k: G.dict_con_name_2_LB[k] for k in self.cons_keep }
@@ -188,17 +234,22 @@ class Separ_object:
 
         self.COMP_dict_var_con_2_lhs_eq = {
             (var, con): val
-            for (var, con), val in G.dict_var_con_2_lhs_exog.items()
+            for (var, con), val in G.dict_var_con_2_lhs_eq.items()
             if var in self.COMP_dict_var_name_2_obj and con in self.COMP_dict_con_name_2_eq
         }
-
+        #print('self.COMP_dict_var_con_2_lhs_eq ')
+        #print(self.COMP_dict_var_con_2_lhs_eq )
+        #print('matching eq ')
+        #input('---')
         for uv in self.active_x:
             con_name='match_EQ_'+str(uv)
             u=uv[0]
             v=uv[1]
             var_name='act_'+str(u)+'_'+str(v)
-            self.COMP_dict_con_name_2_eq[con_name]=self.x[var_name]+self.x_mag[var_name]
-
+            self.COMP_dict_con_name_2_eq[con_name]=self.active_x[uv]#self.x[var_name]+self.x_mag[var_name]
+            #print('self.active_x[uv]')
+            #print(self.active_x[uv])
+            #input('did_modify')
         
     def generate_cut(self):
         
@@ -210,33 +261,16 @@ class Separ_object:
         for e in G.E:
             i=e[0]
             j=e[1]
-            #print('self.dual_solution')
-            #print(self.dual_solution)
             i_name='flow_in_out_'+str(i)
-            j_name='flow_in_out_'+str(j)
-            #print('i')
-            #print(i)
-            #print('j')
-            #print(j)
-            #print('e')
-            #print(e)
-            #3print('i_name')
-            #print(i_name)
-            #print('j_name')
-            #print(j_name)
-            #print('type(j_name)')
-            #print(type(j_name))
+            j_name='flow_in_out_'+str(j)      
             dual_i=0
             dual_j=0
             if i!=G.source_node:
                 dual_i=self.dual_solution[i_name]
             if j!=G.sink_node:
-                print('in here')
-                print('j')
-                print(j)
-                print('G.sink_node')
-                print(G.sink_node)
-                print('---')
+                if j_name not in self.dual_solution:
+                    print('error')
+                    input('error ')
                 dual_j=self.dual_solution[j_name]
             self.E_weight[str(e)]=dual_i-dual_j
     
@@ -264,18 +298,13 @@ class novel_ng_graph_basic:
         #generate all subsets 
         my_subsets=set([])
         for u in range(0,self.NC):
-            print('u')
-            print(u)
-            print('self.u_2_NG[u]')
-            print(self.u_2_NG[u])
+           
 
 
             tmp=self.u_2_NG[u]+[u]
             my_power_set=power_set(tmp)
             for p in my_power_set:
                 if len(p)<=self.max_SRI_SET_SIZE:
-                    print('p')
-                    print(p)
                     p=sorted(p)
                     tmp=frozenset(p)
                     my_subsets.add(tmp)
@@ -287,11 +316,6 @@ class novel_ng_graph_basic:
         max_SRI_size=self.max_SRI_SET_SIZE
         for p in self.subset_2_make_SRI:
             max_sz=np.ceil(len(p)/2)
-            #print('max_sz')
-            #print(max_sz)
-            ##print('max_SRI_size')
-            #print(max_SRI_size)
-            #input('---')
             max_sz=np.min([max_sz,max_SRI_size])
             max_sz=int(max_sz)
             for k in range(2,max_sz+1):
@@ -300,6 +324,8 @@ class novel_ng_graph_basic:
                     new_SRI['customers']=p
                     new_SRI['my_divisor']=k
                     new_SRI['my_RHS']=np.floor(len(p)/k)
+                    print('new_SRI')
+                    print(new_SRI)
                     my_SRI.append(new_SRI)
         self.my_SRI=my_SRI
     
@@ -321,6 +347,38 @@ class novel_ng_graph_basic:
         self.non_source_sink_cust=np.arange(0,self.NC)#set(u_2_NG.keys())-set([self.my_VRP.NC,self.my_VRP.NC+1])
 
     def generate_edge_2_SRI_contrib(self):
+        self.dict_valid_ineq_name_2_rhs = {}
+        self.dict_valid_ineq_name_edge_2_coeff = {}
+
+        E_2_lost_terms = self.E_2_lost_terms
+        my_SRI = self.my_SRI
+
+        count=0
+        for q in my_SRI:
+            count=count+1
+            print([count,len(my_SRI)])
+            Nhat = set(q['customers'])
+            k = q['my_divisor']
+            rhs = q['my_RHS']
+            k_inv = 1.0 / k  # precompute
+            q_name = f"{frozenset(Nhat)}_{k}_{rhs}"
+
+            # RHS of valid inequality
+            self.dict_valid_ineq_name_2_rhs[q_name] = -np.floor(len(Nhat) * k_inv)
+
+            # Build edge contribution dict
+            tmp_dict = {
+                e: -np.floor(len(terms & Nhat) * k_inv)
+                for e, terms in E_2_lost_terms.items()
+                if len(terms & Nhat) >= k  # early filter if no contribution
+            }
+
+            # Keep only nonzero entries
+            tmp_dict = {e: coeff for e, coeff in tmp_dict.items() if coeff < 0}
+            self.dict_valid_ineq_name_edge_2_coeff[q_name] = tmp_dict
+
+
+    def OLD_generate_edge_2_SRI_contrib(self):
 
         self.dict_valid_ineq_name_2_rhs=dict()
         self.dict_valid_ineq_name_edge_2_coeff=dict()
@@ -333,11 +391,12 @@ class novel_ng_graph_basic:
             self.dict_valid_ineq_name_2_rhs[q_name]=-np.floor(len(Nhat)/k)
             tmp_dict=dict()
             for e in self.E_2_lost_terms:
-                my_lost_terms=self.E_2_lost_terms
-                coeff=np.floor(len(my_lost_terms)/k)
+                my_lost_terms=self.E_2_lost_terms[e]
+                this_inter=my_lost_terms.intersection(Nhat)
+                coeff=np.floor(len(this_inter)/k)
                 if coeff>0:
                     tmp_dict[e]=-coeff
-
+                    
             self.dict_valid_ineq_name_edge_2_coeff[q_name]=tmp_dict
 
     def generate_nodes(self):
@@ -374,16 +433,57 @@ class novel_ng_graph_basic:
         NC=self.NC
         #print('self.nodes')
         #print(self.nodes)
+        for u in range(0,NC+1):
+            for v in range(0,NC+2):
+                if Dist[u,v]<np.inf:
+                    self.uv_2_E[tuple([u,v])]=[]
+        self.SET_u_2_ng_set=dict()
+        self.SET_u_2_ng_set[NC]=set([])
+        self.SET_u_2_ng_set[NC+1]=set([])
+
+        for u in range(0,NC):
+            self.SET_u_2_ng_set[u]=set(self.u_2_NG[u])
+
         for n in self.nodes:
             print('n')
             print(n)
             u=n[0]
             N_n=n[1]
+            nodes_plus_u=set(N_n).union(set([u]))
             for w in range(0,NC+2):
                 if u!=w and w!=NC and Dist[u,w]<np.inf and w not in N_n :
-                    self.make_new_edge(n,w)
+                    self.make_new_edge(n,w,nodes_plus_u)
 
-    def make_new_edge(self,i,w):
+    def make_new_edge(self, i, w,orig_terms):
+
+        i0=i[0]
+
+        if w < self.my_VRP.num_cust:
+            this_ng_set = self.SET_u_2_ng_set[w]
+            new_set = orig_terms & this_ng_set
+        else:
+            new_set = set([])
+
+        lost_terms = orig_terms - new_set
+        new_set = set(sorted(new_set))
+
+        j = (w, new_set)
+        e = (i, j)
+        if j not in self.nodes:
+            print('j')
+            print(j)
+            print('BIG ERROR')
+            input('BIG ERROR')
+        uv = (i0, w)
+
+        self.E.append(e)
+        self.uv_2_E[uv].append(e)
+        e_key = str(e)
+        self.E_2_uv[e_key] = uv
+        self.E_2_lost_terms[e_key] = lost_terms
+
+
+    def OLD_make_new_edge(self,i,w):
         orig_terms=set(i[1]).union(set([i[0]]))
         this_ng_set=set([])
         if w<self.my_VRP.num_cust:
@@ -394,15 +494,12 @@ class novel_ng_graph_basic:
         j=tuple([w,new_set])
         
         e=tuple([i,j])
-        print('e')
-        print(e)
+
         self.E.append(e)
         uv=tuple([i[0],w])
-        if uv not in self.uv_2_E:
-            self.uv_2_E[uv]=[]
+        
         self.uv_2_E[uv].append(e)
-        print('e')
-        print(e)
+
         self.E_2_uv[str(e)]=uv
         self.E_2_lost_terms[str(e)]=lost_terms
 
@@ -412,7 +509,7 @@ class complete_separater_end_to_end:
         print('hello')
         self.MF=MF
         self.OPT=dict()
-        self.OPT['num_LA_cutting_plane']=4
+        self.OPT['num_LA_cutting_plane']=6
         self.OPT['do_custom_NG']=False
 
         self.x_act=MF.my_lower_bound_LP.lp_primal_solution
@@ -428,6 +525,9 @@ class complete_separater_end_to_end:
         self.my_graph_based_separ=graph_based_separ(self.my_NG.E,self.my_NG.E_2_uv,self.my_NG.uv_2_E,self.my_NG.nodes,self.my_NG.non_source_sink_nodes,self.my_NG.dict_valid_ineq_name_2_rhs,self.my_NG.dict_valid_ineq_name_edge_2_coeff,self.my_NG.source_node,self.my_NG.sink_node)
         self.my_separ=Separ_object(self.my_graph_based_separ,self.x_act,self.x_mag)
         self.objective_cut=self.my_separ.out_solution['objective']
+        print('self.objective_cut')
+        print(self.objective_cut)
+        print('----')
         if self.my_separ.out_solution['objective']>.0001:
 
             self.add_ineq_to_MF()

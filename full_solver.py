@@ -1,4 +1,4 @@
-
+import pickle
 from collections import defaultdict
 from typing import Dict, DefaultDict, Set, List
 import numpy as np
@@ -380,7 +380,10 @@ class full_solver:
             if self.jy_opt['use_new_valid_ineq']==True and did_compress_call==False and did_split==False :
                 
                 from class_new_valid import complete_separater_end_to_end 
-
+                #with open("my_object.pkl", "wb") as f:
+                #    pickle.dump(self, f, protocol=pickle.HIGHEST_PROTOCOL)
+                #with open("my_object.pkl", "rb") as f:
+                 #   loaded_object = pickle.load(f)
                 my_adder=complete_separater_end_to_end(self)
                 print('The cut objective is ')
                 print(my_adder.objective_cut)

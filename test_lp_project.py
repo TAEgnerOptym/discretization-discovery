@@ -25,3 +25,7 @@ with gp.Env(params=options) as env:
         model.setParam("Presolve", 2)       # Aggressive presolve
         #model.setParam("ScaleFlag", 1)      # Enable scaling
         model.optimize()
+        print('nothing')
+        for var in model.getVars():
+            if var.X > 0:
+                print(f"{var.VarName} = {var.X}")
