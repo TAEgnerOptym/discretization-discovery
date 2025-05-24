@@ -15,7 +15,7 @@ def call_and_run_code(input_file_path,my_params_path,my_json_file_path,my_output
     my_params=grab_params(my_params_path)
 
     print('Reading file and creating input')
-    make_problem_instance(input_file_path,my_params,my_json_file_path)
+    my_instance=make_problem_instance(input_file_path,my_params,my_json_file_path)
     print('DONE Reading file and creating input')
     # Open and load the JSON file
 
@@ -31,6 +31,6 @@ def call_and_run_code(input_file_path,my_params_path,my_json_file_path,my_output
 
     print('Calling the solver')
 
-
+    D['my_VRP']=my_instance
 
     my_solver=full_solver(D,my_params,my_output_path)

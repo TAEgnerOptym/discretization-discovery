@@ -9,8 +9,9 @@ import itertools
 import gurobipy as gp
 from solve_gurobi_lp import solve_gurobi_lp
 import sys
-sys.path.append("../pre_process")
-from naive_pre import naive_get_LA_neigh
+sys.path.append("pre_process")
+from naive_pre import *
+
 def power_set(s):
         """
         Returns the power set of the input collection `s` as a list of tuples.
@@ -234,11 +235,21 @@ class novel_ng_graph_basic:
     def generate_subsets_to_consider(self):
         #generate all subsets 
         my_subsets=set([])
-        for u in self.u_2_NG:
-            my_power_set=power_set([self.u_2_NG,u])
+        for u in range(0,self.NC):
+            print('u')
+            print(u)
+            print('self.u_2_NG[u]')
+            print(self.u_2_NG[u])
+
+
+            tmp=self.u_2_NG[u]+[u]
+            my_power_set=power_set(tmp)
             for p in my_power_set:
                 if len(p)<=self.max_SRI_SET_SIZE:
-                    my_subsets.add(p)
+                    print('p')
+                    print(p)
+                    tmp=frozenset(p)
+                    my_subsets.add(tmp)
         self.subset_2_make_SRI=my_subsets
 
 
@@ -247,13 +258,19 @@ class novel_ng_graph_basic:
         max_SRI_size=self.max_SRI_SET_SIZE
         for p in self.subset_2_make_SRI:
             max_sz=np.ceil(len(p)/2)
-            max_sz=np.min(max_sz,self.max_SRI_SIZE)
+            #print('max_sz')
+            #print(max_sz)
+            ##print('max_SRI_size')
+            #print(max_SRI_size)
+            #input('---')
+            max_sz=np.min([max_sz,max_SRI_size])
+            max_sz=int(max_sz)
             for k in range(2,max_sz+1):
                 if np.remainder(len(p),k)!=0:
                     new_SRI=dict()
                     new_SRI['customers']=p
                     new_SRI['my_divisor']=k
-                    new_SRI['my_RHS']=np.floor(len(p),k)
+                    new_SRI['my_RHS']=np.floor(len(p)/k)
                     my_SRI.append(new_SRI)
         self.my_SRI=my_SRI
     
@@ -262,18 +279,22 @@ class novel_ng_graph_basic:
     def __init__(self,u_2_NG,my_VRP):
         self.my_VRP=my_VRP
         self.u_2_NG=u_2_NG
+        self.NC=len(self.u_2_NG)
         self.max_SRI_Divisor=2
         self.max_SRI_SET_SIZE=3
+        self.source_node=tuple([self.NC,set([])])
+        self.sink_node=tuple([self.NC+1,set([])])
         self.generate_nodes()
         self.generate_edges()
         self.generate_subsets_to_consider()
         self.generate_SRI()
         self.generate_edge_2_SRI_contrib()
-        self.non_source_sink_cust=set(u_2_NG.keys())-set([self.my_VRP.NC,self.my_VRP.NC+1])
+        self.non_source_sink_cust=np.arange(0,self.NC)#set(u_2_NG.keys())-set([self.my_VRP.NC,self.my_VRP.NC+1])
 
     def generate_edge_2_SRI_contrib(self):
 
         self.dict_valid_ineq_name_2_rhs=dict()
+        self.dict_valid_ineq_name_edge_2_coeff=dict()
         my_SRI=self.my_SRI
         for q in my_SRI:
             Nhat=set(q['customers'])
@@ -284,7 +305,7 @@ class novel_ng_graph_basic:
             tmp_dict=dict()
             for e in self.E_2_lost_terms:
                 my_lost_terms=self.E_2_lost_terms
-                coeff=np.floor(Nhat.intersection(my_lost_terms)/k)
+                coeff=np.floor(len(my_lost_terms)/k)
                 if coeff>0:
                     tmp_dict[e]=-coeff
 
@@ -293,46 +314,59 @@ class novel_ng_graph_basic:
     def generate_nodes(self):
         self.nodes=[]
         VRP=self.my_VRP
-        NC=VRP.num_cust
+        NC=self.NC
 
         sink_node=tuple([NC+1,set([])])
         source_node=tuple([NC,set([])])
         self.nodes.append(sink_node)
         self.nodes.append(source_node)
+        self.non_source_sink_cust=np.arange(0,NC)
         #self.node_2_ng_allowed
         for u in self.non_source_sink_cust:
+            #print('self.u_2_NG[u]')
+            #print(self.u_2_NG[u])
+            #input('---')
             my_power_set=power_set(self.u_2_NG[u])
-            self.nodes[u]=[]
+            #self.nodes[u]=[]
             for my_sub in my_power_set:
                 my_sub=set(sorted(list(my_sub)))
                 my_new_node=tuple([u,my_sub])
-                self.nodes[u].append(my_new_node)
+                self.nodes.append(my_new_node)
 
     def generate_edges(self):
 
         VRP=self.my_VRP
         Dist=VRP.dist_mat_full
-        VRP.NC
         self.E_2_uv=dict()
         self.uv_2_E=dict()
         self.E_2_lost_terms=dict()
         self.E=[]
+        NC=self.NC
+        #print('self.nodes')
+        #print(self.nodes)
         for n in self.nodes:
+            print('n')
+            print(n)
             u=n[0]
-            N_n=n[2]
-            for w in VRP.NC+2:
-                if u!=w and w!=VRP.NC and Dist[u,w]<np.inf and w not in N_n :
+            N_n=n[1]
+            for w in range(0,NC+2):
+                if u!=w and w!=NC and Dist[u,w]<np.inf and w not in N_n :
                     self.make_new_edge(n,w)
 
-    def make_new_edge(i,w):
-        orig_terms=i[1]+[i[0]]
-        
-        new_set=set(orig_terms).intersection(self.u_2_NG[w])
+    def make_new_edge(self,i,w):
+        orig_terms=i[1].union(set([i[0]]))
+        this_ng_set=set([])
+        if w<self.my_VRP.num_cust:
+            this_ng_set=self.u_2_NG[w]
+        new_set=set(orig_terms).intersection()
         lost_terms=set(orig_terms)-new_set
         new_set=sorted(list(new_set))
         j=tuple([w,new_set])
-        
-        e=tuple([i,j])
+        ifroz=tuple([i[0],frozenset(i[1])])
+        jfroz=tuple([j[0],frozenset(j[1])])
+        e=tuple([ifroz,jfroz])
+        print('e')
+        print(e)
         self.E.append(e)
         uv=tuple([i[0],w])
         if uv not in self.uv_2_E:
@@ -347,25 +381,29 @@ class complete_separater_end_to_end:
         print('hello')
         self.MF=MF
         self.OPT=dict()
-        self.OPT['num_LA_cutting_plane']=10
+        self.OPT['num_LA_cutting_plane']=4
         self.OPT['do_custom_NG']=False
 
         self.x_act=MF.my_lower_bound_LP.lp_primal_solution
         self.x_mag=defaultdict(float)
         for uv in self.MF.all_actions_ever_seen:
             self.x_mag[uv]=1
-        if self.do_custom_NG==True:
+        if self.OPT['do_custom_NG']==True:
             self.make_custom_NG()
         else:
-            self.u_2_NG=self.naive_get_LA_neigh(self.MF.VRP,self.OPT['num_LA_cutting_plane'])
-        self.my_NG=novel_ng_graph_basic(self.u_2_NG,self.my_VRP)
+            self.u_2_NG=naive_get_LA_neigh(self.MF.my_VRP,self.OPT['num_LA_cutting_plane'])
+            self.u_2_NG=self.u_2_NG[0]
+        self.my_NG=novel_ng_graph_basic(self.u_2_NG,self.MF.my_VRP)
         self.my_graph_based_separ=graph_based_separ(self.my_NG.E,self.my_NG.E_2_uv,self.my_NG.uv_2_E,self.my_NG.nodes,self.my_NG.dict_valid_ineq_name_2_rhs,self.my_NG.dict_valid_ineq_name_edge_2_coeff,self.my_NG.source_node,self.my_NG.sink_node)
-        self.my_separ=Separ_object(self.my_graph_based_separ,self.x_act,self.x_mag):
+        self.my_separ=Separ_object(self.my_graph_based_separ,self.x_act,self.x_mag)
+        self.objective_cut=self.my_separ.out_solution['objective']
         if self.my_separ.out_solution['objective']>.0001:
 
             self.add_ineq_to_MF()
        
 
+    def make_custom_NG(self):
+        input('make this oine next')
 
     def add_ineq_to_MF(self):
         cur_count_cutting_planes=self.MF.count_cutting_planes

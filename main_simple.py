@@ -2,7 +2,7 @@ from call_and_run_code import call_and_run_code
 
 import argparse
 
-default_input='data/jy_R112.txt'
+default_input='data/jy_R102.txt'
 default_option_path='my_params_R200.json'
 
 #default_input='data/jy_R104.txt'

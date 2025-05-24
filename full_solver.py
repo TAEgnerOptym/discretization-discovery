@@ -34,6 +34,7 @@ class full_solver:
         self.jy_opt=jy_opt
         self.output_file_path=output_file_path
         self.full_input_dict=full_input_dict
+        self.my_VRP=full_input_dict['my_VRP']
         #self.all_delta:  list of the ids of all delta terms 
         self.all_delta=full_input_dict['allDelta']
         self.all_actions_not_source_sink_connected=full_input_dict['all_actions_not_source_sink_connected']
@@ -374,13 +375,16 @@ class full_solver:
             #input('---')
             print('self.time_list_outer')
             print(self.time_list_outer)
-            #if did_compress_call==False and did_split==False :
+            if did_compress_call==False and did_split==False :
                 
-            #    from class_new_valid import complete_separater_end_to_end 
+                from class_new_valid import complete_separater_end_to_end 
 
-            #    my_adder=complete_separater_end_to_end(self)
-            #    if my_adder.objective_cut>0.0001:
-            #        continue
+                my_adder=complete_separater_end_to_end(self)
+                print('The cut objective is ')
+                print(my_adder.objective_cut)
+                input('---')
+                if my_adder.objective_cut<0.0001:
+                    continue
             if did_compress_call==False and did_split==False:
                 print('breaking do to no split')
                 break

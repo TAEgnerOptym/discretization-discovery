@@ -64,3 +64,4 @@ def make_problem_instance(input_file_path,my_params,my_json_file_path):
 
     with open(my_json_file_path, 'w') as file:
         json.dump(data, file)
+    return my_instance
