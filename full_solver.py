@@ -375,7 +375,9 @@ class full_solver:
             #input('---')
             print('self.time_list_outer')
             print(self.time_list_outer)
-            if did_compress_call==False and did_split==False :
+            #print('use_ineq')
+            #print(self.jy_opt['use_new_valid_ineq'])
+            if self.jy_opt['use_new_valid_ineq']==True and did_compress_call==False and did_split==False :
                 
                 from class_new_valid import complete_separater_end_to_end 
 
@@ -383,7 +385,7 @@ class full_solver:
                 print('The cut objective is ')
                 print(my_adder.objective_cut)
                 input('---')
-                if my_adder.objective_cut<0.0001:
+                if my_adder.objective_cut>0.0001:
                     continue
             if did_compress_call==False and did_split==False:
                 print('breaking do to no split')

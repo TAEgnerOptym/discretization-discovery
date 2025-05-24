@@ -72,13 +72,13 @@ class graph_based_separ:
 
 
     def make_valid_ineq(self):
-        for q in self.dict_valid_ineq_name_edge_2_coeff:
+        for q in self.dict_valid_ineq_name_2_rhs:
             con_name='Valid_ineq_'+str(q)
             self.dict_con_name_2_LB[con_name]=self.dict_valid_ineq_name_2_rhs[q]
             for e in self.dict_valid_ineq_name_edge_2_coeff[q]:
                 var_name='EDGE_VAR_'+str(e)
                 coeff=self.dict_valid_ineq_name_edge_2_coeff[q][e]
-                self.dict_valid_ineq_name_edge_2_coeff[tuple([var_name,con_name])]=coeff
+                self.dict_var_con_2_lhs_exog[tuple([var_name,con_name])]=coeff
     def make_match(self):
         print('making match constraints')
         for uv in self.uv_2_E:
@@ -117,6 +117,8 @@ class Separ_object:
     def __init__(self,my_graph_based_separ,x,x_mag):
         self.my_graph_based_separ=my_graph_based_separ
         self.x=x
+        self.non_source_sink_nodes=self.my_graph_based_separ.non_source_sink_nodes#et(self.nodes)-set([self.my_graph_based_separ.source_node,self.my_graph_based_separ.sink_node])
+
         self.x_mag=x_mag
         self.magnanti_epsilon=.0001
         self.get_vars_cons_keep()
@@ -131,6 +133,7 @@ class Separ_object:
 
         
     def get_vars_cons_keep(self):
+        G=self.my_graph_based_separ
 
         self.active_x=dict()
         for uv in self.my_graph_based_separ.uv_2_E:
@@ -145,25 +148,26 @@ class Separ_object:
         self.cons_keep_eq=[]
         self.valid_cons_keep=[]
         
-        self.non_source_sink_nodes=set(self.nodes)-set([self.my_graph_based_separ.source_node,self.my_graph_based_separ.sink_node])
-        for n in self.non_source_sink_nodes:
-            var_name='SLACK_FLOW_'+str(n)
+        for i in self.non_source_sink_nodes:
+            var_name='SLACK_FLOW_'+str(i)
             self.vars_keep.append(var_name)
             con_name='flow_in_out_'+str(i)
+            #print('con_name')
+            #print(con_name)
+            #input('keeping')
             self.cons_keep.append(con_name)
             #self.dict_var_2_obj[var_name]=1
         
         for uv in self.active_x:
             con_name='match_EQ_'+str(uv)
             self.cons_keep_eq.append(con_name)
-            for e in self.my_graph_based_separ.uv_2_e[uv]:
+            for e in self.my_graph_based_separ.uv_2_E[uv]:
                 var_name='EDGE_VAR_'+str(e)
                 self.vars_keep.append(var_name)
-        for q in self.dict_valid_ineq_name_2_rhs:
+        for q in G.dict_valid_ineq_name_2_rhs:
             #for e in self.dict_valid_ineq_name_edge_2_coeff[q]:
-            dict1=self.dict_valid_ineq_name_edge_2_coeff[q]
-            dict2=self.vars_keep
-            cardinality = len(dict1.keys() & dict2.keys())
+            dict1=G.dict_valid_ineq_name_edge_2_coeff[q]
+            cardinality = len(dict1.keys() & self.vars_keep)
             if cardinality>0:
                 var_name='SLACK_VALID_'+str(q)
                 con_name='Valid_ineq_'+str(q)
@@ -171,7 +175,6 @@ class Separ_object:
                 self.cons_keep.append(con_name)
                 self.valid_cons_keep.append(con_name)
 
-        G=self.my_graph_based_separ
         self.COMP_dict_var_name_2_obj= {k: G.dict_var_2_obj[k] for k in self.vars_keep}
 
         self.COMP_dict_con_name_2_LB={k: G.dict_con_name_2_LB[k] for k in self.cons_keep }
@@ -189,7 +192,7 @@ class Separ_object:
             if var in self.COMP_dict_var_name_2_obj and con in self.COMP_dict_con_name_2_eq
         }
 
-        for uv in self.active_x[uv]:
+        for uv in self.active_x:
             con_name='match_EQ_'+str(uv)
             u=uv[0]
             v=uv[1]
@@ -207,15 +210,35 @@ class Separ_object:
         for e in G.E:
             i=e[0]
             j=e[1]
+            #print('self.dual_solution')
+            #print(self.dual_solution)
             i_name='flow_in_out_'+str(i)
             j_name='flow_in_out_'+str(j)
+            #print('i')
+            #print(i)
+            #print('j')
+            #print(j)
+            #print('e')
+            #print(e)
+            #3print('i_name')
+            #print(i_name)
+            #print('j_name')
+            #print(j_name)
+            #print('type(j_name)')
+            #print(type(j_name))
             dual_i=0
             dual_j=0
             if i!=G.source_node:
                 dual_i=self.dual_solution[i_name]
             if j!=G.sink_node:
+                print('in here')
+                print('j')
+                print(j)
+                print('G.sink_node')
+                print(G.sink_node)
+                print('---')
                 dual_j=self.dual_solution[j_name]
-            self.E_weight[e]=dual_i-dual_j
+            self.E_weight[str(e)]=dual_i-dual_j
     
         self.new_cut_RHS=0
         for q in self.valid_cons_keep:
@@ -228,7 +251,7 @@ class Separ_object:
                 
         self.new_cut_x_uv_2_coeff=dict()
         for uv in G.uv_2_E:
-            self.new_cut_x_uv_2_coeff[uv] = min(self.E_weight[e] for e in G.uv_2_E[uv])
+            self.new_cut_x_uv_2_coeff[uv] = min(self.E_weight[str(e)] for e in G.uv_2_E[uv])
 
     def return_cut(self):
         return self.new_cut_x_uv_2_coeff,self.new_cut_RHS
@@ -253,6 +276,7 @@ class novel_ng_graph_basic:
                 if len(p)<=self.max_SRI_SET_SIZE:
                     print('p')
                     print(p)
+                    p=sorted(p)
                     tmp=frozenset(p)
                     my_subsets.add(tmp)
         self.subset_2_make_SRI=my_subsets
@@ -360,17 +384,16 @@ class novel_ng_graph_basic:
                     self.make_new_edge(n,w)
 
     def make_new_edge(self,i,w):
-        orig_terms=i[1].union(set([i[0]]))
+        orig_terms=set(i[1]).union(set([i[0]]))
         this_ng_set=set([])
         if w<self.my_VRP.num_cust:
             this_ng_set=self.u_2_NG[w]
-        new_set=set(orig_terms).intersection()
+        new_set=set(orig_terms).intersection(this_ng_set)
         lost_terms=set(orig_terms)-new_set
-        new_set=sorted(list(new_set))
+        new_set=set(sorted(list(new_set)))
         j=tuple([w,new_set])
-        ifroz=tuple([i[0],frozenset(i[1])])
-        jfroz=tuple([j[0],frozenset(j[1])])
-        e=tuple([ifroz,jfroz])
+        
+        e=tuple([i,j])
         print('e')
         print(e)
         self.E.append(e)
@@ -378,8 +401,10 @@ class novel_ng_graph_basic:
         if uv not in self.uv_2_E:
             self.uv_2_E[uv]=[]
         self.uv_2_E[uv].append(e)
-        self.E_2_uv[e]=uv
-        self.E_2_lost_terms[e]=lost_terms
+        print('e')
+        print(e)
+        self.E_2_uv[str(e)]=uv
+        self.E_2_lost_terms[str(e)]=lost_terms
 
 class complete_separater_end_to_end:
 
@@ -411,17 +436,31 @@ class complete_separater_end_to_end:
     def make_custom_NG(self):
         input('make this oine next')
 
-    def add_ineq_to_MF(self):
-        cur_count_cutting_planes=self.MF.count_cutting_planes
-        new_CP_name='my_valid_ineq_'+str(cur_count_cutting_planes)
-        self.MF.all_exog.append(new_CP_name)
-        self.MF.exog_name_2_rhs[new_CP_name]=self.my_sep.new_cutting_plane_rhs
+    def print_cut(self):
         for uv in self.my_sep.new_cuttin_plane_coef:
             u=uv[0]
             v=uv[1]
             primal_var='act_'+str(u)+'_'+str(v)
-            val=self.my_sep.new_cutting_plane_coeff
+            val=self.my_sep.new_cutting_plane_coeff[primal_var]
             if abs(val)>0.000001:
-                self.MF.action_con_2_contrib[tuple([primal_var,new_CP_name])]=val
-        self.MF.exog_name_2_rhs[new_CP_name]=self.my_sep.new_cut_x_uv_2_coeff
+                print('u,v,val')
+                print([u,v,val])
+            print('self.MF.exog_name_2_rhs[self.new_CP_name]')
+            print(self.MF.exog_name_2_rhs[self.new_CP_name])
+            print('printed_cut_above')
+            input('---')
+    def add_ineq_to_MF(self):
+        cur_count_cutting_planes=self.MF.count_cutting_planes
+        self.new_CP_name='my_valid_ineq_'+str(cur_count_cutting_planes)
+        self.MF.all_exog.append(self.new_CP_name)
+        self.MF.exog_name_2_rhs[self.new_CP_name]=self.my_sep.new_cutting_plane_rhs
+        for uv in self.my_sep.new_cuttin_plane_coef:
+            u=uv[0]
+            v=uv[1]
+            primal_var='act_'+str(u)+'_'+str(v)
+            val=self.my_sep.new_cutting_plane_coeff[primal_var]
+            if abs(val)>0.000001:
+                self.MF.action_con_2_contrib[tuple([primal_var,self.new_CP_name])]=val
+        self.MF.exog_name_2_rhs[self.new_CP_name]=self.my_sep.new_cut_x_uv_2_coeff
         
+        self.print_cut()
