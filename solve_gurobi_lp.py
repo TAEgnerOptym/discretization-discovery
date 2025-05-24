@@ -98,9 +98,9 @@ def solve_gurobi_lp(dict_var_name_2_obj,
             time_opt = time.time() - time_opt
             print('DONE Gur LP')
             #if time_opt>0:
-            print('writing model')
-            model.write('LONG_proj.mps')
-            print('done wriitng model')
+            #print('writing model')
+            #model.write('LONG_proj.mps')
+            #print('done wriitng model')
             time_post = time.time()
 
             if model.status != GRB.OPTIMAL:
