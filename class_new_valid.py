@@ -27,7 +27,7 @@ def power_set(s):
 
 class graph_based_separ:
 
-    def __init__(self,E,E_2_uv,uv_2_E,Nodes,dict_valid_ineq_name_2_rhs,dict_valid_ineq_name_edge_2_coeff,source_node,sink_node):
+    def __init__(self,E,E_2_uv,uv_2_E,Nodes,non_source_sink_nodes,dict_valid_ineq_name_2_rhs,dict_valid_ineq_name_edge_2_coeff,source_node,sink_node):
 
         self.E=E
         self.E_2_uv=E_2_uv
@@ -37,17 +37,22 @@ class graph_based_separ:
         self.sink_node=sink_node
         self.dict_valid_ineq_name_2_rhs=dict_valid_ineq_name_2_rhs
         self.dict_valid_ineq_name_edge_2_coeff=dict_valid_ineq_name_edge_2_coeff
-
+        self.non_source_sink_nodes=non_source_sink_nodes
         self.dict_var_name_2_obj=dict()
         self.dict_var_con_2_lhs_exog=dict()
         self.dict_var_con_2_lhs_eq=dict()
         self.dict_con_name_2_LB=dict()
         self.dict_con_name_2_eq=dict()
+        print('making vars')
         self.make_vars()
-        self.make_flow_in_out()
-        self.make_match()
-        self.make_valid_ineq()
+        print('making make_flow_in_out')
 
+        self.make_flow_in_out()
+        print('making match')
+        self.make_match()
+        print('making valid')
+        self.make_valid_ineq()
+        print('dont graph part')
     def make_vars(self):
         #edge_vars
         self.dict_var_2_obj=dict()
@@ -55,7 +60,7 @@ class graph_based_separ:
             var_name='EDGE_VAR_'+str(e)
             self.dict_var_2_obj[var_name]=0
         
-        self.non_source_sink_nodes=set(self.nodes)-set([self.source_node,self.sink_node])
+       #self.non_source_sink_nodes=self.Nodes-set([self.source_node,self.sink_node])
         for n in self.non_source_sink_nodes:
             var_name='SLACK_FLOW_'+str(n)
 
@@ -75,12 +80,12 @@ class graph_based_separ:
                 coeff=self.dict_valid_ineq_name_edge_2_coeff[q][e]
                 self.dict_valid_ineq_name_edge_2_coeff[tuple([var_name,con_name])]=coeff
     def make_match(self):
-        
+        print('making match constraints')
         for uv in self.uv_2_E:
             con_name='match_EQ_'+str(uv)
             self.dict_con_name_2_eq[con_name]=0
 
-            for e in self.E_2_uv:
+            for e in self.uv_2_E[uv]:
                 var_name='EDGE_VAR_'+str(e)
                 my_tup_1=tuple([var_name,con_name])
                 self.dict_var_con_2_lhs_eq[my_tup_1]=1
@@ -320,6 +325,7 @@ class novel_ng_graph_basic:
         source_node=tuple([NC,set([])])
         self.nodes.append(sink_node)
         self.nodes.append(source_node)
+        self.non_source_sink_nodes=[]
         self.non_source_sink_cust=np.arange(0,NC)
         #self.node_2_ng_allowed
         for u in self.non_source_sink_cust:
@@ -332,7 +338,7 @@ class novel_ng_graph_basic:
                 my_sub=set(sorted(list(my_sub)))
                 my_new_node=tuple([u,my_sub])
                 self.nodes.append(my_new_node)
-
+                self.non_source_sink_nodes.append(my_new_node)
     def generate_edges(self):
 
         VRP=self.my_VRP
@@ -394,7 +400,7 @@ class complete_separater_end_to_end:
             self.u_2_NG=naive_get_LA_neigh(self.MF.my_VRP,self.OPT['num_LA_cutting_plane'])
             self.u_2_NG=self.u_2_NG[0]
         self.my_NG=novel_ng_graph_basic(self.u_2_NG,self.MF.my_VRP)
-        self.my_graph_based_separ=graph_based_separ(self.my_NG.E,self.my_NG.E_2_uv,self.my_NG.uv_2_E,self.my_NG.nodes,self.my_NG.dict_valid_ineq_name_2_rhs,self.my_NG.dict_valid_ineq_name_edge_2_coeff,self.my_NG.source_node,self.my_NG.sink_node)
+        self.my_graph_based_separ=graph_based_separ(self.my_NG.E,self.my_NG.E_2_uv,self.my_NG.uv_2_E,self.my_NG.nodes,self.my_NG.non_source_sink_nodes,self.my_NG.dict_valid_ineq_name_2_rhs,self.my_NG.dict_valid_ineq_name_edge_2_coeff,self.my_NG.source_node,self.my_NG.sink_node)
         self.my_separ=Separ_object(self.my_graph_based_separ,self.x_act,self.x_mag)
         self.objective_cut=self.my_separ.out_solution['objective']
         if self.my_separ.out_solution['objective']>.0001:
