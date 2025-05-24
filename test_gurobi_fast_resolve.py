@@ -126,6 +126,9 @@ with gp.Env(params=options) as env:
     with gp.read(model_path, env=env) as model:
         model.setParam("DisplayInterval", 1)
         print('changing options')
+        model.setParam("MIPFocus", 3)
+        model.setParam("BranchDir", 1)
+        model.setParam("Presolve", 1)
         model.optimize()
         input('---')
         #model.update()

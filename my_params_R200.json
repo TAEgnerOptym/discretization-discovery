@@ -21,8 +21,8 @@
 "min_inc_2_compress":0.00001,
 "use_delta_in_milp":1,
 "use_delta_in_lp":1,
-"turn_off_non_active_fg_project":1,
-"max_iterations_loop_compress_project":50,
+"turn_off_non_active_fg_project":0,
+"max_iterations_loop_compress_project":20,
 
 
 
