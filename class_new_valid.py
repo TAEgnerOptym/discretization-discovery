@@ -275,18 +275,21 @@ class Separ_object:
             self.E_weight[str(e)]=dual_i-dual_j
     
         self.new_cut_RHS=0
-        for q in self.valid_cons_keep:
-            dual_val=self.dual_solution[q]
-            self.new_cut_RHS+=G.dict_valid_ineq_name_2_rhs*dual_val
+        for q_full in self.valid_cons_keep:
+            dual_val=self.dual_solution[q_full]
+            q=q_full[11:]
 
+            self.new_cut_RHS+=G.dict_valid_ineq_name_2_rhs[q]*dual_val
+            
             for e in G.dict_valid_ineq_name_edge_2_coeff[q]:
-                coeff=G.dict_valid_ineq_name_edge_2_coeff[q]
+                coeff=G.dict_valid_ineq_name_edge_2_coeff[q][e]
                 self.E_weight[e]-=(dual_val*coeff)
                 
         self.new_cut_x_uv_2_coeff=dict()
         for uv in G.uv_2_E:
-            self.new_cut_x_uv_2_coeff[uv] = min(self.E_weight[str(e)] for e in G.uv_2_E[uv])
+            self.new_cut_x_uv_2_coeff[uv] = -min(self.E_weight[str(e)] for e in G.uv_2_E[uv])
 
+        
     def return_cut(self):
         return self.new_cut_x_uv_2_coeff,self.new_cut_RHS
 
@@ -483,26 +486,7 @@ class novel_ng_graph_basic:
         self.E_2_lost_terms[e_key] = lost_terms
 
 
-    def OLD_make_new_edge(self,i,w):
-        orig_terms=set(i[1]).union(set([i[0]]))
-        this_ng_set=set([])
-        if w<self.my_VRP.num_cust:
-            this_ng_set=self.u_2_NG[w]
-        new_set=set(orig_terms).intersection(this_ng_set)
-        lost_terms=set(orig_terms)-new_set
-        new_set=set(sorted(list(new_set)))
-        j=tuple([w,new_set])
-        
-        e=tuple([i,j])
-
-        self.E.append(e)
-        uv=tuple([i[0],w])
-        
-        self.uv_2_E[uv].append(e)
-
-        self.E_2_uv[str(e)]=uv
-        self.E_2_lost_terms[str(e)]=lost_terms
-
+    
 class complete_separater_end_to_end:
 
     def __init__(self,MF):
@@ -511,7 +495,7 @@ class complete_separater_end_to_end:
         self.OPT=dict()
         self.OPT['num_LA_cutting_plane']=6
         self.OPT['do_custom_NG']=False
-
+        self.epsilon_slack_valid=.00001
         self.x_act=MF.my_lower_bound_LP.lp_primal_solution
         self.x_mag=defaultdict(float)
         for uv in self.MF.all_actions_ever_seen:
@@ -537,30 +521,50 @@ class complete_separater_end_to_end:
         input('make this oine next')
 
     def print_cut(self):
-        for uv in self.my_sep.new_cuttin_plane_coef:
+        print('PRINTINIG CUT')
+        for uv in self.my_separ.new_cut_x_uv_2_coeff:
             u=uv[0]
             v=uv[1]
-            primal_var='act_'+str(u)+'_'+str(v)
-            val=self.my_sep.new_cutting_plane_coeff[primal_var]
+            #primal_var='act_'+str(u)+'_'+str(v)
+            val=self.my_separ.new_cut_x_uv_2_coeff[uv]
             if abs(val)>0.000001:
                 print('u,v,val')
                 print([u,v,val])
-            print('self.MF.exog_name_2_rhs[self.new_CP_name]')
-            print(self.MF.exog_name_2_rhs[self.new_CP_name])
-            print('printed_cut_above')
-            input('---')
+        print('self.MF.exog_name_2_rhs[self.new_CP_name]')
+        print(self.MF.exog_name_2_rhs[self.new_CP_name])
+        print('printed_cut_above')
+        input('---')
     def add_ineq_to_MF(self):
         cur_count_cutting_planes=self.MF.count_cutting_planes
         self.new_CP_name='my_valid_ineq_'+str(cur_count_cutting_planes)
         self.MF.all_exog.append(self.new_CP_name)
-        self.MF.exog_name_2_rhs[self.new_CP_name]=self.my_sep.new_cutting_plane_rhs
-        for uv in self.my_sep.new_cuttin_plane_coef:
+        self.MF.exog_name_2_rhs[self.new_CP_name]=self.my_separ.new_cut_RHS-self.epsilon_slack_valid
+        DEBUG_RHS=self.my_separ.new_cut_RHS
+        DEBUG_LHS=0
+        for uv in self.my_separ.new_cut_x_uv_2_coeff:
             u=uv[0]
             v=uv[1]
             primal_var='act_'+str(u)+'_'+str(v)
-            val=self.my_sep.new_cutting_plane_coeff[primal_var]
+            val=self.my_separ.new_cut_x_uv_2_coeff[uv]
             if abs(val)>0.000001:
                 self.MF.action_con_2_contrib[tuple([primal_var,self.new_CP_name])]=val
-        self.MF.exog_name_2_rhs[self.new_CP_name]=self.my_sep.new_cut_x_uv_2_coeff
+            xuv=self.MF.my_lower_bound_LP.lp_primal_solution[primal_var]
+            print('xuv  '+str(xuv)+'   val '+str(val)+'   xuv*val:  '+str(xuv*val))
+            DEBUG_LHS+=xuv*val
         
+        if abs((DEBUG_RHS-DEBUG_LHS)-self.objective_cut)>.001:
+            print('DEBUG_RHS')
+            print(DEBUG_RHS)
+            print('DEBUG_LHS')
+            print(DEBUG_LHS)
+            print('self.objective_cut')
+            print(self.objective_cut)
+            input('cut coefficients not written correctly')
+        else:
+            print('GREAT JOB')
+            print('DEBUG_RHS')
+            print(DEBUG_RHS)
+            print('DEBUG_LHS')
+            print(DEBUG_LHS)
+            input('FOUND')
         self.print_cut()

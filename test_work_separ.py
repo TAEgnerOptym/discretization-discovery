@@ -4,7 +4,7 @@ import pickle
 loaded_object=[]
 
 print('staritng load ')
-with open("USE_my_object.pkl", "rb") as f:
+with open("../ALL_JSON_BIG/USE_my_object.pkl", "rb") as f:
     loaded_object = pickle.load(f)
 
 print('done load ')
