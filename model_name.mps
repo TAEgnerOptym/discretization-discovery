@@ -1,414 +1,335 @@
-* Signature: 0x2d4532d3bbe939ce
+* Signature: 0x660d16bfe262b5be
 NAME converted_MILP
 ROWS
  N  OBJ
- G  c29     
- G  c14     
- G  c22     
- G  c52     
- G  c61     
- G  c48     
+ G  c28     
+ G  c5      
  G  c65     
- G  c19     
- G  c16     
- G  c51     
- G  c63     
- G  c70     
- G  c40     
- G  c60     
- G  c1      
- G  c27     
- G  c36     
- G  c2      
- G  c59     
- G  c35     
- G  c41     
- G  c34     
  G  c66     
- G  c17     
- G  c54     
- G  c38     
- G  c7      
- G  c3      
- G  c6      
- G  c4      
- G  c42     
- G  c71     
- E  c68     
- E  c55     
- E  c23     
- E  c73     
- E  c18     
- E  c64     
- E  c25     
+ G  c39     
+ G  c64     
+ G  c48     
+ G  c62     
+ G  c15     
+ G  c58     
+ G  c16     
+ G  c1      
+ G  c20     
+ G  c59     
+ G  c40     
+ G  c2      
+ G  c53     
+ G  c23     
+ G  c9      
+ G  c60     
+ G  c45     
+ G  c33     
+ G  c51     
+ G  c46     
+ G  c36     
  E  c49     
- E  c45     
+ E  c4      
+ E  c27     
  E  c44     
- E  c9      
- E  c0      
- E  c47     
- E  c5      
- E  c21     
+ E  c3      
  E  c50     
- E  c62     
- E  c58     
- E  c74     
- E  c56     
- E  c31     
- E  c15     
- E  c28     
- E  c20     
- E  c53     
- E  c33     
- E  c32     
- E  c39     
+ E  c34     
  E  c13     
- E  c69     
- E  c8      
- E  c30     
- E  c43     
- E  c10     
- E  c72     
+ E  c61     
+ E  c54     
  E  c11     
- E  c26     
- E  c12     
- E  c46     
- E  c24     
+ E  c14     
+ E  c29     
+ E  c38     
+ E  c21     
+ E  c32     
+ E  c41     
+ E  c42     
  E  c57     
+ E  c52     
+ E  c35     
+ E  c7      
+ E  c63     
+ E  c43     
+ E  c22     
+ E  c26     
+ E  c8      
+ E  c19     
+ E  c12     
+ E  c18     
+ E  c6      
+ E  c30     
+ E  c10     
+ E  c47     
  E  c67     
  E  c37     
+ E  c24     
+ E  c31     
+ E  c56     
+ E  c55     
+ E  c17     
+ E  c25     
+ E  c0      
 COLUMNS
     MARKER    'MARKER'                 'INTORG'
     act_0_1   OBJ       1
-    act_0_1   c29       -9804
-    act_0_1   c14       -2
-    act_0_1   c40       1
-    act_0_1   c60       1
-    act_0_1   c1        -1
-    act_0_1   c27       -1
-    act_0_1   c36       1
-    act_0_1   c17       -1
-    act_0_1   c54       -1
-    act_0_1   c7        -1
-    act_0_1   c3        -1
-    act_0_1   c4        -1
+    act_0_1   c28       -9804
+    act_0_1   c5        -2
+    act_0_1   c20       1
+    act_0_1   c59       1
+    act_0_1   c40       -1
+    act_0_1   c2        -1
+    act_0_1   c53       1
+    act_0_1   c46       -1
+    act_0_1   c36       -1
+    act_0_1   c50       -1
     act_0_1   c42       -1
-    act_0_1   c71       -1
-    act_0_1   c64       -1
-    act_0_1   c58       -1
     act_0_2   OBJ       2
-    act_0_2   c22       -9806
-    act_0_2   c52       -2
-    act_0_2   c40       1
-    act_0_2   c60       1
-    act_0_2   c1        -1
-    act_0_2   c2        -1
+    act_0_2   c65       -9806
+    act_0_2   c66       -2
+    act_0_2   c20       1
     act_0_2   c59       1
-    act_0_2   c17       -1
-    act_0_2   c38       -1
-    act_0_2   c7        -1
-    act_0_2   c3        -1
-    act_0_2   c6        -1
-    act_0_2   c42       -1
-    act_0_2   c71       -1
-    act_0_2   c25       -1
-    act_0_2   c74       -1
+    act_0_2   c40       -1
+    act_0_2   c23       -1
+    act_0_2   c9        1
+    act_0_2   c46       -1
+    act_0_2   c36       -1
+    act_0_2   c34       -1
+    act_0_2   c57       -1
     act_0_4   OBJ       99
-    act_0_4   c40       1
-    act_0_4   c60       1
-    act_0_4   c1        -1
-    act_0_4   c17       -1
-    act_0_4   c54       -1
-    act_0_4   c38       -1
-    act_0_4   c7        -1
-    act_0_4   c3        -1
-    act_0_4   c6        -1
-    act_0_4   c4        -1
-    act_0_4   c42       -1
-    act_0_4   c71       -1
-    act_0_4   c49       -1
-    act_0_4   c56       -1
+    act_0_4   c20       1
+    act_0_4   c59       1
+    act_0_4   c40       -1
+    act_0_4   c46       -1
+    act_0_4   c36       -1
+    act_0_4   c13       -1
+    act_0_4   c52       -1
     act_1_0   OBJ       1
-    act_1_0   c61       -9803
-    act_1_0   c48       -2
-    act_1_0   c60       -1
-    act_1_0   c1        1
-    act_1_0   c27       1
+    act_1_0   c39       -9803
+    act_1_0   c64       -2
+    act_1_0   c59       -1
+    act_1_0   c40       1
+    act_1_0   c2        1
+    act_1_0   c53       -1
+    act_1_0   c60       1
+    act_1_0   c46       -1
     act_1_0   c36       -1
-    act_1_0   c35       1
-    act_1_0   c17       -1
-    act_1_0   c7        -1
-    act_1_0   c6        -1
-    act_1_0   c4        -1
-    act_1_0   c42       -1
-    act_1_0   c71       -1
-    act_1_0   c45       -1
-    act_1_0   c31       -1
+    act_1_0   c61       -1
+    act_1_0   c35       -1
     act_1_2   OBJ       1
-    act_1_2   c65       -9805
-    act_1_2   c19       -2
-    act_1_2   c27       1
+    act_1_2   c48       -9805
+    act_1_2   c62       -2
+    act_1_2   c2        1
+    act_1_2   c53       -1
+    act_1_2   c23       -1
+    act_1_2   c9        1
+    act_1_2   c60       1
+    act_1_2   c33       -1
+    act_1_2   c51       -1
+    act_1_2   c46       -1
     act_1_2   c36       -1
-    act_1_2   c2        -1
-    act_1_2   c59       1
-    act_1_2   c35       1
-    act_1_2   c34       -1
     act_1_2   c54       -1
     act_1_2   c7        -1
-    act_1_2   c3        -1
-    act_1_2   c6        -1
-    act_1_2   c4        -1
-    act_1_2   c71       -1
-    act_1_2   c44       -1
-    act_1_2   c15       -1
     act_1_4   OBJ       98
-    act_1_4   c27       1
+    act_1_4   c2        1
+    act_1_4   c53       -1
+    act_1_4   c60       1
+    act_1_4   c33       -1
+    act_1_4   c51       -1
+    act_1_4   c46       -1
     act_1_4   c36       -1
-    act_1_4   c35       1
-    act_1_4   c34       -1
-    act_1_4   c66       -1
-    act_1_4   c17       -1
-    act_1_4   c54       -1
-    act_1_4   c7        -1
-    act_1_4   c3        -1
-    act_1_4   c6        -1
-    act_1_4   c4        -1
-    act_1_4   c42       -1
-    act_1_4   c71       -1
-    act_1_4   c9        -1
-    act_1_4   c28       -1
+    act_1_4   c11       -1
+    act_1_4   c63       -1
     act_2_0   OBJ       2
-    act_2_0   c16       -9804
-    act_2_0   c51       -2
-    act_2_0   c60       -1
-    act_2_0   c1        1
-    act_2_0   c2        1
+    act_2_0   c15       -9804
+    act_2_0   c58       -2
     act_2_0   c59       -1
-    act_2_0   c41       1
-    act_2_0   c54       -1
-    act_2_0   c3        -1
-    act_2_0   c6        -1
-    act_2_0   c4        -1
-    act_2_0   c42       -1
-    act_2_0   c71       -1
-    act_2_0   c0        -1
-    act_2_0   c20       -1
+    act_2_0   c40       1
+    act_2_0   c23       1
+    act_2_0   c9        -1
+    act_2_0   c45       1
+    act_2_0   c36       -1
+    act_2_0   c14       -1
+    act_2_0   c43       -1
     act_2_1   OBJ       1
-    act_2_1   c63       -9804
-    act_2_1   c70       -2
-    act_2_1   c27       -1
-    act_2_1   c36       1
-    act_2_1   c2        1
-    act_2_1   c59       -1
-    act_2_1   c41       1
-    act_2_1   c66       -1
-    act_2_1   c17       -1
-    act_2_1   c3        -1
-    act_2_1   c6        -1
-    act_2_1   c42       -1
-    act_2_1   c71       -1
-    act_2_1   c47       -1
-    act_2_1   c53       -1
+    act_2_1   c16       -9804
+    act_2_1   c1        -2
+    act_2_1   c2        -1
+    act_2_1   c53       1
+    act_2_1   c23       1
+    act_2_1   c9        -1
+    act_2_1   c45       1
+    act_2_1   c51       -1
+    act_2_1   c46       -1
+    act_2_1   c36       -1
+    act_2_1   c29       -1
+    act_2_1   c22       -1
     act_2_4   OBJ       97
-    act_2_4   c2        1
-    act_2_4   c59       -1
-    act_2_4   c41       1
-    act_2_4   c34       -1
-    act_2_4   c66       -1
-    act_2_4   c17       -1
-    act_2_4   c54       -1
-    act_2_4   c38       -1
-    act_2_4   c7        -1
-    act_2_4   c3        -1
-    act_2_4   c6        -1
-    act_2_4   c4        -1
-    act_2_4   c42       -1
-    act_2_4   c71       -1
-    act_2_4   c5        -1
+    act_2_4   c23       1
+    act_2_4   c9        -1
+    act_2_4   c45       1
     act_2_4   c33       -1
+    act_2_4   c51       -1
+    act_2_4   c46       -1
+    act_2_4   c36       -1
+    act_2_4   c38       -1
+    act_2_4   c26       -1
     act_3_0   OBJ       99
-    act_3_0   c60       -1
-    act_3_0   c1        1
-    act_3_0   c17       1
-    act_3_0   c54       1
-    act_3_0   c38       1
-    act_3_0   c7        1
-    act_3_0   c3        1
-    act_3_0   c6        1
-    act_3_0   c4        1
-    act_3_0   c42       1
-    act_3_0   c71       1
+    act_3_0   c59       -1
+    act_3_0   c40       1
+    act_3_0   c46       1
+    act_3_0   c36       1
     act_3_0   c21       -1
-    act_3_0   c32       -1
+    act_3_0   c8        -1
     act_3_1   OBJ       98
-    act_3_1   c27       -1
+    act_3_1   c2        -1
+    act_3_1   c53       1
+    act_3_1   c33       1
+    act_3_1   c51       1
+    act_3_1   c46       1
     act_3_1   c36       1
-    act_3_1   c34       1
-    act_3_1   c66       1
-    act_3_1   c17       1
-    act_3_1   c54       1
-    act_3_1   c7        1
-    act_3_1   c3        1
-    act_3_1   c6        1
-    act_3_1   c4        1
-    act_3_1   c42       1
-    act_3_1   c71       1
-    act_3_1   c50       -1
-    act_3_1   c39       -1
+    act_3_1   c32       -1
+    act_3_1   c19       -1
     act_3_2   OBJ       97
-    act_3_2   c2        -1
-    act_3_2   c59       1
-    act_3_2   c34       1
-    act_3_2   c66       1
-    act_3_2   c17       1
-    act_3_2   c54       1
-    act_3_2   c38       1
-    act_3_2   c7        1
-    act_3_2   c3        1
-    act_3_2   c6        1
-    act_3_2   c4        1
-    act_3_2   c42       1
-    act_3_2   c71       1
-    act_3_2   c62       -1
-    act_3_2   c13       -1
+    act_3_2   c23       -1
+    act_3_2   c9        1
+    act_3_2   c33       1
+    act_3_2   c51       1
+    act_3_2   c46       1
+    act_3_2   c36       1
+    act_3_2   c41       -1
+    act_3_2   c12       -1
     MARKER    'MARKER'                 'INTEND'
-    delta_capRem_0  c14       1
-    delta_capRem_0  c52       1
-    delta_capRem_0  c48       -1
-    delta_capRem_0  c51       -1
-    delta_timeRem_0  c29       1
-    delta_timeRem_0  c22       1
-    delta_timeRem_0  c61       -1
-    delta_timeRem_0  c16       -1
-    delta_capRem_1  c14       -1
-    delta_capRem_1  c48       1
-    delta_capRem_1  c19       1
-    delta_capRem_1  c70       -1
-    delta_timeRem_1  c29       -1
-    delta_timeRem_1  c61       1
-    delta_timeRem_1  c65       1
-    delta_timeRem_1  c63       -1
-    delta_capRem_2  c52       -1
-    delta_capRem_2  c19       -1
-    delta_capRem_2  c51       1
-    delta_capRem_2  c70       1
-    delta_timeRem_2  c22       -1
+    delta_capRem_0  c5        1
+    delta_capRem_0  c66       1
+    delta_capRem_0  c64       -1
+    delta_capRem_0  c58       -1
+    delta_timeRem_0  c28       1
+    delta_timeRem_0  c65       1
+    delta_timeRem_0  c39       -1
+    delta_timeRem_0  c15       -1
+    delta_capRem_1  c5        -1
+    delta_capRem_1  c64       1
+    delta_capRem_1  c62       1
+    delta_capRem_1  c1        -1
+    delta_timeRem_1  c28       -1
+    delta_timeRem_1  c39       1
+    delta_timeRem_1  c48       1
+    delta_timeRem_1  c16       -1
+    delta_capRem_2  c66       -1
+    delta_capRem_2  c62       -1
+    delta_capRem_2  c58       1
+    delta_capRem_2  c1        1
     delta_timeRem_2  c65       -1
+    delta_timeRem_2  c48       -1
+    delta_timeRem_2  c15       1
     delta_timeRem_2  c16       1
-    delta_timeRem_2  c63       1
     MARKER    'MARKER'                 'INTORG'
-    v18       c69       1
-    v19       c68       1
-    v19       c8        1
-    v20       c68       -1
+    v18       c18       1
+    v19       c49       1
+    v19       c6        1
+    v20       c49       -1
     v20       c30       1
-    v21       c55       1
-    v21       c23       -1
-    v21       c43       1
-    v22       c10       1
-    v23       c55       1
-    v23       c73       -1
-    v23       c72       1
-    v24       c23       1
-    v24       c11       1
-    v25       c23       -1
-    v25       c18       1
-    v25       c26       1
-    v26       c73       -1
-    v26       c18       1
-    v26       c12       1
-    v27       c12       1
-    v28       c73       1
-    v28       c46       1
-    v29       c23       1
-    v29       c73       -1
-    v29       c24       1
-    v30       c55       -1
-    v30       c57       1
-    v31       c18       -1
-    v31       c67       1
-    v32       c23       -1
-    v32       c37       1
-    v33       c64       1
-    v33       c69       -1
-    v34       c25       1
-    v34       c69       -1
-    v35       c45       1
-    v35       c69       -1
-    v36       c44       1
-    v36       c69       -1
-    v37       c0        1
-    v37       c69       -1
-    v38       c47       1
-    v38       c69       -1
-    v39       c69       -1
-    v40       c49       1
-    v40       c8        -1
-    v41       c9        1
-    v41       c8        -1
-    v42       c5        1
-    v42       c8        -1
+    v21       c4        1
+    v21       c27       -1
+    v21       c10       1
+    v22       c47       1
+    v23       c4        1
+    v23       c44       -1
+    v23       c67       1
+    v24       c27       1
+    v24       c37       1
+    v25       c27       -1
+    v25       c3        1
+    v25       c24       1
+    v26       c44       -1
+    v26       c3        1
+    v26       c31       1
+    v27       c31       1
+    v28       c44       1
+    v28       c56       1
+    v29       c27       1
+    v29       c44       -1
+    v29       c55       1
+    v30       c4        -1
+    v30       c17       1
+    v31       c3        -1
+    v31       c25       1
+    v32       c27       -1
+    v32       c0        1
+    v33       c50       1
+    v33       c18       -1
+    v34       c34       1
+    v34       c18       -1
+    v35       c61       1
+    v35       c18       -1
+    v36       c54       1
+    v36       c18       -1
+    v37       c14       1
+    v37       c18       -1
+    v38       c29       1
+    v38       c18       -1
+    v39       c18       -1
+    v40       c13       1
+    v40       c6        -1
+    v41       c11       1
+    v41       c6        -1
+    v42       c38       1
+    v42       c6        -1
     v43       c21       1
     v43       c30       -1
-    v44       c50       1
+    v44       c32       1
     v44       c30       -1
-    v45       c62       1
+    v45       c41       1
     v45       c30       -1
-    v46       c74       1
-    v46       c43       -1
-    v47       c43       -1
-    v48       c20       1
-    v48       c10       -1
-    v49       c10       -1
-    v50       c58       1
-    v50       c72       -1
-    v51       c56       1
-    v51       c11       -1
-    v52       c33       1
-    v52       c11       -1
-    v53       c31       1
-    v53       c26       -1
-    v54       c15       1
-    v54       c26       -1
-    v55       c12       -1
-    v56       c28       1
-    v56       c46       -1
-    v57       c53       1
-    v57       c24       -1
-    v58       c32       1
-    v58       c57       -1
-    v59       c39       1
-    v59       c67       -1
-    v60       c13       1
-    v60       c37       -1
+    v46       c57       1
+    v46       c10       -1
+    v47       c10       -1
+    v48       c43       1
+    v48       c47       -1
+    v49       c47       -1
+    v50       c42       1
+    v50       c67       -1
+    v51       c52       1
+    v51       c37       -1
+    v52       c26       1
+    v52       c37       -1
+    v53       c35       1
+    v53       c24       -1
+    v54       c7        1
+    v54       c24       -1
+    v55       c31       -1
+    v56       c63       1
+    v56       c56       -1
+    v57       c22       1
+    v57       c55       -1
+    v58       c8        1
+    v58       c17       -1
+    v59       c19       1
+    v59       c25       -1
+    v60       c12       1
+    v60       c0        -1
     MARKER    'MARKER'                 'INTEND'
 RHS
-    RHS1      c29       -9802
-    RHS1      c14       -1
-    RHS1      c22       -9803
-    RHS1      c52       -1
-    RHS1      c61       -9801
-    RHS1      c48       -1
+    RHS1      c28       -9802
+    RHS1      c5        -1
     RHS1      c65       -9803
-    RHS1      c19       -1
-    RHS1      c16       -9801
-    RHS1      c51       -1
-    RHS1      c63       -9802
-    RHS1      c70       -1
-    RHS1      c40       1
-    RHS1      c35       1
-    RHS1      c41       1
-    RHS1      c34       -1.00001
-    RHS1      c66       -1.00001
-    RHS1      c17       -1.00001
-    RHS1      c54       -1.00001
-    RHS1      c38       -1.00001
-    RHS1      c7        -1.00001
-    RHS1      c3        -1.00001
-    RHS1      c6        -1.00001
-    RHS1      c4        -1.00001
-    RHS1      c42       -1.00001
-    RHS1      c71       -1.00001
+    RHS1      c66       -1
+    RHS1      c39       -9801
+    RHS1      c64       -1
+    RHS1      c48       -9803
+    RHS1      c62       -1
+    RHS1      c15       -9801
+    RHS1      c58       -1
+    RHS1      c16       -9802
+    RHS1      c1        -1
+    RHS1      c20       1
+    RHS1      c60       1
+    RHS1      c45       1
+    RHS1      c33       -1.00001
+    RHS1      c51       -1.00001
+    RHS1      c46       -1.00001
+    RHS1      c36       -1.00001
 BOUNDS
  BV BND1      act_0_1 
  BV BND1      act_0_2 

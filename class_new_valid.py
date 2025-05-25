@@ -85,6 +85,8 @@ class graph_based_separ:
     def make_match(self):
         print('making match constraints')
         for uv in self.uv_2_E:
+            if uv[0]==uv[1]:
+                continue
             con_name='match_EQ_'+str(uv)
             self.dict_con_name_2_eq[con_name]=0
 
@@ -124,7 +126,7 @@ class Separ_object:
         self.non_source_sink_nodes=self.my_graph_based_separ.non_source_sink_nodes#et(self.nodes)-set([self.my_graph_based_separ.source_node,self.my_graph_based_separ.sink_node])
 
         self.x_mag=x_mag
-        self.magnanti_epsilon=0#.0001
+        self.magnanti_epsilon=.0001
         self.get_vars_cons_keep()
         #print(self.cons_keep)
         #input('---')
@@ -170,7 +172,8 @@ class Separ_object:
                  #   print(contrib)
                     
                  #   input('---')
-                tot_contrib=tot_contrib+contrib
+                if p.startswith('SLACK')==False:
+                    tot_contrib=tot_contrib+contrib
         print('tot_contrib')
         print(tot_contrib)
         print('orig_rhs')
@@ -190,7 +193,7 @@ class Separ_object:
             u=uv[0]
             v=uv[1]
             var_name='act_'+str(u)+'_'+str(v)
-            if self.x[var_name]+self.x_mag[var_name]>0:
+            if u!=v and self.x[var_name]+self.x_mag[var_name]>0:
                 self.active_x[uv]=self.x[var_name]+(self.magnanti_epsilon*self.x_mag[var_name])
                 #print('self.active_x[uv]')
                 #print(self.active_x[uv])
@@ -221,22 +224,22 @@ class Separ_object:
                 self.vars_keep.append(var_name)
         num_ineq_found=0
         for q in G.dict_valid_ineq_name_2_rhs:
-            print('in q')
+            #print('in q')
             
             #for e in self.dict_valid_ineq_name_edge_2_coeff[q]:
             dict1a=G.dict_valid_ineq_name_edge_2_coeff[q]
             dict1 = {str(k): v for k, v in dict1a.items()}
             set1=set(dict1.keys())
             set_2={v.replace("EDGE_VAR_", "") for v in self.vars_keep}
-            print('set1')
-            print(set1)
-            print('set_2')
-            print(set_2)
+            #print('set1')
+            #print(set1)
+            #print('set_2')
+            #print(set_2)
             cardinality = len( set1 & set_2 )
-            print('cardinality')
-            print(cardinality)
-            print('---')
-            DEBUG_ON=True
+            #print('cardinality')
+            #print(cardinality)
+            #print('---')
+            DEBUG_ON=False
             if DEBUG_ON and cardinality<1:
                 for t in set1:
                     if t not in set_2:
@@ -329,10 +332,10 @@ class Separ_object:
             self.E_weight[str(e)]=dual_i-dual_j
     
         self.new_cut_RHS=0
-        print('G.E')
-        print(G.E)
-        print('G.E[3]')
-        print(G.E[3])
+        #print('G.E')
+        #print(G.E)
+        #print('G.E[3]')
+        #print(G.E[3])
         for q_full in self.valid_cons_keep:
             dual_val=self.dual_solution[q_full]
             q=q_full[11:]
@@ -345,7 +348,8 @@ class Separ_object:
                 
         self.new_cut_x_uv_2_coeff=dict()
         for uv in G.uv_2_E:
-            self.new_cut_x_uv_2_coeff[uv] = -min(self.E_weight[str(e)] for e in G.uv_2_E[uv])
+            if uv[0]!=uv[1]:
+                self.new_cut_x_uv_2_coeff[uv] = -min(self.E_weight[str(e)] for e in G.uv_2_E[uv])
 
         
     def return_cut(self):
@@ -357,16 +361,27 @@ class complete_separater_end_to_end:
 
     def update_given_solution(self):
         self.x_act=self.MF.my_lower_bound_LP.lp_primal_solution
-        self.x_mag=defaultdict(float)
-        print('producing outputs')
+        #self.x_mag=defaultdict(float)
+        #print('producing outputs')
+        #print('self.my_graph_based_separ.uv_2_E')
+        #print(self.my_graph_based_separ.uv_2_E)
+        #input('--')
         for uv in self.my_graph_based_separ.uv_2_E:
             u=uv[0]
             v=uv[1]
+            
+            if u==v:
+                continue
             var_name='act_'+str(u)+'_'+str(v)
             val=self.x_act[var_name]
+            self.running_avg[var_name]=self.running_avg[var_name]*.95
+            self.running_avg[var_name]+=val*0.05
 
             if val>0:
                 print(var_name+'  '+str(val))
+        print('self.running_avg')
+        print(self.running_avg)
+        self.x_mag=self.running_avg
         input('sol above from input')
         self.OPT['allow_slack_on_nodes']=True
         #if len(self.MF.history_dict['sum_lp_value_project'])>0 and self.MF.history_dict['sum_lp_value_project'][-1]<0.001:
@@ -403,6 +418,16 @@ class complete_separater_end_to_end:
         self.my_NG=ng_help_valid_ineq(self.MF.my_VRP,self.u_2_NG,self.OPT['max_SRI_Divisor'],self.OPT['max_SRI_SET_SIZE'])
         ng_help_valid_ineq
         self.my_graph_based_separ=graph_based_separ(self.my_NG.E,self.my_NG.uv_2_E,self.my_NG.nodes,self.my_NG.non_source_sink_nodes,self.my_NG.dict_valid_ineq_name_2_rhs,self.my_NG.dict_valid_ineq_name_edge_2_coeff,self.my_NG.source_node,self.my_NG.sink_node)
+        self.running_avg=dict()
+        for uv in self.my_graph_based_separ.uv_2_E:
+            u=uv[0]
+            v=uv[1]
+            if u==v:
+                continue
+            var_name='act_'+str(u)+'_'+str(v)
+
+            self.running_avg[var_name]=0
+            
         if 0>1:
             self.my_separ=Separ_object(self.my_graph_based_separ,self.x_act,self.x_mag)
             self.objective_cut=self.my_separ.out_solution['objective']
@@ -445,9 +470,10 @@ class complete_separater_end_to_end:
             val=self.my_separ.new_cut_x_uv_2_coeff[uv]
             if abs(val)>0.000001:
                 self.MF.action_con_2_contrib[tuple([primal_var,self.new_CP_name])]=val
-            xuv=self.MF.my_lower_bound_LP.lp_primal_solution[primal_var]
+            if u!=v:
+                xuv=self.MF.my_lower_bound_LP.lp_primal_solution[primal_var]
             #print('xuv  '+str(xuv)+'   val '+str(val)+'   xuv*val:  '+str(xuv*val))
-            DEBUG_LHS+=xuv*val
+                DEBUG_LHS+=xuv*val
         
         if abs((DEBUG_RHS-DEBUG_LHS)-self.objective_cut)>.001:
             print('DEBUG_RHS')

@@ -386,7 +386,7 @@ class full_solver:
             input('--paused in loop-')
             #print('use_ineq')
             #print(self.jy_opt['use_new_valid_ineq'])
-            if self.jy_opt['use_new_valid_ineq']==True and did_compress_call==False and did_split==False :
+            if self.jy_opt['use_new_valid_ineq']==True:# and did_compress_call==False and did_split==False :
                 
                 #with open("my_object.pkl", "wb") as f:
                 #    pickle.dump(self, f, protocol=pickle.HIGHEST_PROTOCOL)

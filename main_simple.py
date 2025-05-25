@@ -3,6 +3,7 @@ from call_and_run_code import call_and_run_code
 import argparse
 
 #default_input='data/jy_RC207.txt'
+#default_input='data/jy_C104.txt'
 default_input='jy_nyc_2.txt'
 default_option_path='my_params_R200.json'
 

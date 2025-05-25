@@ -38,8 +38,10 @@ class NEW_order_object:
             self.cost=np.inf
 
         self.dem_in_arc=0
-        for u in self.my_order_name:
-            self.dem_in_arc+=self.my_instance.dem_full[u]
+        #or u in self.my_order_name:
+        #    self.dem_in_arc+=self.my_instance.dem_full[u]
+        self.dem_in_arc = sum(self.my_instance.dem_full[u] for u in self.my_order_name)
+
         if self.dem_in_arc>self.my_instance.vehicle_capacity:
             self.cost=np.inf
        #if self.u==self.my_instance.num_cust and self.w==self.my_instance.num_cust+1:
@@ -91,6 +93,8 @@ class NEW_order_object:
         self.lateDepart=max([trm1,trm2])
         self.late_start_u=trm1
 
+
+
 class ng_help_valid_ineq:
     
     def __init__(self,my_VRP,ng_neigh_by_cust,max_SRI_Divisor=2,max_SRI_SET_SIZE=3):
@@ -110,17 +114,28 @@ class ng_help_valid_ineq:
         self.u_2_NG=ng_neigh_by_cust
         self.Nc=len(self.ng_neigh_by_cust)
         self.NC=self.Nc
+        print('making nodes')
         self.make_all_potential_nodes()
+        print('make_all_arcs_need_eval')
+
         self.make_all_arcs_need_eval()
+        print('make_all_arcs_2_pred')
         self.make_all_arcs_2_pred()
+        print('construct_orderings')
         self.construct_orderings()
+        print('construct_edge_candidates')
         self.construct_edge_candidates()
+        print('generate_subsets_to_consider')
         self.generate_subsets_to_consider()
+        print('generate_SRI')
         self.generate_SRI()
+        print('generate_edge_2_SRI_contrib')
         self.generate_edge_2_SRI_contrib()
+        self.generate_self_self_edges()
+        print('alst stuff')
         self.uv_2_E=dict()
-        print('self.E')
-        print(self.E)
+        #print('self.E')
+        #print(self.E)
         for e in self.E:
             u=e[0][0]
             v=e[1][0]
@@ -140,8 +155,29 @@ class ng_help_valid_ineq:
         #print(self.uv_2_E)
         #input('---')
         self.non_source_sink_cust=np.arange(0,self.NC)#set(u_2_NG.keys())-set([self.my_VRP.NC,self.my_VRP.NC+1])
+        print('done init stuff')
+
+
+    def generate_self_self_edges(self):
+
+        self.u_2_node_list=dict()
+        for u in range(0,self.Nc+2):
+            self.u_2_node_list[u]=[]
         
+        for n in self.nodes:
+            self.u_2_node_list[n[0]].append(n)
         
+        for u in range(self.Nc):
+            NL = self.u_2_node_list[n[0]]
+            len_list = [len(node[1]) for node in NL]  # precompute subset lengths
+
+            for k1 in range(len(NL)):
+                sub1 = NL[k1][1]
+                len1 = len_list[k1]
+                for k2 in range(len(NL)):
+                    sub2 = NL[k2][1]
+                    if len1 == len_list[k2] - 1 and sub1.issubset(sub2):
+                        self.E.append((NL[k1], NL[k2]))
     def get_new_set_and_lost(self,i,v):
         u=i[0]
         Ni=i[1]
@@ -151,29 +187,82 @@ class ng_help_valid_ineq:
         lost_terms=ideal-actual
         new_node=tuple([v,frozenset(actual)])
         return new_node,lost_terms
+    
+    def is_allowable_transition(self,n,v):
+        #print('starting')
+        #print('starting')
+        #print('starting')
+        #p#rint('starting')
+        #p#rint('starting')
+        #print('starting')
+        #print('starting')
+        #print('starting')
+        w=n[0]
+        if v==n[0] or v in n[1]:
+            return False
+        if len(n[1])==0:
+            #print('in here')
+            p=tuple([w,frozenset([]),v])
+            #print(p)
+            
+            if p in self.arc_2_orderings and len(self.arc_2_orderings[p])>0 and self.arc_2_orderings[p][0].cost<np.inf:
+                return True
+
+        prev_cust_set=set(n[1])
+        for u in prev_cust_set:
+            #print('u')
+            #print(u)
+            N_minus_plus=prev_cust_set.copy()
+            if N_minus_plus==None:
+                N_minus_plus=set([])
+            #print('N_minus_plus')
+            #print(N_minus_plus)
+            N_minus_plus.add(w)
+            N_minus_plus.remove(u)
+            p=tuple([u,frozenset(N_minus_plus),v])
+            #3print('p')
+            #print(p)
+            if p not in self.arc_2_orderings:
+                continue
+            for my_ord in self.arc_2_orderings[p]:
+                if my_ord.my_order_name[-2]==w and my_ord.cost<np.inf:
+                    #input('FOUND ONE')
+                    return True
+        
+        #print('n')
+        #print(n)
+        #print('v')
+        #p3rint(v)
+        #i#nput('Lets check')
+        return False
+
+
+
     def construct_edge_candidates(self):
         E=[]
         E_2_lost_terms=dict()
         for n in self.node_candidates:
+            if n[0]==self.Nc:
+                print('looking')
+                print('self.nc=  '+str(self.Nc))
             for v in np.arange(0,self.Nc+2):
-                p=tuple([n[0],n[1],v])
+                if n[0]==self.Nc:
+                    print('v = '+str(v))
+                #p=tuple([n[0],n[1],v])
                 did_make=False
-                if p in self.arc_2_orderings and len(self.arc_2_orderings[p])>0:
-                    did_make=True
+                if self.is_allowable_transition(n,v):
                     [new_node,lost_terms]= self.get_new_set_and_lost(n,v)           
                     if new_node not in self.node_candidates:
                         input('error here')
                     e=tuple([n,new_node])
                     E.append(e)
                     E_2_lost_terms[e]=lost_terms
-                if 1<0:
-                    print('p')
-                    print(p)
-                    print(did_make)
-                    print(did_make)
-                    print('self.Nc+2')
-                    print(self.Nc+2)
-                    input('--')
+                    if n[0]==self.Nc and v<self.Nc:
+                        print('GOOD E')
+                        print(e)
+                else:
+                    if n[0]==self.Nc and v<self.Nc:
+                        input('wrong')
         G = nx.DiGraph()
         source=tuple([self.Nc,frozenset([])])
         G.add_edges_from(E)  # E is a list of (u, v) tuples
@@ -183,14 +272,11 @@ class ng_help_valid_ineq:
         reachable = nx.descendants(G, source)
         self.source_node=source
        
-        reachable.add(source)  # include the source itself
-        #print('node_candidates')
-        #print(self.node_candidates)
-        #3print('len(node_candidates)')
-        #print(len(self.node_candidates))
-        #print('E')
-        #print(E)
-
+        reachable.add(source) 
+        unreachable=self.node_candidates-set(reachable)
+       # print('unreachable')
+       # print(unreachable)
+       # input('--')
         self.E = [edge for edge in E if edge[0] in reachable and edge[1] in reachable]
         #print('self.E ')
         #print(self.E )
@@ -254,6 +340,9 @@ class ng_help_valid_ineq:
         #input('my_SRI')
     def make_all_arcs_2_pred(self):
         self.arc_2_pred_arcs=dict()
+        #print('len(self.my_arcs)')
+        #print(len(self.my_arcs))
+        
         for p in self.my_arcs:
             u=p[0]
             bigN=set(p[1])
@@ -264,9 +353,9 @@ class ng_help_valid_ineq:
                 new_bigN = bigN - {w}
                 new_bigN=frozenset(new_bigN)
                 pred = tuple([w, new_bigN, v])
-                if pred not in self.my_arcs:
+                #if pred not in self.my_arcs:
                     
-                    input('error here')
+                #    input('error here')
                 preds.add(pred)
 
             self.arc_2_pred_arcs[p] = preds
@@ -324,7 +413,12 @@ class ng_help_valid_ineq:
                         new_ord=my_ord.extend_order(u)
                         if new_ord.cost<np.inf:
                             all_pred_orderings.append(new_ord)
+                print('before len fronteir ')
+                print(len(all_pred_orderings))
                 self.arc_2_orderings[p]=self.compute_efficient_frontier(all_pred_orderings)
+                print('after len')
+                print(len(self.arc_2_orderings[p]))
+                #input('---')
         print('done making base case orderings')
     def compute_efficient_frontier(self,objects):
     # Sort by cost ascending, then earlyArrival descending, then lateDepart ascending
