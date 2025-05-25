@@ -453,8 +453,8 @@ class complete_separater_end_to_end:
                 print([u,v,val])
         print('self.MF.exog_name_2_rhs[self.new_CP_name]')
         print(self.MF.exog_name_2_rhs[self.new_CP_name])
-        #print('printed_cut_above')
-        #input('---')
+        print('printed_cut_above')
+        input('---')
     def add_ineq_to_MF(self):
         cur_count_cutting_planes=self.MF.count_cutting_planes
         self.new_CP_name='my_valid_ineq_'+str(cur_count_cutting_planes)
@@ -490,4 +490,4 @@ class complete_separater_end_to_end:
          #   print('DEBUG_LHS')
          #   print(DEBUG_LHS)
             #input('FOUND')
-        #self.print_cut()
+        self.print_cut()
