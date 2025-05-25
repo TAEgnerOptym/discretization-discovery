@@ -10,6 +10,7 @@ from dem_graph_2 import dem_graph
 from ng_graph import ng_graph
 from jy_make_input_file_no_la import jy_make_input_file_no_la
 import json
+from valid_ineq_helper_ng_la import *
 def make_problem_instance(input_file_path,my_params,my_json_file_path):
     my_instance=vrp_instance_class(input_file_path,my_params)
     dem_thresh=naive_get_dem_thresh_list(my_instance,(my_params['dem_step_sz']))
@@ -28,6 +29,7 @@ def make_problem_instance(input_file_path,my_params,my_json_file_path):
         #print(ng_neigh_by_cust)
         #input('--')
         if my_params['use_fancy_ng_graph']<0.5:
+            
             my_ng_graph=ng_graph(my_instance,ng_neigh_by_cust)
         else:
             from ng_graph_fancy_slow import ng_graph_fancy_slow
@@ -36,6 +38,9 @@ def make_problem_instance(input_file_path,my_params,my_json_file_path):
 
         #print('done ng making ')
     data=[]
+    #print('here to debug this')
+    #ng_help_valid_ineq(my_instance,ng_neigh_by_cust)
+    #input('done')
     my_object_no_la=jy_make_input_file_no_la(my_instance,my_dem_graph,my_time_graph,int(my_params['num_terms_per_bin_init_construct']),my_ng_graph)
     
     if my_params['use_time_graph']<0.5:

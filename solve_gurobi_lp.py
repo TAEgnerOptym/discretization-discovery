@@ -35,9 +35,20 @@ def solve_gurobi_lp(dict_var_name_2_obj,
     con_names_eq = list(dict_con_name_2_eq.keys())
     all_con_names = list(set(con_names_exog) | set(con_names_eq))
 
-    var_name_map = {v: f"v{i}" for i, v in enumerate(var_names)}
-    con_name_map = {c: f"c{i}" for i, c in enumerate(all_con_names)}
-
+    #var_name_map = {v: f"v{i}" for i, v in enumerate(var_names)}
+    var_name_map = {
+        v: v if len(v) < 50 else f"v{i}"
+        for i, v in enumerate(var_names)}
+    #con_name_map = {c: f"c{i}" for i, c in enumerate(all_con_names)}
+    con_name_map = {
+        c: c if len(c) < 50 else f"c{i}"
+        for i, c in enumerate(all_con_names)}
+    print('len(all_con_names)')
+    print(len(all_con_names))
+    print('len(con_names_exog)')
+    print(len(con_names_exog))
+    print('len(con_names_eq)')
+    print(len(con_names_eq))
     var_name_rev = {v_alias: v for v, v_alias in var_name_map.items()}
     con_name_rev = {c_alias: c for c, c_alias in con_name_map.items()}
 
@@ -49,7 +60,7 @@ def solve_gurobi_lp(dict_var_name_2_obj,
                    for (v, c), coeff in dict_var_con_2_lhs_eq.items()}
     safe_LB = {con_name_map[k]: v for k, v in dict_con_name_2_LB.items()}
     safe_EQ = {con_name_map[k]: v for k, v in dict_con_name_2_eq.items()}
-
+    
     options = {
         "WLSACCESSID": "8f7bb9d6-8fe5-4349-9dd3-6abbaa9199a0",
         "WLSSECRET": "cb02810a-e0e2-4a1f-8fc0-fd375f65fc65",
@@ -82,7 +93,15 @@ def solve_gurobi_lp(dict_var_name_2_obj,
                 for var, coeff in terms:
                     expr.addTerms(coeff, var)
                 model.addConstr(expr >= safe_LB[con_name], name=con_name)
-
+                #if con_name.startswith("Valid_ineq_"):
+                #    print("expr")
+                #    print(expr)
+                #    print("safe_LB[con_name]")
+                #    print(safe_LB[con_name])
+                #    print('con_name')
+                #    print(con_name)
+                #    input('---')
+                
             for con_name, terms in group_eq.items():
                 expr = gp.LinExpr()
                 for var, coeff in terms:
@@ -98,9 +117,8 @@ def solve_gurobi_lp(dict_var_name_2_obj,
             time_opt = time.time() - time_opt
             print('DONE Gur LP')
             #if time_opt>0:
-            #print('writing model')
+            #print()
             #model.write('LONG_proj.mps')
-            #print('done wriitng model')
             time_post = time.time()
 
             if model.status != GRB.OPTIMAL:
@@ -117,7 +135,10 @@ def solve_gurobi_lp(dict_var_name_2_obj,
             dual_solution = {
                 con_name_rev[con.ConstrName]: con.Pi for con in model.getConstrs()
             }
-
+            print('len(con_name_rev)')
+            print(len(con_name_rev))
+            print('len(model.getConstrs())')
+            print(len(model.getConstrs()))
             objective = model.ObjVal
             time_post = time.time() - time_post
 

@@ -14,6 +14,8 @@ from lower_bound_LP_milp import lower_bound_LP_milp
 #from exper_lower_bound_LP_MILP import lower_bound_LP_milp
 import pulp
 from compressor import compressor
+from class_new_valid import complete_separater_end_to_end 
+
 #from experimental_compressor_additive import compressor
 #from projector import projector
 #from experimental_projector_simp import projector
@@ -125,7 +127,7 @@ class full_solver:
             time_component_lps[h]=my_proj.lp_time
             self.TOT_time_component_lps[h]=self.TOT_time_component_lps[h]+my_proj.lp_time
             count_prior_split[h]=len(set(self.graph_node_2_agg_node[h].values()))
-            if objective>0.00000001:#%self.jy_opt['epsilon']:
+            if objective>0.0001:#%self.jy_opt['epsilon']:
                 self.graph_node_2_agg_node[h]=my_proj.NEW_node_2_agg_node
                 did_split=True
             count_after_split[h]=len(set(self.graph_node_2_agg_node[h].values()))
@@ -260,7 +262,11 @@ class full_solver:
         tot_lplb_time=0
         tot_proj_lp_time=0
         tot_comp_lp_time=0
-        
+        if self.jy_opt['use_new_valid_ineq']==True:
+            print('PRE-PROCESSING THE SEPARATOR')
+            self.my_adder=complete_separater_end_to_end(self)
+            print('DONE PRE-PROCESSING THE SEPARATOR')
+
         self.actions_ignore=self.all_actions_not_source_sink_connected
         self.all_actions_ever_seen=set([])#set(self.all_non_null_action.copy())#set()
         #self.all_actions_ever_seen=set(self.all_non_null_action.copy())#set()
@@ -296,6 +302,8 @@ class full_solver:
                 print('incumbant_lp')
                 print(incumbant_lp)
                 input('error here ')
+            #if new_lp_value>354:
+            #    use_compression=False
             if use_compression==False:
                 incumbant_lp=new_lp_value
             did_split=True
@@ -375,20 +383,29 @@ class full_solver:
             #input('---')
             print('self.time_list_outer')
             print(self.time_list_outer)
+            input('--paused in loop-')
             #print('use_ineq')
             #print(self.jy_opt['use_new_valid_ineq'])
             if self.jy_opt['use_new_valid_ineq']==True and did_compress_call==False and did_split==False :
                 
-                from class_new_valid import complete_separater_end_to_end 
                 #with open("my_object.pkl", "wb") as f:
                 #    pickle.dump(self, f, protocol=pickle.HIGHEST_PROTOCOL)
                 #with open("my_object.pkl", "rb") as f:
                  #   loaded_object = pickle.load(f)
-                my_adder=complete_separater_end_to_end(self)
+                #if self.my_adder==None and iter!=1:
+                #    input('wierd0')
+               # if self.my_adder==None:
+                #    self.my_adder=complete_separater_end_to_end(self)
+                self.my_adder.update_given_solution()#self.my_lower_bound_LP.lp_primal_solution)
+                #if self.my_adder==None :
+                #    input('wierd')
                 print('The cut objective is ')
-                print(my_adder.objective_cut)
+                print('self.my_adder.objective_cut')
+                print(self.my_adder.objective_cut)
+                print('self.my_adder.my_separ.new_cut_RHS')
+                print(self.my_adder.my_separ.new_cut_RHS)
                 input('---')
-                if my_adder.objective_cut>0.0001:
+                if self.my_adder.objective_cut>0.0001:
                     continue
             if did_compress_call==False and did_split==False:
                 print('breaking do to no split')

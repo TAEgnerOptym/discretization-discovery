@@ -1,5 +1,6 @@
 import numpy as np
 
+KEEP_MIN_VEH=False
 class jy_make_input_file_no_la:
 
     def __init__(self,my_instance,my_dem_graph,my_time_graph,num_terms_per_bin,ngGraph):
@@ -138,7 +139,7 @@ class jy_make_input_file_no_la:
             u=uv[0]
             v=uv[1]
             new_action='act_'+str(u)+'_'+str(v)
-            if u==self.my_instance.num_cust:
+            if KEEP_MIN_VEH==True and u==self.my_instance.num_cust:
                 name_min_veh='exog_min_veh_'
                 tup_action_minVeh=str(tuple([new_action,name_min_veh]))
                 self.actionCon2Contrib[tup_action_minVeh]=1
@@ -250,10 +251,10 @@ class jy_make_input_file_no_la:
 
             
             self.delta_name_2_ub['delta_capRem_'+str(u)]=self.my_instance.vehicle_capacity
-
-        min_veh=np.ceil(tot_dem/self.my_instance.vehicle_capacity)
-        self.exogName2Rhs['exog_min_veh_']=min_veh
-        self.allExogNames.append('exog_min_veh_')
+        if KEEP_MIN_VEH:
+            min_veh=np.ceil(tot_dem/self.my_instance.vehicle_capacity)
+            self.exogName2Rhs['exog_min_veh_']=min_veh
+            self.allExogNames.append('exog_min_veh_')
         
         for uv in self.all_uv_edges:
             u=uv[0]
