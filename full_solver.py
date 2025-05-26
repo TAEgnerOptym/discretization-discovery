@@ -383,7 +383,7 @@ class full_solver:
             #input('---')
             print('self.time_list_outer')
             print(self.time_list_outer)
-            input('--paused in loop-')
+            #input('--paused in loop-')
             #print('use_ineq')
             #print(self.jy_opt['use_new_valid_ineq'])
             if self.jy_opt['use_new_valid_ineq']==True:# and did_compress_call==False and did_split==False :
@@ -404,7 +404,7 @@ class full_solver:
                 print(self.my_adder.objective_cut)
                 print('self.my_adder.my_separ.new_cut_RHS')
                 print(self.my_adder.my_separ.new_cut_RHS)
-                input('---')
+                #input('---')
                 if self.my_adder.objective_cut>0.0001:
                     continue
             if did_compress_call==False and did_split==False:

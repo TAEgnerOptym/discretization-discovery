@@ -12,6 +12,7 @@ import sys
 sys.path.append("pre_process")
 from naive_pre import *
 from valid_ineq_helper_ng_la import ng_help_valid_ineq
+verbose=False
 def power_set(s):
         """
         Returns the power set of the input collection `s` as a list of tuples.
@@ -141,46 +142,36 @@ class Separ_object:
         #print(self.out_solution['objective'])
         self.lp_primal_new=self.out_solution['primal_solution']
         #print('printing solution')
-        my_con='Valid_ineq_frozenset({0, 1, 2})_2_1.0'
-        for vc in self.my_graph_based_separ.dict_var_con_2_lhs_exog:
-            v=vc[0]
-            c=vc[1]
-            if c==my_con:
-                val=self.my_graph_based_separ.dict_var_con_2_lhs_exog[vc]
-                print(str(vc)+" -> "+str(val))
-        #input('---')
-        orig_rhs=self.my_graph_based_separ.dict_con_name_2_LB[my_con]
-        exog=self.my_graph_based_separ.dict_var_con_2_lhs_exog
-        tot_contrib=0
-        for p in self.lp_primal_new:
-            if self.lp_primal_new[p]>0.01:
-                my_tup=tuple([p,my_con])
-                weight=0
-                x_val=self.lp_primal_new[p]
-                if my_tup in exog:
-                    weight=float(exog[my_tup])
-                contrib=weight*x_val
-                print(p+': val '+str(x_val)+ '     weight       ' +str(weight)+'      contrib     '+str(contrib) )
-                #print(p+': )
-                #print(p+': weight*val '+str(contrib))
-                #if contrib>0:
-                #    print('weight')
-                 #   print(weight)
-                 #   print('x_val')
-                 #   print(x_val)
-                 #   print('contrib')
-                 #   print(contrib)
-                    
-                 #   input('---')
-                if p.startswith('SLACK')==False:
-                    tot_contrib=tot_contrib+contrib
-        print('tot_contrib')
-        print(tot_contrib)
-        print('orig_rhs')
-        print(orig_rhs)
-        print('objective')
-        print(self.out_solution['objective'])
-        input('---')
+        if verbose:
+            my_con='Valid_ineq_frozenset({0, 1, 2})_2_1.0'
+            for vc in self.my_graph_based_separ.dict_var_con_2_lhs_exog:
+                v=vc[0]
+                c=vc[1]
+                if c==my_con:
+                    val=self.my_graph_based_separ.dict_var_con_2_lhs_exog[vc]
+                    print(str(vc)+" -> "+str(val))
+            #input('---')
+            orig_rhs=self.my_graph_based_separ.dict_con_name_2_LB[my_con]
+            exog=self.my_graph_based_separ.dict_var_con_2_lhs_exog
+            tot_contrib=0
+            for p in self.lp_primal_new:
+                if self.lp_primal_new[p]>0.01:
+                    my_tup=tuple([p,my_con])
+                    weight=0
+                    x_val=self.lp_primal_new[p]
+                    if my_tup in exog:
+                        weight=float(exog[my_tup])
+                    contrib=weight*x_val
+                    print(p+': val '+str(x_val)+ '     weight       ' +str(weight)+'      contrib     '+str(contrib) )
+                    if p.startswith('SLACK')==False:
+                        tot_contrib=tot_contrib+contrib
+            print('tot_contrib')
+            print(tot_contrib)
+            print('orig_rhs')
+            print(orig_rhs)
+            print('objective')
+            print(self.out_solution['objective'])
+            input('---')
         self.generate_cut()
 
 
@@ -377,12 +368,14 @@ class complete_separater_end_to_end:
             self.running_avg[var_name]=self.running_avg[var_name]*.95
             self.running_avg[var_name]+=val*0.05
 
-            if val>0:
+            if verbose and val>0:
                 print(var_name+'  '+str(val))
-        print('self.running_avg')
-        print(self.running_avg)
         self.x_mag=self.running_avg
-        input('sol above from input')
+
+        if verbose:
+            print('self.running_avg')
+            print(self.running_avg)
+            input('sol above from input')
         self.OPT['allow_slack_on_nodes']=True
         #if len(self.MF.history_dict['sum_lp_value_project'])>0 and self.MF.history_dict['sum_lp_value_project'][-1]<0.001:
         #    self.OPT['allow_slack_on_nodes']=False
@@ -400,8 +393,8 @@ class complete_separater_end_to_end:
         self.MF=MF
         self.OPT=dict()
         self.OPT['num_LA_cutting_plane']=8
-        self.OPT['max_SRI_Divisor']=3
-        self.OPT['max_SRI_SET_SIZE']=4
+        self.OPT['max_SRI_Divisor']=5
+        self.OPT['max_SRI_SET_SIZE']=7
         self.OPT['allow_slack_on_nodes']=True
         self.OPT['do_custom_NG']=False
         self.epsilon_slack_valid=.00001
@@ -490,4 +483,5 @@ class complete_separater_end_to_end:
          #   print('DEBUG_LHS')
          #   print(DEBUG_LHS)
             #input('FOUND')
-        self.print_cut()
+        if verbose:
+            self.print_cut()

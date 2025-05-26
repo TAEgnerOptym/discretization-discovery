@@ -340,9 +340,7 @@ class ng_help_valid_ineq:
         #input('my_SRI')
     def make_all_arcs_2_pred(self):
         self.arc_2_pred_arcs=dict()
-        #print('len(self.my_arcs)')
-        #print(len(self.my_arcs))
-        
+
         for p in self.my_arcs:
             u=p[0]
             bigN=set(p[1])
@@ -353,9 +351,6 @@ class ng_help_valid_ineq:
                 new_bigN = bigN - {w}
                 new_bigN=frozenset(new_bigN)
                 pred = tuple([w, new_bigN, v])
-                #if pred not in self.my_arcs:
-                    
-                #    input('error here')
                 preds.add(pred)
 
             self.arc_2_pred_arcs[p] = preds

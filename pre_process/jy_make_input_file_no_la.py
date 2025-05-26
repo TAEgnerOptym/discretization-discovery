@@ -1,6 +1,6 @@
 import numpy as np
 
-KEEP_MIN_VEH=False
+KEEP_MIN_VEH=True
 class jy_make_input_file_no_la:
 
     def __init__(self,my_instance,my_dem_graph,my_time_graph,num_terms_per_bin,ngGraph):
