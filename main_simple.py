@@ -2,9 +2,9 @@ from call_and_run_code import call_and_run_code
 
 import argparse
 
-#default_input='data/jy_RC207.txt'
+default_input='data/jy_R112.txt'
 
-default_input='jy_nyc.txt'
+#default_input='jy_nyc.txt'
 
 do_BIG_PROBLEM=False
 if do_BIG_PROBLEM==True:

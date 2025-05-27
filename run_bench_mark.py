@@ -76,9 +76,11 @@ if 0>1:
 #all_files.append("jy_c109.txt")
 
 in_fold="data/"
-out_fold="../ALL_JSON_BIG/out_R100_50_yes_delta/"
+#out_fold="../ALL_JSON_BIG/out_R100_50_yes_delta/"
+#out_fold="../ALL_JSON_BIG/out_R100_50_no_reset_yes_reset_each_end/"
+out_fold="../ALL_JSON_BIG/FIX_out_R100_50_yes_reset_yes_reset_each_end/"
 my_json_input_path="mid_jnk"
-param_file_path="my_params.json"
+param_file_path="my_params_R200.json"
 for my_file in all_files:
     input_file_path=in_fold+my_file
     output_file_path=out_fold+my_file
@@ -86,8 +88,8 @@ for my_file in all_files:
     print(input_file_path)
     print("my_file")
     print(my_file)
-    #if 1>0 or not os.path.exists(output_file_path):
-    if  not os.path.exists(output_file_path):
+    if 1>0 :#or not os.path.exists(output_file_path):
+    #if   not os.path.exists(output_file_path):
         call_and_run_code(input_file_path, param_file_path, my_json_input_path, output_file_path)
     else:
         print(f"Output file {output_file_path} already exists. Skipping call.")

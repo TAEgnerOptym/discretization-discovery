@@ -492,11 +492,22 @@ class full_solver:
                 counter=counter+1
         
         if self.jy_opt['do_split_based_init']>0.5:
-            
+            #print('testing 1')
+            #input('---')
+            #self.my_lower_bound_LP=lower_bound_LP_milp(self,self.graph_node_2_agg_node,False,False)
+            #print('self.my_lower_bound_LP.lp_objective')
+            #print(self.my_lower_bound_LP.lp_objective)
+            #input('-splitting-')
             self.split_based_init()
+            #input('testing two ')
+            #self.my_lower_bound_LP=lower_bound_LP_milp(self,self.graph_node_2_agg_node,False,False)
+            #print('self.my_lower_bound_LP.lp_objective')
+            #print(self.my_lower_bound_LP.lp_objective)
+            #input('testing done ')
 
             self.count_size(False)
             #print('NEW STUFF')
+
 
             #input('--')
         self.count_size(False)

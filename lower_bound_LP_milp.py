@@ -424,8 +424,8 @@ class lower_bound_LP_milp:
                     
                     if p in vars_names_ignore_set:
                         all_new_entries_ignore.append(var_name)
-                    #if p !=self.null_action: #or (self.full_prob.jy_opt['allOneBig_init']==False and self.full_prob.jy_opt['do_split_based_init']==True):
-                    dict_update_non_null[var_name] = 0
+                    if p !=self.null_action: #or (self.full_prob.jy_opt['allOneBig_init']==False and self.full_prob.jy_opt['do_split_based_init']==True):
+                        dict_update_non_null[var_name] = 0
         # Single update call
         self.dict_var_name_2_obj.update(dict_update)
         if self.full_prob.jy_opt['all_vars_binary']==True:
