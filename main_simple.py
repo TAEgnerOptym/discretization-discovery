@@ -2,18 +2,22 @@ from call_and_run_code import call_and_run_code
 
 import argparse
 
-default_input='data/jy_R112.txt'
+#default_input='data/jy_C104.txt'
 
-#default_input='jy_nyc.txt'
+default_input='jy_nyc.txt'
 
-do_BIG_PROBLEM=False
+do_BIG_PROBLEM=True
 if do_BIG_PROBLEM==True:
-    default_input='data/jy_C104.txt'
+    #default_input='data/jy_C104.txt'
+    default_input='data/jy_RC101.txt'
 default_option_path='my_params_R200.json'
 
+#for any given group of 7 customers.  The number of routes that use 
+# 3,4 of those Plus 2* number that use 5,6,7 can not exceed 2
 #default_input='data/jy_R104.txt'
 #default_option_path='my_params.json'
-
+#speed up the inner LPs.  
+#speed up the projector LPs
 
 default_my_json='../ALL_JSON_BIG/sample_json_input_description.json'
 default_out_file_path='../ALL_JSON_BIG/sample_json_output.json'

@@ -107,7 +107,7 @@ class full_solver:
         self.history_dict['sum_lp_value_project']=[]
         self.history_dict['sum_lp_time_project']=[]
         self.history_dict['history_of_graphs_by_iter']=[]
-        
+        self.history_dict['objective_cut_list']=[]
         self.apply_complete_algorithm()
 
     def apply_splitting(self):
@@ -262,10 +262,12 @@ class full_solver:
         tot_lplb_time=0
         tot_proj_lp_time=0
         tot_comp_lp_time=0
-        if self.jy_opt['use_new_valid_ineq']==True:
-            print('PRE-PROCESSING THE SEPARATOR')
-            self.my_adder=complete_separater_end_to_end(self)
-            print('DONE PRE-PROCESSING THE SEPARATOR')
+        do_custom_NG=True 
+        self.my_adder=None
+        #if DOCUSTOMNG==False and self.jy_opt['use_new_valid_ineq']==True:
+        #    print('PRE-PROCESSING THE SEPARATOR')
+        #    self.my_adder=complete_separater_end_to_end(self)
+        #    print('DONE PRE-PROCESSING THE SEPARATOR')
 
         self.actions_ignore=self.all_actions_not_source_sink_connected
         self.all_actions_ever_seen=set([])#set(self.all_non_null_action.copy())#set()
@@ -386,24 +388,38 @@ class full_solver:
             #input('--paused in loop-')
             #print('use_ineq')
             #print(self.jy_opt['use_new_valid_ineq'])
-            if self.jy_opt['use_new_valid_ineq']==True:# and did_compress_call==False and did_split==False :
+            if self.jy_opt['use_new_valid_ineq']==True and did_compress_call==False and did_split==False :
                 
-                #with open("my_object.pkl", "wb") as f:
-                #    pickle.dump(self, f, protocol=pickle.HIGHEST_PROTOCOL)
+                print('saving the object')
+                print('new_lp_value')
+                print(new_lp_value)
+                with open("my_object.pkl", "wb") as f:
+                    pickle.dump(self, f, protocol=pickle.HIGHEST_PROTOCOL)
                 #with open("my_object.pkl", "rb") as f:
                  #   loaded_object = pickle.load(f)
                 #if self.my_adder==None and iter!=1:
                 #    input('wierd0')
-               # if self.my_adder==None:
-                #    self.my_adder=complete_separater_end_to_end(self)
+                if do_custom_NG==True or self.my_adder==None:
+                     self.my_adder=complete_separater_end_to_end(self,do_custom_NG)
                 self.my_adder.update_given_solution()#self.my_lower_bound_LP.lp_primal_solution)
                 #if self.my_adder==None :
                 #    input('wierd')
+                self.history_dict['objective_cut_list'].append([iter,self.my_adder.objective_cut,self.my_adder.my_separ.new_cut_RHS,new_lp_value])
+
                 print('The cut objective is ')
                 print('self.my_adder.objective_cut')
                 print(self.my_adder.objective_cut)
                 print('self.my_adder.my_separ.new_cut_RHS')
                 print(self.my_adder.my_separ.new_cut_RHS)
+                print('objective_cut_list')
+                print(self.history_dict['objective_cut_list'])
+                print('********')
+                print('********')
+                print('********')
+                print('********')
+                print('********')
+                print('----')
+                print('----')
                 #input('---')
                 if self.my_adder.objective_cut>0.0001:
                     continue

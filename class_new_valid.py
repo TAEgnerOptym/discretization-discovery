@@ -2,13 +2,15 @@ import gurobipy as gp
 from gurobipy import GRB
 import time
 from collections import defaultdict
-
+import networkx as nx
 import numpy as np
 # Set desired solver options
 import itertools
 import gurobipy as gp
 from solve_gurobi_lp import solve_gurobi_lp
 import sys
+from tqdm import tqdm
+
 sys.path.append("pre_process")
 from naive_pre import *
 from valid_ineq_helper_ng_la import ng_help_valid_ineq
@@ -28,16 +30,26 @@ def power_set(s):
 
 class graph_based_separ:
 
-    def __init__(self,E,uv_2_E,Nodes,non_source_sink_nodes,dict_valid_ineq_name_2_rhs,dict_valid_ineq_name_edge_2_coeff,source_node,sink_node):
+    #def __init__(self,E,uv_2_E,Nodes,non_source_sink_nodes,dict_valid_ineq_name_2_rhs,dict_valid_ineq_name_edge_2_coeff,source_node,sink_node,my_NG):
+    def __init__(self,my_NG):
+        self.my_NG=my_NG
 
-        self.E=E
-        self.uv_2_E=uv_2_E
-        self.Nodes=Nodes
-        self.source_node=source_node
-        self.sink_node=sink_node
-        self.dict_valid_ineq_name_2_rhs=dict_valid_ineq_name_2_rhs
-        self.dict_valid_ineq_name_edge_2_coeff=dict_valid_ineq_name_edge_2_coeff
-        self.non_source_sink_nodes=non_source_sink_nodes
+        self.E=self.my_NG.E
+        self.uv_2_E=self.my_NG.uv_2_E
+        self.Nodes=self.my_NG.nodes
+        self.non_source_sink_nodes=self.my_NG.non_source_sink_nodes
+        self.dict_valid_ineq_name_2_rhs=self.my_NG.dict_valid_ineq_name_2_rhs
+        self.dict_valid_ineq_name_edge_2_coeff=self.my_NG.dict_valid_ineq_name_edge_2_coeff
+        self.source_node=self.my_NG.source_node
+        self.sink_node=self.my_NG.sink_node
+        #self.E=E
+        #self.uv_2_E=uv_2_E
+        #self.Nodes=Nodes
+        #self.source_node=source_node
+        #self.sink_node=sink_node
+        #self.dict_valid_ineq_name_2_rhs=dict_valid_ineq_name_2_rhs
+        #self.dict_valid_ineq_name_edge_2_coeff=dict_valid_ineq_name_edge_2_coeff
+        #self.non_source_sink_nodes=non_source_sink_nodes
         self.dict_var_name_2_obj=dict()
         self.dict_var_con_2_lhs_exog=dict()
         self.dict_var_con_2_lhs_eq=dict()
@@ -70,8 +82,39 @@ class graph_based_separ:
             var_name='SLACK_VALID_'+str(q)
             self.dict_var_2_obj[var_name]=1
 
-
     def make_valid_ineq(self):
+        # Precompute edge variable names once
+        if not hasattr(self, 'edge_to_varname'):
+            self.edge_to_varname = {
+                edge: 'EDGE_VAR_' + str(edge)
+                for edge in self.my_NG.E_2_lost_terms
+            }
+
+        d_lhs = self.dict_var_con_2_lhs_exog
+        d_lb = self.dict_con_name_2_LB
+        d_rhs = self.dict_valid_ineq_name_2_rhs
+        d_edge_coeff = self.dict_valid_ineq_name_edge_2_coeff
+
+        for q_name in tqdm(d_rhs,desc='generating VALID INEQ'):
+            #print('q_name')
+            #print(q_name)
+            con_name = 'Valid_ineq_' + q_name
+            slack_var_name = 'SLACK_VALID_' + q_name
+            d_lb[con_name] = d_rhs[q_name] - 0.0001
+
+            entries = []
+            append = entries.append  # local alias for performance
+
+            append(((slack_var_name, con_name), 1))
+
+            for edge, coeff in d_edge_coeff[q_name].items():
+                var_name = self.edge_to_varname[edge]
+                append(((var_name, con_name), coeff))
+
+            d_lhs.update(entries)
+
+
+    def OLD_make_valid_ineq(self):
         for q in self.dict_valid_ineq_name_2_rhs:
             con_name='Valid_ineq_'+str(q)
             self.dict_con_name_2_LB[con_name]=self.dict_valid_ineq_name_2_rhs[q]-0.0001
@@ -214,48 +257,16 @@ class Separ_object:
                 var_name='EDGE_VAR_'+str(e)
                 self.vars_keep.append(var_name)
         num_ineq_found=0
-        for q in G.dict_valid_ineq_name_2_rhs:
-            #print('in q')
+        set_2={v.replace("EDGE_VAR_", "") for v in self.vars_keep}
+
+        for q in tqdm(G.dict_valid_ineq_name_2_rhs,"Gtting Vars Cons"):
             
-            #for e in self.dict_valid_ineq_name_edge_2_coeff[q]:
             dict1a=G.dict_valid_ineq_name_edge_2_coeff[q]
             dict1 = {str(k): v for k, v in dict1a.items()}
             set1=set(dict1.keys())
-            set_2={v.replace("EDGE_VAR_", "") for v in self.vars_keep}
-            #print('set1')
-            #print(set1)
-            #print('set_2')
-            #print(set_2)
+
             cardinality = len( set1 & set_2 )
-            #print('cardinality')
-            #print(cardinality)
-            #print('---')
-            DEBUG_ON=False
-            if DEBUG_ON and cardinality<1:
-                for t in set1:
-                    if t not in set_2:
-                        print(t)
-                        print(type(t))
-                        print('NOT FOUND')
-                        input('---')
-                        for t2 in set_2:
-                            print('t')
-                            print(t)
-                            print('t2')
-                            print(t2)
-                            print(t==t2)
-                        input('---') 
-            #cardinality = len(set(dict1.keys()) & set(self.vars_keep))
-            #print('len(dict1.keys() )')
-            #print(len(dict1.keys() ))
-            #3print('len(self.vars_keep)')
-            #p#rint(len(self.vars_keep))
-            #print('cardinality')
-            #print(cardinality)
-            #print('type(self.vars_keep))')
-            ##print(type(self.vars_keep))
-            #print('type(dict1.keys())')
-            #print(type(dict1.keys()))
+            
             if cardinality>0:
                 var_name='SLACK_VALID_'+str(q)
                 con_name='Valid_ineq_'+str(q)
@@ -265,13 +276,6 @@ class Separ_object:
                 
                 num_ineq_found=num_ineq_found+1
 
-        #print('self.vars_keep')
-        #print(self.vars_keep)
-        #print('self.cons_keep')
-        #print(self.cons_keep)
-        #print('num_ineq_found')
-        ##print(num_ineq_found)
-        #input('---')
         self.COMP_dict_var_name_2_obj= {k: G.dict_var_2_obj[k] for k in self.vars_keep}
 
         self.COMP_dict_con_name_2_LB={k: G.dict_con_name_2_LB[k] for k in self.cons_keep }
@@ -388,29 +392,87 @@ class complete_separater_end_to_end:
         if self.my_separ.out_solution['objective']>.0001:
             
             self.add_ineq_to_MF()
+        print('objective')
+        print(self.my_separ.out_solution['objective'])
+        print('ALL DONE')
 
-    def __init__(self,MF):
+
+
+    def make_custom_NG(self, K=6):
+        x = self.MF.my_lower_bound_LP.lp_primal_solution
+        Nc = self.MF.my_VRP.num_cust
+
+        # Step 1: Build a directed graph in NetworkX
+        G = nx.Graph()
+
+        for u in range(Nc+2):
+            for v in range(Nc+2):
+                var_name = f'act_{u}_{v}'
+                if var_name in x and x[var_name]>0.0001:
+                    print(var_name+"   "+str(x[var_name]))
+        for u in range(Nc):
+            for v in range(Nc):
+                if u == v:
+                    continue
+                var_name = f'act_{u}_{v}'
+                if var_name in x and x[var_name]>0.0001:
+                    
+                    weight = 1/(.001+x[var_name])
+                    G.add_edge(u, v, weight=weight)
+                    #print(var_name+"   "+str(x[var_name]))
+        # Step 2: Compute all-pairs shortest path lengths
+        all_pairs_dist = dict(nx.all_pairs_dijkstra_path_length(G))
+
+        # Step 3: For each node, find K nearest neighbors by shortest path distance
+        nearest_neighbors = []
+        for u in range(0,Nc):
+            dist_u = all_pairs_dist.get(u, {})
+            neighbors = [(v, d) for v, d in dist_u.items() if v != u]
+            neighbors.sort(key=lambda item: item[1])
+            tmp = [v for v, _ in neighbors[:K]]
+            nearest_neighbors.append(tmp)
+        # Add dummy entries for depot-like nodes if needed
+        #print('nearest_neighbors')
+        #print(nearest_neighbors)
+        #input('---')
+        self.custom_NG = nearest_neighbors
+        #self.custom_NG[Nc] = []
+        #self.custom_NG[Nc+1] = []
+        self.u_2_NG=self.custom_NG
+    
+    def __init__(self,MF,do_custom_NG=False,num_LA_cutting_plane=8,max_SRI_Divisor=3,max_SRI_SET_SIZE=5):
         self.MF=MF
         self.OPT=dict()
-        self.OPT['num_LA_cutting_plane']=8
-        self.OPT['max_SRI_Divisor']=5
-        self.OPT['max_SRI_SET_SIZE']=7
+        self.OPT['num_LA_cutting_plane']=num_LA_cutting_plane
+        self.OPT['max_SRI_Divisor']=max_SRI_Divisor
+        self.OPT['max_SRI_SET_SIZE']=max_SRI_SET_SIZE
         self.OPT['allow_slack_on_nodes']=True
-        self.OPT['do_custom_NG']=False
+        self.OPT['do_custom_NG']=do_custom_NG
         self.epsilon_slack_valid=.00001
         #self.x_act=MF.my_lower_bound_LP.lp_primal_solution
         #self.x_mag=defaultdict(float)
         #for uv in self.MF.all_actions_ever_seen:
         #    self.x_mag[uv]=1
-        #if self.OPT['do_custom_NG']==True:
-        #    self.make_custom_NG()
-        #else:
-        self.u_2_NG=naive_get_LA_neigh(self.MF.my_VRP,self.OPT['num_LA_cutting_plane'])
-        self.u_2_NG=self.u_2_NG[0]
+        if self.OPT['do_custom_NG']==True:
+            self.ORIG_u_2_NG=naive_get_LA_neigh(self.MF.my_VRP,self.OPT['num_LA_cutting_plane'])
+            self.ORIG_u_2_NG=self.ORIG_u_2_NG[0]
+            self.make_custom_NG(self.OPT['num_LA_cutting_plane'])
+           ## for u in range(0,len(self.ORIG_u_2_NG)):
+           #     print('u'+str(u))
+           #     print('new ')
+           #     print(sorted(self.u_2_NG[u]))
+           ##     print('orig')
+           #     print(sorted(self.ORIG_u_2_NG[u]))
+            #    print('---')
+                #input('--')
+        else:
+            #input('i dont reall want to be here')
+            self.u_2_NG=naive_get_LA_neigh(self.MF.my_VRP,self.OPT['num_LA_cutting_plane'])
+            self.u_2_NG=self.u_2_NG[0]
         #self.my_NG=novel_ng_graph_basic(self.u_2_NG,self.MF.my_VRP,self.OPT['max_SRI_Divisor'],self.OPT['max_SRI_SET_SIZE'])
         self.my_NG=ng_help_valid_ineq(self.MF.my_VRP,self.u_2_NG,self.OPT['max_SRI_Divisor'],self.OPT['max_SRI_SET_SIZE'])
-        ng_help_valid_ineq
-        self.my_graph_based_separ=graph_based_separ(self.my_NG.E,self.my_NG.uv_2_E,self.my_NG.nodes,self.my_NG.non_source_sink_nodes,self.my_NG.dict_valid_ineq_name_2_rhs,self.my_NG.dict_valid_ineq_name_edge_2_coeff,self.my_NG.source_node,self.my_NG.sink_node)
+        
+        self.my_graph_based_separ=graph_based_separ(self.my_NG)
         self.running_avg=dict()
         for uv in self.my_graph_based_separ.uv_2_E:
             u=uv[0]
@@ -431,8 +493,8 @@ class complete_separater_end_to_end:
                 self.add_ineq_to_MF()
        
 
-    def make_custom_NG(self):
-        input('make this oine next')
+    #def make_custom_NG(self):
+    #    input('make this oine next')
 
     def print_cut(self):
         print('PRINTINIG CUT')

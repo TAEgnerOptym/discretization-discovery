@@ -4,6 +4,10 @@ import numpy as np
 # Set desired solver options
 import itertools
 import networkx as nx
+from collections import defaultdict
+from tqdm import tqdm
+import time
+from itertools import combinations
 
 def power_set(s):
     """
@@ -40,21 +44,16 @@ class NEW_order_object:
         self.dem_in_arc=0
         #or u in self.my_order_name:
         #    self.dem_in_arc+=self.my_instance.dem_full[u]
-        self.dem_in_arc = sum(self.my_instance.dem_full[u] for u in self.my_order_name)
-
+        if pred_order==None:
+            self.dem_in_arc = sum(self.my_instance.dem_full[u] for u in self.my_order_name)
+        else:
+            self.dem_in_arc=self.my_instance.dem_full[self.u]+pred_order.dem_in_arc
         if self.dem_in_arc>self.my_instance.vehicle_capacity:
             self.cost=np.inf
-       #if self.u==self.my_instance.num_cust and self.w==self.my_instance.num_cust+1:
-       #     print('self.cost')
-       #     print(self.cost)
-       #     input('my cost')
+
     def extend_order(self,new_u):
         
         trm1=[new_u]
-        #print('self.my_order_name')
-        #print(self.my_order_name)
-        #print('trm1')
-        #print(trm1)
         NEW_my_order_name=trm1+self.my_order_name
         my_new_order=NEW_order_object(NEW_my_order_name,self,self.my_instance)
 
@@ -168,7 +167,7 @@ class ng_help_valid_ineq:
             self.u_2_node_list[n[0]].append(n)
         
         for u in range(self.Nc):
-            NL = self.u_2_node_list[n[0]]
+            NL = self.u_2_node_list[u]
             len_list = [len(node[1]) for node in NL]  # precompute subset lengths
 
             for k1 in range(len(NL)):
@@ -242,12 +241,12 @@ class ng_help_valid_ineq:
         E=[]
         E_2_lost_terms=dict()
         for n in self.node_candidates:
-            if n[0]==self.Nc:
-                print('looking')
-                print('self.nc=  '+str(self.Nc))
+            #if n[0]==self.Nc:
+            #    print('looking')
+            #    print('self.nc=  '+str(self.Nc))
             for v in np.arange(0,self.Nc+2):
-                if n[0]==self.Nc:
-                    print('v = '+str(v))
+                #if n[0]==self.Nc:
+                #    print('v = '+str(v))
                 #p=tuple([n[0],n[1],v])
                 did_make=False
                 if self.is_allowable_transition(n,v):
@@ -257,9 +256,9 @@ class ng_help_valid_ineq:
                     e=tuple([n,new_node])
                     E.append(e)
                     E_2_lost_terms[e]=lost_terms
-                    if n[0]==self.Nc and v<self.Nc:
-                        print('GOOD E')
-                        print(e)
+                    #if n[0]==self.Nc and v<self.Nc:
+                    #    print('GOOD E')
+                    #    print(e)
                 else:
                     if n[0]==self.Nc and v<self.Nc:
                         input('wrong')
@@ -299,6 +298,21 @@ class ng_help_valid_ineq:
     
 
     def generate_subsets_to_consider(self):
+        my_subsets = set()
+
+        for u in range(self.NC):
+            neighbors = self.u_2_NG[u]
+            items = neighbors + [u]
+            items_set = sorted(set(items))  # deduplicate + consistent order
+
+            for k in range(1, self.max_SRI_SET_SIZE + 1):
+                for subset in combinations(items_set, k):
+                    my_subsets.add(frozenset(subset))
+
+        self.subset_2_make_SRI = my_subsets
+
+
+    def OLD_generate_subsets_to_consider(self):
         #generate all subsets 
         my_subsets=set([])
         for u in range(0,self.NC):
@@ -331,14 +345,24 @@ class ng_help_valid_ineq:
                     new_SRI['customers']=p
                     new_SRI['my_divisor']=k
                     new_SRI['my_RHS']=np.floor(len(p)/k)
-                    #print('new_SRI')
-                    #print(new_SRI)
                     my_SRI.append(new_SRI)
         self.my_SRI=my_SRI
-        #print('my_SRI')
-        #print(my_SRI)
-        #input('my_SRI')
     def make_all_arcs_2_pred(self):
+        t1=time.time()
+        self.arc_2_pred_arcs = {}
+
+        for (u, bigN_frozen, v) in self.my_arcs:
+            bigN = set(bigN_frozen)
+            preds = {
+                (w, frozenset(bigN - {w}), v)
+                for w in bigN
+            }
+            self.arc_2_pred_arcs[(u, bigN_frozen, v)] = preds
+        t1=time.time()-t1
+        print(t1)
+        #input('time')
+
+    def OLD_make_all_arcs_2_pred(self):
         self.arc_2_pred_arcs=dict()
 
         for p in self.my_arcs:
@@ -384,11 +408,57 @@ class ng_help_valid_ineq:
                 #    print('next_cust')
                 #    print(next_cust)
                 #    input('---')
+    
     def construct_orderings(self):
+    # Group arcs by size of the middle element
+        size_to_arcs = {}
+        print('pt1 ')
+        for arc in self.my_arcs:
+            k = len(arc[1])
+            if k not in size_to_arcs:
+                size_to_arcs[k] = []
+            size_to_arcs[k].append(arc)
+
+        self.arc_2_orderings = {}
+        print('pt2 ')
+
+        # Base case: arcs with empty middle element
+        for p in size_to_arcs.get(0, []):
+            u, _, v = p
+            new_ordering = NEW_order_object([u, v], None, self.my_instance)
+            self.arc_2_orderings[p] = [new_ordering] if new_ordering.cost < np.inf else []
+        print('pt3 ')
+
+        # Process remaining arcs in increasing size
+        for size in sorted(size_to_arcs):
+            print('pt4 '+str(size))
+
+            if size == 0:
+                continue
+            for p in size_to_arcs[size]:
+                u, _, _ = p
+                all_pred_orderings = []
+                for pred_arc in self.arc_2_pred_arcs[p]:
+                    for ord in self.arc_2_orderings.get(pred_arc, []):
+                        new_ord = ord.extend_order(u)
+                        if new_ord.cost < np.inf:
+                            all_pred_orderings.append(new_ord)
+                self.arc_2_orderings[p] = self.compute_efficient_frontier(all_pred_orderings)
+
+        print('done making base case orderings')
+
+    def OLD_construct_orderings(self):
+
+        #self.my_arcs contains tuples of 3 elements;  the middle element is used to sort them for processing them.  
+        #however there are only a small number of consequtive discrete values starting at zero.  So we dont really need to do a sort. 
+        # More like producing a list of lists 
+        
         sorted_arcs = sorted(self.my_arcs, key=lambda arc: len(arc[1]))
         self.arc_2_orderings=dict()
+        
+        #we now process the sizs in order
         for p in sorted_arcs:
-            if len(p[1])==0:
+            if len(p[1])==0:#if we procesed all fo the ones first then we would be able to avoid this if statement 
                 new_ordering=NEW_order_object([p[0],p[2]],None,self.my_instance)
                 if new_ordering.cost<np.inf:
                     self.arc_2_orderings[p]=[new_ordering]
@@ -397,23 +467,17 @@ class ng_help_valid_ineq:
 
 
             else:
+                #now we can likely speed this up dramatically 
                 all_pred_orderings=[]
                 u=p[0]
                 for my_pred_arc in self.arc_2_pred_arcs[p]:
                     for my_ord in self.arc_2_orderings[my_pred_arc]:
-                        #print('u')
-                        #print(u)
-                        #print('p')
-                        #print(p)
+                
                         new_ord=my_ord.extend_order(u)
                         if new_ord.cost<np.inf:
                             all_pred_orderings.append(new_ord)
-                print('before len fronteir ')
-                print(len(all_pred_orderings))
                 self.arc_2_orderings[p]=self.compute_efficient_frontier(all_pred_orderings)
-                print('after len')
-                print(len(self.arc_2_orderings[p]))
-                #input('---')
+
         print('done making base case orderings')
     def compute_efficient_frontier(self,objects):
     # Sort by cost ascending, then earlyArrival descending, then lateDepart ascending
@@ -466,7 +530,8 @@ class ng_help_valid_ineq:
                 #next_cust.remove(Nc)
                 #next_cust.remove(u)
                 #next_cust=next_cust-set(set_p)
-                
+
+
 
     def generate_edge_2_SRI_contrib(self):
         self.dict_valid_ineq_name_2_rhs = {}
@@ -475,31 +540,98 @@ class ng_help_valid_ineq:
         E_2_lost_terms = self.E_2_lost_terms
         my_SRI = self.my_SRI
 
-        count=0
-        for q in my_SRI:
-            count=count+1
-            #print([count,len(my_SRI)])
+        # Step 1: Group edges by their lost terms
+        lost_terms_to_edges = defaultdict(list)
+        for edge, terms in E_2_lost_terms.items():
+            key = frozenset(terms)
+            lost_terms_to_edges[key].append(edge)
+
+        unique_lost_sets = list(lost_terms_to_edges.keys())
+
+        # Step 2: Build inverted index: customer → lost sets that include them
+        cust_to_lostsets = defaultdict(set)
+        for lost_set in unique_lost_sets:
+            for cust in lost_set:
+                cust_to_lostsets[cust].add(lost_set)
+
+        # Step 3: Process each SRI constraint
+        for q in tqdm(my_SRI, desc='generating SRI contrib'):
             Nhat = set(q['customers'])
             k = q['my_divisor']
             rhs = q['my_RHS']
-            k_inv = 1.0 / k  # precompute
+            k_inv = 1.0 / k
             q_name = f"{frozenset(Nhat)}_{k}_{rhs}"
+
+            # Precompute RHS of valid inequality
+            self.dict_valid_ineq_name_2_rhs[q_name] = -int(len(Nhat) * k_inv)
+
+            tmp_dict = {}
+
+            # Step 4: Only consider lost sets that share customers with Nhat
+            relevant_lost_sets = set()
+            for cust in Nhat:
+                relevant_lost_sets.update(cust_to_lostsets.get(cust, []))
+
+            # Step 5: Compute contributions
+            for lost_set in relevant_lost_sets:
+                intersection_size = len(lost_set & Nhat)
+                #if intersection_size < k:
+                #    continue
+
+                coeff = -int(intersection_size * k_inv)
+                if coeff >= 0:
+                    continue
+
+                for edge in lost_terms_to_edges[lost_set]:
+                    tmp_dict[edge] = coeff
+
+            self.dict_valid_ineq_name_edge_2_coeff[q_name] = tmp_dict
+
+
+    def OLD_generate_edge_2_SRI_contrib(self):
+        """Optimized version of generate_edge_2_SRI_contrib"""
+        self.dict_valid_ineq_name_2_rhs = {}
+        self.dict_valid_ineq_name_edge_2_coeff = {}
+
+        E_2_lost_terms = self.E_2_lost_terms
+        my_SRI = self.my_SRI
+
+        # Pre-compute all unique lost term sets and their intersections
+        unique_lost_sets = list(set(frozenset(terms) for terms in E_2_lost_terms.values()))
+        
+        # Group edges by their lost terms to avoid redundant computation
+        lost_terms_to_edges = defaultdict(list)
+        for edge, terms in E_2_lost_terms.items():
+            lost_terms_to_edges[frozenset(terms)].append(edge)
+
+
+        for q in tqdm(my_SRI,desc='generating SRI contrib'):
+
+                
+            Nhat = set(q['customers'])
+            Nhat_frozen = frozenset(Nhat)
+            k = q['my_divisor']
+            rhs = q['my_RHS']
+            k_inv = 1.0 / k
+            q_name = f"{Nhat_frozen}_{k}_{rhs}"
 
             # RHS of valid inequality
             self.dict_valid_ineq_name_2_rhs[q_name] = -np.floor(len(Nhat) * k_inv)
 
-            # Build edge contribution dict
-            tmp_dict = {
-                e: -np.floor(len(terms & Nhat) * k_inv)
-                for e, terms in E_2_lost_terms.items()
-                if len(terms & Nhat) >= k  # early filter if no contribution
-            }
+            # Build edge contribution dict efficiently
+            tmp_dict = {}
+            
+            for lost_set_frozen in unique_lost_sets:
+                lost_set = set(lost_set_frozen)
+                intersection_size = len(lost_set & Nhat)
+                
+                if intersection_size >= k:  # Only process if there's potential contribution
+                    coeff = -np.floor(intersection_size * k_inv)
+                    if coeff < 0:  # Only keep negative coefficients
+                        # Apply this coefficient to all edges with these lost terms
+                        for edge in lost_terms_to_edges[lost_set_frozen]:
+                            tmp_dict[edge] = coeff
 
-            # Keep only nonzero entries
-            #print('tmp_dict')
-            #print(tmp_dict)
-            #input('---')
-            tmp_dict = {e: coeff for e, coeff in tmp_dict.items() if coeff < 0}
             self.dict_valid_ineq_name_edge_2_coeff[q_name] = tmp_dict
 
                 

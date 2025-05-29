@@ -75,9 +75,9 @@ def solve_with_lazy_delta_constraints(model: gp.Model,do_remove,do_bring_back,do
 
         
     model.setParam("MIPFocus", 3)
-    model.setParam("Cuts", 2)
-    model.setParam("NodeLimit", 100000)        # Only solve root node
-    model.setParam("OutputFlag", 1)
+    model.setParam("Cuts", 0)
+    #model.setParam("NodeLimit", 100000)        # Only solve root node
+    #model.setParam("OutputFlag", 1)
     model.update()
     model.optimize()
     input('Done first pass')
@@ -118,19 +118,22 @@ model_path="R104_super_fine.mps"
 #model_path="model_name.mps"
 model_path="model_name.mps"
 #model_path="R_112_model_name.mps"
-do_remove=False
-do_bring_back=False
+do_remove=True
+do_bring_back=True
 do_force_integer=True
 do_make_linear=False
 with gp.Env(params=options) as env:
     with gp.read(model_path, env=env) as model:
         model.setParam("DisplayInterval", 1)
         print('changing options')
-        model.setParam("MIPFocus", 3)
-        model.setParam("BranchDir", 1)
-        model.setParam("Presolve", 1)
-        model.optimize()
-        input('---')
+        #model.setParam("MIPFocus", 3)
+        #model.setParam("BranchDir", 1)
+        #model.setParam("Presolve", 1)
+        #model.setParam("Heuristics", 0)
+        #model.setParam("Method", 2)
+        #model.setParam("Seed",1)
+        #model.optimize()
+        #input('---')
         #model.update()
         solve_with_lazy_delta_constraints(model,do_remove,do_bring_back,do_force_integer,do_make_linear)
          
