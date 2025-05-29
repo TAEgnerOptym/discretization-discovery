@@ -497,15 +497,25 @@ class complete_separater_end_to_end:
     #    input('make this oine next')
 
     def print_cut(self):
+
+        print('printinig component dual')
+        for q_full in self.my_separ.valid_cons_keep:
+            dual_val=self.my_separ.dual_solution[q_full]
+            q=q_full[11:]
+            if abs(dual_val)>0:
+                print(str(q)+'   '+str(dual_val))
+                #self.new_cut_RHS+=G.dict_valid_ineq_name_2_rhs[q]
+        input('input coeff')
         print('PRINTINIG CUT')
         for uv in self.my_separ.new_cut_x_uv_2_coeff:
             u=uv[0]
             v=uv[1]
-            #primal_var='act_'+str(u)+'_'+str(v)
+            primal_var='act_'+str(u)+'_'+str(v)
             val=self.my_separ.new_cut_x_uv_2_coeff[uv]
-            if abs(val)>0.000001:
-                print('u,v,val')
-                print([u,v,val])
+            primal_val=self.MF.my_lower_bound_LP.lp_primal_solution[primal_var]
+            if self.running_avg[primal_var]+primal_val+abs(val)>0.000001:
+                print('u,v,cut_coeff,primal_val,')
+                print([u,v,val,primal_val,self.running_avg[primal_var]])
         print('self.MF.exog_name_2_rhs[self.new_CP_name]')
         print(self.MF.exog_name_2_rhs[self.new_CP_name])
         print('printed_cut_above')
@@ -545,5 +555,5 @@ class complete_separater_end_to_end:
          #   print('DEBUG_LHS')
          #   print(DEBUG_LHS)
             #input('FOUND')
-        if verbose:
-            self.print_cut()
+        #if verbose:
+        self.print_cut()
