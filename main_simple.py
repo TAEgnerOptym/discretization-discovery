@@ -8,7 +8,6 @@ default_input='jy_nyc.txt'
 
 do_BIG_PROBLEM=True
 if do_BIG_PROBLEM==True:
-    #default_input='data/jy_C104.txt'
     default_input='data/jy_RC101.txt'
 default_option_path='my_params_R200.json'
 

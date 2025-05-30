@@ -55,16 +55,16 @@ class graph_based_separ:
         self.dict_var_con_2_lhs_eq=dict()
         self.dict_con_name_2_LB=dict()
         self.dict_con_name_2_eq=dict()
-        print('making vars')
+        #print('making vars')
         self.make_vars()
-        print('making make_flow_in_out')
+        #print('making make_flow_in_out')
 
         self.make_flow_in_out()
-        print('making match')
+        #print('making match')
         self.make_match()
-        print('making valid')
+        #print('making valid')
         self.make_valid_ineq()
-        print('dont graph part')
+        #print('dont graph part')
     def make_vars(self):
         #edge_vars
         self.dict_var_2_obj=dict()
@@ -139,6 +139,8 @@ class graph_based_separ:
                 my_tup_1=tuple([var_name,con_name])
                 self.dict_var_con_2_lhs_eq[my_tup_1]=1
 
+
+
     def make_flow_in_out(self):
         for i in self.non_source_sink_nodes:
             con_name='flow_in_out_'+str(i)
@@ -155,13 +157,15 @@ class graph_based_separ:
             if i!=self.source_node:
                 con_name='flow_in_out_'+str(i)
                 my_tup_1=tuple([var_name,con_name])
-                self.dict_var_con_2_lhs_exog[my_tup_1]=-1
+                self.dict_var_con_2_lhs_exog[my_tup_1]=1
             if j!=self.sink_node:
                 con_name='flow_in_out_'+str(j)
                 my_tup_2=tuple([var_name,con_name])
-                self.dict_var_con_2_lhs_exog[my_tup_2]=1
+                self.dict_var_con_2_lhs_exog[my_tup_2]=-1
 
 class Separ_object:
+
+
 
     def __init__(self,my_graph_based_separ,x,x_mag,allow_slack_on_nodes):
         self.my_graph_based_separ=my_graph_based_separ
@@ -184,6 +188,20 @@ class Separ_object:
         #print('objective')
         #print(self.out_solution['objective'])
         self.lp_primal_new=self.out_solution['primal_solution']
+        self.generate_cut()
+        do_add_extra_cuts=False
+        self.aux_cuts=[]
+        if do_add_extra_cuts==True:
+            active_q_terms=[]
+            for q_full in self.valid_cons_keep:
+                dual_val=self.dual_solution[q_full]
+                q=q_full[11:]
+                if abs(dual_val)>0.001:
+                    active_q_terms.append(q_full)
+                    print('q  '+str(q)+' val'+ str(dual_val))
+            #if len(active_q_terms)>1:
+            for q in active_q_terms: 
+                self.make_aux_cut(active_q_terms,q)
         #print('printing solution')
         if verbose:
             my_con='Valid_ineq_frozenset({0, 1, 2})_2_1.0'
@@ -215,10 +233,78 @@ class Separ_object:
             print('objective')
             print(self.out_solution['objective'])
             input('---')
-        self.generate_cut()
 
+    def make_aux_cut(self,active_q_terms,q_this):
 
+        con_remove=set(active_q_terms)-set([q_this])
+
+        NEW_COMP_dict_var_con_2_lhs_exog = {
+            (var, con): val
+            for (var, con), val in self.COMP_dict_var_con_2_lhs_exog.items()
+            if con not in con_remove
+        }
+
+        NEW_COMP_dict_con_name_2_LB = {
+            con: lb
+            for con, lb in self.COMP_dict_con_name_2_LB.items()
+            if con not in con_remove
+        }
         
+        out_solution=solve_gurobi_lp(self.COMP_dict_var_name_2_obj,
+                    NEW_COMP_dict_var_con_2_lhs_exog,
+                    NEW_COMP_dict_con_name_2_LB,
+                    self.COMP_dict_var_con_2_lhs_eq,
+                    self.COMP_dict_con_name_2_eq)
+        if out_solution['objective']>0.0001:
+            #print('creating a cut from objective ')
+            #print(out_solution['objective'])
+            #print('q_this')
+            #print(q_this)
+            dual_solution=self.out_solution['dual_solution']
+
+            lp_primal_new=self.out_solution['primal_solution']
+            [new_rhs,new_cut_vec]=self.generate_cut_aux(dual_solution,q_this)
+            self.aux_cuts.append([new_rhs,new_cut_vec,q_this])
+        #else:
+        #    print('NO CUT from  '+str(q_this) )
+    def generate_cut_aux(self,dual_solution,q_full):
+        
+        new_cut_RHS=0
+        new_cut_x_uv_2_coeff=dict()
+        G=self.my_graph_based_separ
+
+        E_weight=dict()
+        for e in G.E:
+            i=e[0]
+            j=e[1]
+            i_name='flow_in_out_'+str(i)
+            j_name='flow_in_out_'+str(j)      
+            dual_i=0
+            dual_j=0
+            if i!=G.source_node and i_name in dual_solution:
+                dual_i=dual_solution[i_name]
+            if j!=G.sink_node and j_name in dual_solution:
+                dual_j=dual_solution[j_name]
+            E_weight[str(e)]=-dual_i+dual_j
+    
+        new_cut_RHS=0
+        dual_val=dual_solution[q_full]
+        q=q_full[11:]
+
+        new_cut_RHS=G.dict_valid_ineq_name_2_rhs[q]*dual_val#+self.e
+        
+        for e in G.dict_valid_ineq_name_edge_2_coeff[q]:
+            coeff=G.dict_valid_ineq_name_edge_2_coeff[q][e]
+            E_weight[str(e)]-=(dual_val*coeff)
+                
+        new_cut_x_uv_2_coeff=dict()
+        for uv in G.uv_2_E:
+            if uv[0]!=uv[1]:
+                new_cut_x_uv_2_coeff[uv] = -min(E_weight[str(e)] for e in G.uv_2_E[uv])
+
+        return [new_cut_RHS,new_cut_x_uv_2_coeff]
+
+
     def get_vars_cons_keep(self):
         G=self.my_graph_based_separ
 
@@ -324,7 +410,7 @@ class Separ_object:
                         
                     input('error ')
                 dual_j=self.dual_solution[j_name]
-            self.E_weight[str(e)]=dual_i-dual_j
+            self.E_weight[str(e)]=-dual_i+dual_j
     
         self.new_cut_RHS=0
         #print('G.E')
@@ -334,9 +420,11 @@ class Separ_object:
         for q_full in self.valid_cons_keep:
             dual_val=self.dual_solution[q_full]
             q=q_full[11:]
-
+            if G.dict_valid_ineq_name_2_rhs[q]>0:
+                input('ok wrong i think')
             self.new_cut_RHS+=G.dict_valid_ineq_name_2_rhs[q]*dual_val
-            
+            if abs(dual_val)>0.001:
+                print(str(q)+' = ' +str(dual_val))
             for e in G.dict_valid_ineq_name_edge_2_coeff[q]:
                 coeff=G.dict_valid_ineq_name_edge_2_coeff[q][e]
                 self.E_weight[str(e)]-=(dual_val*coeff)
@@ -354,26 +442,41 @@ class Separ_object:
     
 class complete_separater_end_to_end:
 
-    def update_given_solution(self):
-        self.x_act=self.MF.my_lower_bound_LP.lp_primal_solution
-        #self.x_mag=defaultdict(float)
-        #print('producing outputs')
-        #print('self.my_graph_based_separ.uv_2_E')
-        #print(self.my_graph_based_separ.uv_2_E)
-        #input('--')
-        for uv in self.my_graph_based_separ.uv_2_E:
-            u=uv[0]
-            v=uv[1]
-            
-            if u==v:
-                continue
-            var_name='act_'+str(u)+'_'+str(v)
-            val=self.x_act[var_name]
-            self.running_avg[var_name]=self.running_avg[var_name]*.95
-            self.running_avg[var_name]+=val*0.05
+    def update_given_solution(self,running_average_sol):
 
-            if verbose and val>0:
-                print(var_name+'  '+str(val))
+        filtered_duals_aux = {
+            k: v
+            for k, v in self.MF.my_lower_bound_LP.lp_dual_solution.items()
+            if k.startswith('my_valid_ineqAUX_') and  abs(v) > 1e-8 #.contains("") # # or v != 0 if exact zeros are fine
+        }        
+    
+        filtered_duals_reg = {
+            k: v
+            for k, v in self.MF.my_lower_bound_LP.lp_dual_solution.items()
+            if  k.startswith('my_valid_ineq_') and abs(v) > 1e-8  # or v != 0 if exact zeros are fine
+        }        
+        print('filtered_duals_aux')
+        print(filtered_duals_aux)
+        print('filtered_duals_reg')
+        print(filtered_duals_reg)
+        #input('my dict')
+        self.x_act=self.MF.my_lower_bound_LP.lp_primal_solution
+        if len(running_average_sol)==0:
+            for uv in self.my_graph_based_separ.uv_2_E:
+                u=uv[0]
+                v=uv[1]
+                
+                if u==v:
+                    continue
+                var_name='act_'+str(u)+'_'+str(v)
+                val=self.x_act[var_name]
+                self.running_avg[var_name]=self.running_avg[var_name]*.95
+                self.running_avg[var_name]+=val*0.05
+
+                if verbose and val>0:
+                    print(var_name+'  '+str(val))
+        else:
+            self.running_avg=running_average_sol
         self.x_mag=self.running_avg
 
         if verbose:
@@ -392,11 +495,34 @@ class complete_separater_end_to_end:
         if self.my_separ.out_solution['objective']>.0001:
             
             self.add_ineq_to_MF()
+            self.add_aux_cuts_to_MF()
         print('objective')
         print(self.my_separ.out_solution['objective'])
         print('ALL DONE')
 
-
+    def add_aux_cuts_to_MF(self):
+        #print('aux cuts')
+        for k in range(0,len(self.my_separ.aux_cuts)):
+            #print('k:  '+str(k))
+            new_cut_x_uv_2_coeff=self.my_separ.aux_cuts[k][1]
+            new_cut_RHS=self.my_separ.aux_cuts[k][0]
+            q_this=self.my_separ.aux_cuts[k][2]
+            cur_count_cutting_planes=self.MF.count_cutting_planes
+            new_CP_name='my_valid_ineqAUX_'+str(cur_count_cutting_planes)+'__'+str(q_this)
+            self.MF.all_exog.append(new_CP_name)
+            self.MF.count_cutting_planes+=1
+            self.MF.exog_name_2_rhs[new_CP_name]=new_cut_RHS-self.epsilon_slack_valid/10
+            #print('new_CP_name')
+            #print(new_CP_name)
+            for uv in new_cut_x_uv_2_coeff:
+                u=uv[0]
+                v=uv[1]
+                primal_var='act_'+str(u)+'_'+str(v)
+                val=new_cut_x_uv_2_coeff[uv]
+                if abs(val)>0.000001:
+                    self.MF.action_con_2_contrib[tuple([primal_var,new_CP_name])]=val
+        
+        #input('doner ')
 
     def make_custom_NG(self, K=6):
         x = self.MF.my_lower_bound_LP.lp_primal_solution
@@ -405,11 +531,11 @@ class complete_separater_end_to_end:
         # Step 1: Build a directed graph in NetworkX
         G = nx.Graph()
 
-        for u in range(Nc+2):
-            for v in range(Nc+2):
-                var_name = f'act_{u}_{v}'
-                if var_name in x and x[var_name]>0.0001:
-                    print(var_name+"   "+str(x[var_name]))
+       #for u in range(Nc+2):
+       #     for v in range(Nc+2):
+       #         var_name = f'act_{u}_{v}'
+       #         if var_name in x and x[var_name]>0.0001:
+       #             print(var_name+"   "+str(x[var_name]))
         for u in range(Nc):
             for v in range(Nc):
                 if u == v:
@@ -525,7 +651,7 @@ class complete_separater_end_to_end:
         self.new_CP_name='my_valid_ineq_'+str(cur_count_cutting_planes)
         self.MF.all_exog.append(self.new_CP_name)
         self.MF.count_cutting_planes+=1
-        self.MF.exog_name_2_rhs[self.new_CP_name]=self.my_separ.new_cut_RHS-self.epsilon_slack_valid
+        self.MF.exog_name_2_rhs[self.new_CP_name]=self.my_separ.new_cut_RHS-self.epsilon_slack_valid*2
         DEBUG_RHS=self.my_separ.new_cut_RHS
         DEBUG_LHS=0
         for uv in self.my_separ.new_cut_x_uv_2_coeff:
@@ -556,4 +682,4 @@ class complete_separater_end_to_end:
          #   print(DEBUG_LHS)
             #input('FOUND')
         #if verbose:
-        self.print_cut()
+        #self.print_cut()

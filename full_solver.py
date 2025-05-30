@@ -118,9 +118,9 @@ class full_solver:
         objective_componentLps=dict()
         time_component_lps=dict()
         for h in self.graph_names:
-            print('Starting SPlit+'+h)
+            #print('Starting SPlit+'+h)
             my_proj=projector(self,h)
-            print('DONE  SPlit+'+h)
+            #print('DONE  SPlit+'+h)
 
             objective=my_proj.lp_objective
             objective_componentLps[h]=my_proj.lp_objective
@@ -132,8 +132,8 @@ class full_solver:
                 did_split=True
             count_after_split[h]=len(set(self.graph_node_2_agg_node[h].values()))
 
-        print('time_component_lps')
-        print(time_component_lps)
+        #print('time_component_lps')
+        #print(time_component_lps)
         #print('count_prior_split')
         #print(count_prior_split)
         #print('count_after_split')
@@ -272,6 +272,7 @@ class full_solver:
         self.actions_ignore=self.all_actions_not_source_sink_connected
         self.all_actions_ever_seen=set([])#set(self.all_non_null_action.copy())#set()
         #self.all_actions_ever_seen=set(self.all_non_null_action.copy())#set()
+        self.running_average_sol=[]
         while iter<self.jy_opt['max_iterations_loop_compress_project']:
             self.time_list_outer=dict()
             iter=iter+1
@@ -347,6 +348,7 @@ class full_solver:
 
 
             self.time_list_outer['part3']=time.time()-t1
+
             t1=time.time()
 
             self.history_dict['lblp_lower'].append(new_lp_value)
@@ -388,38 +390,38 @@ class full_solver:
             #input('--paused in loop-')
             #print('use_ineq')
             #print(self.jy_opt['use_new_valid_ineq'])
-            if self.jy_opt['use_new_valid_ineq']==True and did_compress_call==False and did_split==False :
-                
-                print('saving the object')
-                print('new_lp_value')
-                print(new_lp_value)
-                with open("my_object.pkl", "wb") as f:
-                    pickle.dump(self, f, protocol=pickle.HIGHEST_PROTOCOL)
+            #if self.jy_opt['use_new_valid_ineq']==True and did_compress_call==False and did_split==False :
+            if 1>0:   
+                #print('saving the object')
+                #print('new_lp_value')
+                ##print(new_lp_value)
+                #with open("my_object.pkl", "wb") as f:
+                #    pickle.dump(self, f, protocol=pickle.HIGHEST_PROTOCOL)
                 #with open("my_object.pkl", "rb") as f:
                  #   loaded_object = pickle.load(f)
                 #if self.my_adder==None and iter!=1:
                 #    input('wierd0')
                 if do_custom_NG==True or self.my_adder==None:
                      self.my_adder=complete_separater_end_to_end(self,do_custom_NG)
-                self.my_adder.update_given_solution()#self.my_lower_bound_LP.lp_primal_solution)
+                self.update_running_average_primal_solution()
+                self.my_adder.update_given_solution(self.running_average_sol)#self.my_lower_bound_LP.lp_primal_solution)
                 #if self.my_adder==None :
                 #    input('wierd')
                 self.history_dict['objective_cut_list'].append([iter,self.my_adder.objective_cut,self.my_adder.my_separ.new_cut_RHS,new_lp_value])
 
-                print('The cut objective is ')
-                print('self.my_adder.objective_cut')
-                print(self.my_adder.objective_cut)
-                print('self.my_adder.my_separ.new_cut_RHS')
-                print(self.my_adder.my_separ.new_cut_RHS)
-                print('objective_cut_list')
-                print(self.history_dict['objective_cut_list'])
-                print('********')
-                print('********')
-                print('********')
-                print('********')
-                print('********')
-                print('----')
-                print('----')
+                print('self.my_adder.objective_cut:  '+str(self.my_adder.objective_cut))
+                #print(self.my_adder.objective_cut)
+                #print('self.my_adder.my_separ.new_cut_RHS')
+                #print(self.my_adder.my_separ.new_cut_RHS)
+                #print('objective_cut_list')
+                #print(self.history_dict['objective_cut_list'])
+                #print('********')
+                #print('********')
+                #print('********')
+                #print('********')
+                #print('********')
+                #print('----')
+                #print('----')
                 #input('---')
                 if self.my_adder.objective_cut>0.0001:
                     continue
@@ -576,6 +578,19 @@ class full_solver:
             #self.history_dict['milp_solution_objective_value']=milp_solution_objective_value
         self.prepare_ILP_solution()
 
+
+    def update_running_average_primal_solution(self):
+        
+        if len(self.running_average_sol)==0:
+            self.running_average_sol=dict()    
+            for act in self.action_2_cost:
+                self.running_average_sol[act]=self.my_lower_bound_LP.lp_primal_solution[act]
+        else:
+            alpha=0.05
+            for act in self.action_2_cost:
+                t1=(1-alpha)*self.running_average_sol[act]
+                t2=alpha*self.my_lower_bound_LP.lp_primal_solution[act]
+                self.running_average_sol[act]=t1+t2#*self.my_lower_bound_LP.lp_primal_solution[act]
 
 
     def split_based_init(self):

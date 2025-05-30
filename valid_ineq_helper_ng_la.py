@@ -113,25 +113,25 @@ class ng_help_valid_ineq:
         self.u_2_NG=ng_neigh_by_cust
         self.Nc=len(self.ng_neigh_by_cust)
         self.NC=self.Nc
-        print('making nodes')
+        #print('making nodes')
         self.make_all_potential_nodes()
-        print('make_all_arcs_need_eval')
+        #print('make_all_arcs_need_eval')
 
         self.make_all_arcs_need_eval()
-        print('make_all_arcs_2_pred')
+        #print('make_all_arcs_2_pred')
         self.make_all_arcs_2_pred()
-        print('construct_orderings')
+        #print('construct_orderings')
         self.construct_orderings()
-        print('construct_edge_candidates')
+        #print('construct_edge_candidates')
         self.construct_edge_candidates()
-        print('generate_subsets_to_consider')
+        #print('generate_subsets_to_consider')
         self.generate_subsets_to_consider()
-        print('generate_SRI')
+        #print('generate_SRI')
         self.generate_SRI()
-        print('generate_edge_2_SRI_contrib')
+        #print('generate_edge_2_SRI_contrib')
         self.generate_edge_2_SRI_contrib()
         self.generate_self_self_edges()
-        print('alst stuff')
+        #print('alst stuff')
         self.uv_2_E=dict()
         #print('self.E')
         #print(self.E)
@@ -154,7 +154,7 @@ class ng_help_valid_ineq:
         #print(self.uv_2_E)
         #input('---')
         self.non_source_sink_cust=np.arange(0,self.NC)#set(u_2_NG.keys())-set([self.my_VRP.NC,self.my_VRP.NC+1])
-        print('done init stuff')
+        #print('done init stuff')
 
 
     def generate_self_self_edges(self):
@@ -412,7 +412,7 @@ class ng_help_valid_ineq:
     def construct_orderings(self):
     # Group arcs by size of the middle element
         size_to_arcs = {}
-        print('pt1 ')
+        #print('pt1 ')
         for arc in self.my_arcs:
             k = len(arc[1])
             if k not in size_to_arcs:
@@ -420,18 +420,18 @@ class ng_help_valid_ineq:
             size_to_arcs[k].append(arc)
 
         self.arc_2_orderings = {}
-        print('pt2 ')
+        #print('pt2 ')
 
         # Base case: arcs with empty middle element
         for p in size_to_arcs.get(0, []):
             u, _, v = p
             new_ordering = NEW_order_object([u, v], None, self.my_instance)
             self.arc_2_orderings[p] = [new_ordering] if new_ordering.cost < np.inf else []
-        print('pt3 ')
+        #print('pt3 ')
 
         # Process remaining arcs in increasing size
         for size in sorted(size_to_arcs):
-            print('pt4 '+str(size))
+            #print('pt4 '+str(size))
 
             if size == 0:
                 continue
@@ -445,7 +445,7 @@ class ng_help_valid_ineq:
                             all_pred_orderings.append(new_ord)
                 self.arc_2_orderings[p] = self.compute_efficient_frontier(all_pred_orderings)
 
-        print('done making base case orderings')
+        #print('done making base case orderings')
 
     def OLD_construct_orderings(self):
 

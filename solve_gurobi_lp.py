@@ -8,6 +8,7 @@ import time
 
 import io
 import sys
+import os
 
 class Tee(io.TextIOBase):
     def __init__(self, *streams):
@@ -37,18 +38,18 @@ def solve_gurobi_lp(dict_var_name_2_obj,
 
     #var_name_map = {v: f"v{i}" for i, v in enumerate(var_names)}
     var_name_map = {
-        v: v if len(v) < 50 else f"v{i}"
+        v: v if len(v) < 20 else f"v{i}"
         for i, v in enumerate(var_names)}
     #con_name_map = {c: f"c{i}" for i, c in enumerate(all_con_names)}
     con_name_map = {
-        c: c if len(c) < 50 else f"c{i}"
+        c: c if len(c) < 20 else f"c{i}"
         for i, c in enumerate(all_con_names)}
-    print('len(all_con_names)')
-    print(len(all_con_names))
-    print('len(con_names_exog)')
-    print(len(con_names_exog))
-    print('len(con_names_eq)')
-    print(len(con_names_eq))
+    #print('len(all_con_names)')
+    #print(len(all_con_names))
+    #print('len(con_names_exog)')
+    #print(len(con_names_exog))
+    #print('len(con_names_eq)')
+    #print(len(con_names_eq))
     var_name_rev = {v_alias: v for v, v_alias in var_name_map.items()}
     con_name_rev = {c_alias: c for c, c_alias in con_name_map.items()}
 
@@ -66,9 +67,11 @@ def solve_gurobi_lp(dict_var_name_2_obj,
         "WLSSECRET": "cb02810a-e0e2-4a1f-8fc0-fd375f65fc65",
         "LICENSEID": 2660300
     }
-
+    old_old=sys.stdout
+    sys.stdout = open(os.devnull, 'w')
     with gp.Env(params=options) as env:
         with gp.Model("converted_LP", env=env) as model:
+            sys.stdout = old_old#self._original_stdout
             model.setParam("OutputFlag", 0)  # Suppress solver output
 
             # Step 1: Add variables
@@ -111,11 +114,11 @@ def solve_gurobi_lp(dict_var_name_2_obj,
             model.ModelSense = GRB.MINIMIZE
 
             time_pre = time.time() - time_pre
-            print('Starting Gur LP')
+            #print('Starting Gur LP')
             time_opt = time.time()
             model.optimize()
             time_opt = time.time() - time_opt
-            print('DONE Gur LP')
+            #print('DONE Gur LP')
             #if time_opt>0:
             #print()
             #model.write('LONG_proj.mps')
@@ -135,10 +138,10 @@ def solve_gurobi_lp(dict_var_name_2_obj,
             dual_solution = {
                 con_name_rev[con.ConstrName]: con.Pi for con in model.getConstrs()
             }
-            print('len(con_name_rev)')
-            print(len(con_name_rev))
-            print('len(model.getConstrs())')
-            print(len(model.getConstrs()))
+            #print('len(con_name_rev)')
+            #print(len(con_name_rev))
+            #print('len(model.getConstrs())')
+            #print(len(model.getConstrs()))
             objective = model.ObjVal
             time_post = time.time() - time_post
 
@@ -270,7 +273,7 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
 
     #var_name_map = {v: f"v{i}" for i, v in enumerate(var_names)}
     var_name_map = {
-        v: v if len(v) < 30 else f"v{i}"
+        v: v if len(v) < 100 else f"v{i}"
         for i, v in enumerate(var_names)}
     con_name_map = {c: f"c{i}" for i, c in enumerate(all_con_names)}
     var_name_rev = {v_alias: v for v, v_alias in var_name_map.items()}
@@ -445,7 +448,7 @@ def solve_gurobi_lp_bounds(dict_var_name_2_obj,
 
     #var_name_map = {v: f"v{i}" for i, v in enumerate(var_names)}
     var_name_map = {
-        v: v if len(v) < 99 else f"v{i}"
+        v: v if len(v) < 20 else f"v{i}"
         for i, v in enumerate(var_names)}
     con_name_map = {c: f"c{i}" for i, c in enumerate(all_con_names)}
 
@@ -469,9 +472,11 @@ def solve_gurobi_lp_bounds(dict_var_name_2_obj,
         "WLSSECRET": "cb02810a-e0e2-4a1f-8fc0-fd375f65fc65",
         "LICENSEID": 2660300
     }
-
+    original_stdout = sys.stdout
+    sys.stdout = open(os.devnull, 'w')
     with gp.Env(params=options) as env:
         with gp.Model("converted_LP", env=env) as model:
+            sys.stdout =original_stdout
             model.setParam("OutputFlag", 0)  # Suppress solver output
             #model.setParam("Method", 1)
             # Step 1: Add variables
@@ -512,11 +517,11 @@ def solve_gurobi_lp_bounds(dict_var_name_2_obj,
             model.ModelSense = GRB.MINIMIZE
 
             time_pre = time.time() - time_pre
-            print('Starting Gur LP')
+            #print('Starting Gur LP')
             time_opt = time.time()
             model.optimize()
             time_opt = time.time() - time_opt
-            print('DONE Gur LP')
+            #print('DONE Gur LP')
 
             time_post = time.time()
 
