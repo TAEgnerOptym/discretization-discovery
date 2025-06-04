@@ -92,6 +92,18 @@ class order_object:
     def compute_early_depart_wo_wait(self):
         early_depart_prev=self.my_instance.early_start[self.w]
         if self.pred_order!=None:
+            early_depart_prev=self.pred_order.early_depart_wo_wait
+        self.early_depart_prev=early_depart_prev
+        trm1=self.dist_serve_add+early_depart_prev
+        trm2=self.my_instance.early_start[self.u]
+        self.early_start_u=trm2
+        self.early_depart_wo_wait=min([trm1,trm2])
+        self.earlyArrival=self.early_depart_wo_wait-self.cost
+    
+
+    def OLD_compute_early_depart_wo_wait(self):
+        early_depart_prev=self.my_instance.early_start[self.w]
+        if self.pred_order!=None:
             early_depart_prev=self.dist_serve_add+self.pred_order.early_depart_wo_wait
         self.early_depart_prev=early_depart_prev
         trm1=self.dist_serve_add+early_depart_prev
@@ -100,6 +112,7 @@ class order_object:
         self.early_depart_wo_wait=min([trm1,trm2])
         self.earlyArrival=self.early_depart_wo_wait-self.dist_serve_add
         
+
     def compute_latest_depart(self):
         late_depart_prev=self.my_instance.late_start[self.w]
         if self.pred_order!=None:

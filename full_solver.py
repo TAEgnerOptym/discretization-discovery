@@ -27,6 +27,7 @@ from exper_proj_new import projector
 #from experimental_projector_simp_no_neg_w_removal import projector
 from baseline_solver import baseline_solver
 import json
+from New_valid_sep.check_valid_round_2 import check_valid_round_2
 class full_solver:
 
     def __init__(self,full_input_dict,jy_opt,output_file_path):
@@ -127,7 +128,7 @@ class full_solver:
             time_component_lps[h]=my_proj.lp_time
             self.TOT_time_component_lps[h]=self.TOT_time_component_lps[h]+my_proj.lp_time
             count_prior_split[h]=len(set(self.graph_node_2_agg_node[h].values()))
-            if objective>0.0001:#%self.jy_opt['epsilon']:
+            if objective>0.001:#%self.jy_opt['epsilon']:
                 self.graph_node_2_agg_node[h]=my_proj.NEW_node_2_agg_node
                 did_split=True
             count_after_split[h]=len(set(self.graph_node_2_agg_node[h].values()))
@@ -390,8 +391,14 @@ class full_solver:
             #input('--paused in loop-')
             #print('use_ineq')
             #print(self.jy_opt['use_new_valid_ineq'])
-            #if self.jy_opt['use_new_valid_ineq']==True and did_compress_call==False and did_split==False :
-            if 1>0:   
+            if 1<0:
+                with open("Play_my_object.pkl", "wb") as f:
+                    pickle.dump(self, f, protocol=pickle.HIGHEST_PROTOCOL)
+                tmp=check_valid_round_2(self)
+                input('---')
+
+            if self.jy_opt['use_new_valid_ineq']==True and did_compress_call==False and did_split==False :
+            #if self.jy_opt['use_new_valid_ineq']==True and self.history_dict['sum_lp_value_project'][-1]<1: 
                 #print('saving the object')
                 #print('new_lp_value')
                 ##print(new_lp_value)
@@ -401,10 +408,30 @@ class full_solver:
                  #   loaded_object = pickle.load(f)
                 #if self.my_adder==None and iter!=1:
                 #    input('wierd0')
+                DEBUG_ON=False
+                ILP_ONE_my_lower_bound_ILP=[]
+                ILP_TWO_my_lower_bound_ILP=[]
+                if DEBUG_ON==True:
+                    ILP_ONE_my_lower_bound_ILP=lower_bound_LP_milp(self,self.graph_node_2_agg_node,True,False)
+                    #input('first bound is above')
                 if do_custom_NG==True or self.my_adder==None:
-                     self.my_adder=complete_separater_end_to_end(self,do_custom_NG)
+                     self.my_adder=complete_separater_end_to_end(self,do_custom_NG,num_LA_cutting_plane=10,max_SRI_Divisor=3,max_SRI_SET_SIZE=5)
+                     #self.my_adder=complete_separater_end_to_end(self,do_custom_NG,num_LA_cutting_plane=8,max_SRI_Divisor=2,max_SRI_SET_SIZE=3)
                 self.update_running_average_primal_solution()
                 self.my_adder.update_given_solution(self.running_average_sol)#self.my_lower_bound_LP.lp_primal_solution)
+                if DEBUG_ON==True:
+                    ILP_TWO_my_lower_bound_ILP=lower_bound_LP_milp(self,self.graph_node_2_agg_node,True,False)
+                if DEBUG_ON==True:
+                    val_1=ILP_ONE_my_lower_bound_ILP.milp_solution_objective_value
+                    val_2=ILP_TWO_my_lower_bound_ILP.milp_solution_objective_value
+                    if abs(val_1-val_2)>0.01:
+                        print('val_2')
+                        print(val_2)
+                        print('val_1')
+                        print(val_1)
+                        input('big error')
+                #else:
+                #    input('this one is ok')
                 #if self.my_adder==None :
                 #    input('wierd')
                 self.history_dict['objective_cut_list'].append([iter,self.my_adder.objective_cut,self.my_adder.my_separ.new_cut_RHS,new_lp_value])
@@ -423,7 +450,7 @@ class full_solver:
                 #print('----')
                 #print('----')
                 #input('---')
-                if self.my_adder.objective_cut>0.0001:
+                if self.my_adder.objective_cut>0.01:
                     continue
             if did_compress_call==False and did_split==False:
                 print('breaking do to no split')
@@ -592,7 +619,8 @@ class full_solver:
                 t2=alpha*self.my_lower_bound_LP.lp_primal_solution[act]
                 self.running_average_sol[act]=t1+t2#*self.my_lower_bound_LP.lp_primal_solution[act]
 
-
+        for act in self.action_2_cost:
+            self.running_average_sol[act]=1#float(self.running_average_sol[act]>.0001)
     def split_based_init(self):
         self.NEW_graph_node_2_agg_node=dict()
         for h in self.graph_names:

@@ -21,6 +21,7 @@ model_path="R_104_NO_FancY_2.mps"
 #model_path="R_104_MPS_NO_FANCY_2.mps"
 model_path="R104_super_fine.mps"
 #model_path="tryMe.mps"
+model_path="LOOK_ME_model_name.mps"
 #model_path="R_104_fany.mps"
 #model_path="R_104_just_flip.mps"
 #model_path="../optym_gurobi_file_ILP/C_104_50_25_compress.mps"
@@ -28,14 +29,21 @@ with gp.Env(params=options) as env:
     with gp.read(model_path, env=env) as model:
         model.setParam("DisplayInterval", 1)
         bin_set=[]
+        counter=0
         for var in model.getVars():
-             if var.VType == GRB.BINARY:
-                bin_set.append(var)
-                
+
+            if abs(var.Obj)<0.01:# and  == GRB.BINARY:
+                var.VType = GRB.CONTINUOUS
+                print(var.Obj)
+                counter=counter+1
+                #bin_set.append(var)
+        print('counter')
+        print(counter)
+        input('---')
         print('len(bin_set)')
         print(len(bin_set))
-
-        if 1>0: 
+        model.update()
+        if 1<0: 
             print('changing options')
             model.setParam("Cuts", 0)                # Disable all cutting planes
             #model.setParam("Heuristics", 0.2)          # Disable primal heuristics

@@ -71,10 +71,11 @@ class NEW_order_object:
             
     def compute_early_depart_wo_wait(self):
         
-        early_depart_prev=np.inf#self.my_instance.early_start[self.w]
+        early_depart_prev=self.my_instance.early_start[self.w]
         
         if self.pred_order!=None:
-            early_depart_prev=self.dist_serve_add+self.pred_order.early_depart_wo_wait
+            #early_depart_prev=self.dist_serve_add+self.pred_order.early_depart_wo_wait
+            early_depart_prev=self.pred_order.early_depart_wo_wait
         self.early_depart_prev=early_depart_prev
         trm1=self.dist_serve_add+early_depart_prev
         trm2=self.my_instance.early_start_full[self.u]
@@ -131,6 +132,7 @@ class ng_help_valid_ineq:
         #print('generate_edge_2_SRI_contrib')
         self.generate_edge_2_SRI_contrib()
         self.generate_self_self_edges()
+        
         #print('alst stuff')
         self.uv_2_E=dict()
         #print('self.E')

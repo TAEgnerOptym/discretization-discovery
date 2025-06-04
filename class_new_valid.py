@@ -10,10 +10,12 @@ import gurobipy as gp
 from solve_gurobi_lp import solve_gurobi_lp
 import sys
 from tqdm import tqdm
+import json
 
 sys.path.append("pre_process")
 from naive_pre import *
-from valid_ineq_helper_ng_la import ng_help_valid_ineq
+#from valid_ineq_helper_ng_la import ng_help_valid_ineq
+from backup_valid_ineq_helper_ng_la import ng_help_valid_ineq
 verbose=False
 def power_set(s):
         """
@@ -95,23 +97,25 @@ class graph_based_separ:
         d_rhs = self.dict_valid_ineq_name_2_rhs
         d_edge_coeff = self.dict_valid_ineq_name_edge_2_coeff
 
-        for q_name in tqdm(d_rhs,desc='generating VALID INEQ'):
-            #print('q_name')
-            #print(q_name)
-            con_name = 'Valid_ineq_' + q_name
-            slack_var_name = 'SLACK_VALID_' + q_name
+        edge_to_varname = self.edge_to_varname  # local binding
+        update_lhs = d_lhs.update
+        append_entry = lambda v, c, coeff: ((v, c), coeff)
+
+        for q_name in tqdm(d_rhs, desc='generating VALID INEQ'):
+            con_name = f'Valid_ineq_{q_name}'
+            slack_var_name = f'SLACK_VALID_{q_name}'
+
             d_lb[con_name] = d_rhs[q_name] - 0.0001
 
-            entries = []
-            append = entries.append  # local alias for performance
+            entries = [append_entry(slack_var_name, con_name, 1)]
+            
+            edge_coeffs = d_edge_coeff[q_name]
+            entries += [
+                append_entry(edge_to_varname[edge], con_name, coeff)
+                for edge, coeff in edge_coeffs.items()
+            ]
 
-            append(((slack_var_name, con_name), 1))
-
-            for edge, coeff in d_edge_coeff[q_name].items():
-                var_name = self.edge_to_varname[edge]
-                append(((var_name, con_name), coeff))
-
-            d_lhs.update(entries)
+            update_lhs(entries)
 
 
     def OLD_make_valid_ineq(self):
@@ -142,13 +146,31 @@ class graph_based_separ:
 
 
     def make_flow_in_out(self):
+        DEBUG_SAVE_ME=[]
         for i in self.non_source_sink_nodes:
+            
+
             con_name='flow_in_out_'+str(i)
             self.dict_con_name_2_LB[con_name]=0
             var_name='SLACK_FLOW_'+str(i)
             my_tup_slack=tuple([var_name,con_name])
             self.dict_var_con_2_lhs_exog[my_tup_slack]=1
-        
+            if i==(5, frozenset({8, 1, 3, 0})):
+                print('con_name')
+                print(con_name)
+                print('FOUND ME')
+                DEBUG_SAVE_ME=con_name
+        if 1<0:
+            i=(5, frozenset({8, 1, 3, 0}))
+            con_name='flow_in_out_'+str(i)
+            print('i in self.non_source_sink_nodes')
+            print(i in self.non_source_sink_nodes)
+            if con_name not in self.dict_con_name_2_LB:
+                print('con_name')
+                print(con_name)
+                print('DEBUG_SAVE_ME')
+                print(DEBUG_SAVE_ME)
+                input('wrotng')
         for e in self.E:
             i=e[0]
             j=e[1]
@@ -172,10 +194,25 @@ class Separ_object:
         self.x=x
         self.allow_slack_on_nodes=allow_slack_on_nodes
         self.non_source_sink_nodes=self.my_graph_based_separ.non_source_sink_nodes#et(self.nodes)-set([self.my_graph_based_separ.source_node,self.my_graph_based_separ.sink_node])
-
+        
+        
         self.x_mag=x_mag
-        self.magnanti_epsilon=.0001
+        self.magnanti_epsilon=.00001
         self.get_vars_cons_keep()
+        if 1<0:
+            i=(5, frozenset({8, 1, 3, 0}))
+            print('i in self.non_source_sink_nodes')
+            print(i in self.non_source_sink_nodes)
+            con_name='flow_in_out_'+str(i)
+            print('con_name not in self.my_graph_based_separ.dict_con_name_2_LB')
+            print(con_name in self.my_graph_based_separ.dict_con_name_2_LB)
+            print('con_name not in self.cons_keep')
+            print(con_name  in self.cons_keep)
+            print('con_name in G.dict_con_name_2_LB')
+            print(con_name in self.my_graph_based_separ.dict_con_name_2_LB)
+            print('con_name in self.COMP_dict_con_name_2_LB')
+            print( con_name in self.COMP_dict_con_name_2_LB)
+            input('---')
         #print(self.cons_keep)
         #input('---')
         self.out_solution=solve_gurobi_lp(self.COMP_dict_var_name_2_obj,
@@ -187,6 +224,7 @@ class Separ_object:
        
         #print('objective')
         #print(self.out_solution['objective'])
+        #input('--')
         self.lp_primal_new=self.out_solution['primal_solution']
         self.generate_cut()
         do_add_extra_cuts=False
@@ -226,13 +264,13 @@ class Separ_object:
                     print(p+': val '+str(x_val)+ '     weight       ' +str(weight)+'      contrib     '+str(contrib) )
                     if p.startswith('SLACK')==False:
                         tot_contrib=tot_contrib+contrib
-            print('tot_contrib')
-            print(tot_contrib)
-            print('orig_rhs')
-            print(orig_rhs)
-            print('objective')
-            print(self.out_solution['objective'])
-            input('---')
+            #print('tot_contrib')
+            #print(tot_contrib)
+            #print('orig_rhs')
+            #print(orig_rhs)
+            #print('objective')
+            #print(self.out_solution['objective'])
+            #input('---')
 
     def make_aux_cut(self,active_q_terms,q_this):
 
@@ -313,13 +351,16 @@ class Separ_object:
             u=uv[0]
             v=uv[1]
             var_name='act_'+str(u)+'_'+str(v)
-            if u!=v and self.x[var_name]+self.x_mag[var_name]>0:
+            #if u!=v and self.x[var_name]+self.x_mag[var_name]>0:
+            if u!=v:
                 self.active_x[uv]=self.x[var_name]+(self.magnanti_epsilon*self.x_mag[var_name])
                 #print('self.active_x[uv]')
                 #print(self.active_x[uv])
                 #print('uv')
                 #print(uv)
                 #input('ADDING HERE')
+
+        #print('len')
         self.vars_keep=[]
         self.cons_keep=[]
         self.cons_keep_eq=[]
@@ -345,22 +386,32 @@ class Separ_object:
         num_ineq_found=0
         set_2={v.replace("EDGE_VAR_", "") for v in self.vars_keep}
 
-        for q in tqdm(G.dict_valid_ineq_name_2_rhs,"Gtting Vars Cons"):
-            
-            dict1a=G.dict_valid_ineq_name_edge_2_coeff[q]
-            dict1 = {str(k): v for k, v in dict1a.items()}
-            set1=set(dict1.keys())
+        # Step 1: Build a shared key-to-string map
+        all_keys = set()
+        for dict1a in G.dict_valid_ineq_name_edge_2_coeff.values():
+            all_keys.update(dict1a.keys())
 
-            cardinality = len( set1 & set_2 )
+        key_to_str = {k: str(k) for k in all_keys}
+
+        # Step 2: Use it during your loop
+        for q in tqdm(G.dict_valid_ineq_name_2_rhs, "Getting Vars Cons"):
             
-            if cardinality>0:
-                var_name='SLACK_VALID_'+str(q)
-                con_name='Valid_ineq_'+str(q)
+            dict1a = G.dict_valid_ineq_name_edge_2_coeff[q]
+            
+            # Use precomputed str-mapping
+            dict1 = {key_to_str[k]: v for k, v in dict1a.items()}
+            set1 = set(dict1.keys())
+
+            cardinality = len(set1 & set_2)
+
+            if cardinality > 0:
+                var_name = 'SLACK_VALID_' + str(q)
+                con_name = 'Valid_ineq_' + str(q)
                 self.vars_keep.append(var_name)
                 self.cons_keep.append(con_name)
                 self.valid_cons_keep.append(con_name)
-                
-                num_ineq_found=num_ineq_found+1
+                num_ineq_found += 1
+
 
         self.COMP_dict_var_name_2_obj= {k: G.dict_var_2_obj[k] for k in self.vars_keep}
 
@@ -398,11 +449,38 @@ class Separ_object:
             j=e[1]
             i_name='flow_in_out_'+str(i)
             j_name='flow_in_out_'+str(j)      
+            var_edge_name='EDGE_VAR_'+str(e)
+            if var_edge_name not in self.lp_primal_new :
+                print('i')
+                print(i)
+                print('j')
+                print(j)
+                input('error here')
+                continue
             dual_i=0
             dual_j=0
-            if i!=G.source_node and i_name in self.dual_solution:
+
+            if i!=G.source_node:# and i_name in self.dual_solution:
+                if i not in self.non_source_sink_nodes:
+                    print('i')
+                    print(i)
+                    input('ok this is not ok')
+                if i_name not in self.dual_solution:
+                    print('i')
+                    print(i)
+                    print('i_name')
+                    print(i_name)
+                    print('i not in self.non_source_sink_nodes')
+                    print()
+                    input('ok this is not ok either')
                 dual_i=self.dual_solution[i_name]
-            if j!=G.sink_node and j_name in self.dual_solution:
+                if i_name not in self.dual_solution:
+                    print('error')
+                    print('i_name')
+                    print(i_name)
+                        
+                    input('error  2')
+            if j!=G.sink_node:# and j_name in self.dual_solution:
                 if j_name not in self.dual_solution:
                     print('error')
                     print('j_name')
@@ -410,6 +488,8 @@ class Separ_object:
                         
                     input('error ')
                 dual_j=self.dual_solution[j_name]
+            if dual_i<-.0001 or dual_j<-0.0001:
+                input('not sensical')
             self.E_weight[str(e)]=-dual_i+dual_j
     
         self.new_cut_RHS=0
@@ -428,13 +508,36 @@ class Separ_object:
             for e in G.dict_valid_ineq_name_edge_2_coeff[q]:
                 coeff=G.dict_valid_ineq_name_edge_2_coeff[q][e]
                 self.E_weight[str(e)]-=(dual_val*coeff)
-                
+                if dual_val<-0.0001:
+                    print('dual_val')
+                    print(dual_val)
+                    input('error')
         self.new_cut_x_uv_2_coeff=dict()
+        num_errors=0
+        num_correct=0
         for uv in G.uv_2_E:
             if uv[0]!=uv[1]:
-                self.new_cut_x_uv_2_coeff[uv] = -min(self.E_weight[str(e)] for e in G.uv_2_E[uv])
-
-        
+                pi_uv = min(self.E_weight[str(e)] for e in G.uv_2_E[uv])
+                self.new_cut_x_uv_2_coeff[uv]=-pi_uv
+                con_name='match_EQ_'+str(uv)
+                if con_name in self.dual_solution:
+                    val=self.dual_solution[con_name]
+                    if abs(pi_uv-val)>0.01:
+                        print('val')
+                        print(val)
+                        print('self.new_cut_x_uv_2_coeff[uv]')
+                        print(self.new_cut_x_uv_2_coeff[uv])
+                        print('uv')
+                        print(uv)
+                        print('len(G.uv_2_E[uv])')
+                        print(len(G.uv_2_E[uv]))
+                        input('error here')
+                        num_errors=num_errors+1
+                    else:
+                        num_correct=num_correct+1
+        if num_errors>0:
+            print([num_errors,num_correct])
+            input('num_errors,num_correct')
     def return_cut(self):
         return self.new_cut_x_uv_2_coeff,self.new_cut_RHS
 
@@ -512,8 +615,8 @@ class complete_separater_end_to_end:
             self.MF.all_exog.append(new_CP_name)
             self.MF.count_cutting_planes+=1
             self.MF.exog_name_2_rhs[new_CP_name]=new_cut_RHS-self.epsilon_slack_valid/10
-            #print('new_CP_name')
-            #print(new_CP_name)
+            print('new_CP_name')
+            print(new_CP_name)
             for uv in new_cut_x_uv_2_coeff:
                 u=uv[0]
                 v=uv[1]
@@ -625,14 +728,18 @@ class complete_separater_end_to_end:
     def print_cut(self):
 
         print('printinig component dual')
+        valid_ineq_comp_def=[]
+
         for q_full in self.my_separ.valid_cons_keep:
             dual_val=self.my_separ.dual_solution[q_full]
             q=q_full[11:]
             if abs(dual_val)>0:
                 print(str(q)+'   '+str(dual_val))
+                valid_ineq_comp_def.append([float(dual_val),str(q)])
                 #self.new_cut_RHS+=G.dict_valid_ineq_name_2_rhs[q]
-        input('input coeff')
-        print('PRINTINIG CUT')
+        #input('input coeff')
+        #print('PRINTINIG CUT')
+        cut_desc=[]
         for uv in self.my_separ.new_cut_x_uv_2_coeff:
             u=uv[0]
             v=uv[1]
@@ -640,12 +747,20 @@ class complete_separater_end_to_end:
             val=self.my_separ.new_cut_x_uv_2_coeff[uv]
             primal_val=self.MF.my_lower_bound_LP.lp_primal_solution[primal_var]
             if self.running_avg[primal_var]+primal_val+abs(val)>0.000001:
-                print('u,v,cut_coeff,primal_val,')
+                #print('u,v,cut_coeff,primal_val,runAvgVal')
                 print([u,v,val,primal_val,self.running_avg[primal_var]])
-        print('self.MF.exog_name_2_rhs[self.new_CP_name]')
-        print(self.MF.exog_name_2_rhs[self.new_CP_name])
-        print('printed_cut_above')
-        input('---')
+                cut_desc.append([int(u),int(v),float(val),float(primal_val),float(self.running_avg[primal_var])])
+        #print('self.MF.exog_name_2_rhs[self.new_CP_name]')
+        #print(self.MF.exog_name_2_rhs[self.new_CP_name])
+        #print('self.new_CP_name')
+        #print(self.new_CP_name)
+        #print('printed_cut_above')
+        out_terrms=dict()
+        out_terrms['cut_desc']=cut_desc
+        out_terrms['valid_ineq_comp_def']=valid_ineq_comp_def
+        with open('../ALL_JSON_BIG/R101_stuff/CUT_FILE_'+str(self.MF.count_cutting_planes)+'.json', 'w') as file:
+            json.dump(out_terrms, file)
+        #input('---')
     def add_ineq_to_MF(self):
         cur_count_cutting_planes=self.MF.count_cutting_planes
         self.new_CP_name='my_valid_ineq_'+str(cur_count_cutting_planes)
@@ -666,7 +781,7 @@ class complete_separater_end_to_end:
             #print('xuv  '+str(xuv)+'   val '+str(val)+'   xuv*val:  '+str(xuv*val))
                 DEBUG_LHS+=xuv*val
         
-        if abs((DEBUG_RHS-DEBUG_LHS)-self.objective_cut)>.001:
+        if abs((DEBUG_RHS-DEBUG_LHS)-self.objective_cut)>.01:
             print('DEBUG_RHS')
             print(DEBUG_RHS)
             print('DEBUG_LHS')
@@ -682,4 +797,11 @@ class complete_separater_end_to_end:
          #   print(DEBUG_LHS)
             #input('FOUND')
         #if verbose:
+        #print('DEBUG_RHS')
+        #print(DEBUG_RHS)
+        #print('DEBUG_LHS')
+        #print(DEBUG_LHS)
+        #print('self.objective_cut')
+        #print(self.objective_cut)
+        #input('--')
         #self.print_cut()
