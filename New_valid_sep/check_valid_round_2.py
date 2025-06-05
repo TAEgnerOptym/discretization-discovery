@@ -25,9 +25,9 @@ class check_valid_round_2:
         # Step 1: Build a directed graph in NetworkX
         tot_weight=0
         G = nx.Graph()
-        print('K')
-        print(K)
-        input('--')
+        #print('K')
+        #print(K)
+        #input('--')
         for u in range(Nc):
             for v in range(u+1,Nc):
 
@@ -45,20 +45,20 @@ class check_valid_round_2:
                     weight = 1/(.001+amount_use)
                     G.add_edge(u, v, weight=weight)
                     tot_weight=tot_weight+weight
-                    print('uv')
-                    print([u,v])
-                    print('weight')
-                    print(weight)
+                    #print('uv')
+                    #print([u,v])
+                    #print('weight')
+                    #print(weight)
 
         #print(tot_weight)
         #input('--')
         all_pairs_dist = dict(nx.all_pairs_dijkstra_path_length(G))
-        print('all_pairs_dist')
-        print(all_pairs_dist)
+        #print('all_pairs_dist')
+        #print(all_pairs_dist)
         dist_u = all_pairs_dist.get(4, {})
-        print('dist_u')
-        print(dist_u)
-        input('---')
+        #print('dist_u')
+        #print(dist_u)
+        #input('---')
         # Step 3: For each node, find K nearest neighbors by shortest path distance
         nearest_neighbors = dict()
         for u in range(0,Nc):

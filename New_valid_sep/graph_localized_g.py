@@ -403,6 +403,10 @@ class graph_localized_g:
                     new_SRI['my_RHS']=np.floor(len(p)/k)
                     my_SRI.append(new_SRI)
         self.my_SRI=my_SRI
+
+        #print('my_SRI')
+        #print(my_SRI)
+        #$input('--')
     
     def generate_node_slack_2_SRI_contib(self):
 
@@ -423,6 +427,7 @@ class graph_localized_g:
             k = q['my_divisor']
             rhs = q['my_RHS']
             k_rhs_inv = 1.0 / (k * rhs)
+            k_inv=1.0/k
             nhat_len = len(nhat)
 
             q_name = f"{nhat}_{k}_{rhs}"
@@ -434,14 +439,24 @@ class graph_localized_g:
                 for n in my_candid_nodes
                 if (isize := len(dict_n_2_n1_plus_n0[n] & nhat)) >= k
             }
-
+            ##print(intersection_sizes)
+            #input('hold')
             # Only compute floor if above threshold
             tmp_dict = {
-                n: -np.floor(isize * k_rhs_inv)
+                n: -np.floor(isize * k_inv)
                 for n, isize in intersection_sizes.items()
             }
 
             self.dict_valid_ineq_name_node_2_coeff[q_name] = tmp_dict
+            #print('self.dict_valid_ineq_name_node_2_coeff[q_name]')
+            #print(self.dict_valid_ineq_name_node_2_coeff[q_name])
+            #print('self.dict_valid_ineq_name_2_rhs[q_name]')
+            #print(self.dict_valid_ineq_name_2_rhs[q_name])
+            #print('q')
+            #print(q)
+            #print('k_rhs_inv')
+            #print(k_rhs_inv)
+            #input('---')
         #print('self.dict_valid_ineq_name_node_2_coeff[q_name]')
         #print(self.dict_valid_ineq_name_node_2_coeff)
         #print('self.dict_valid_ineq_name_2_rhs')

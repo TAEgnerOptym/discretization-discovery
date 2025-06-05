@@ -396,7 +396,7 @@ class full_solver:
                 #with open("Play_my_object.pkl", "wb") as f:
                 #    pickle.dump(self, f, protocol=pickle.HIGHEST_PROTOCOL)
                 #input('before')
-                lp_cutter=check_valid_round_2(self,num_LA_cutting_plane=12,max_SRI_Divisor=3,max_SRI_SET_SIZE=7)
+                lp_cutter=check_valid_round_2(self,num_LA_cutting_plane=8,max_SRI_Divisor=5,max_SRI_SET_SIZE=7)
                 #lp_cutter=check_valid_round_2(self,num_LA_cutting_plane=5,max_SRI_Divisor=2,max_SRI_SET_SIZE=3)
                 #lp_cutter=check_valid_round_2(self,num_LA_cutting_plane=8,max_SRI_Divisor=2,max_SRI_SET_SIZE=3)
                 #lp_cutter=check_valid_round_2(self,num_LA_cutting_plane=12,max_SRI_Divisor=3,max_SRI_SET_SIZE=5)
