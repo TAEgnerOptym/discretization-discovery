@@ -43,7 +43,7 @@ my_file_name="LAST_112_my_object.pkl"
 my_file_name="Play_my_object.pkl"
 with open(my_file_name, "rb") as f:
     loaded_object = pickle.load(f)
-tmp=check_valid_round_2(loaded_object,do_custom_NG=True,num_LA_cutting_plane=7,max_SRI_Divisor=3,max_SRI_SET_SIZE=5)
+tmp=check_valid_round_2(loaded_object,do_custom_NG=True,num_LA_cutting_plane=8,max_SRI_Divisor=3,max_SRI_SET_SIZE=5)
 print('done load ')
 input('paused')
 num_LA_cutting_plane=10

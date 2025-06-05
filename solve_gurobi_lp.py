@@ -94,6 +94,7 @@ def solve_gurobi_lp(dict_var_name_2_obj,
             for con_name, terms in group_exog.items():
                 expr = gp.LinExpr()
                 for var, coeff in terms:
+                    
                     expr.addTerms(coeff, var)
                 model.addConstr(expr >= safe_LB[con_name], name=con_name)
                 #if con_name.startswith("Valid_ineq_"):
