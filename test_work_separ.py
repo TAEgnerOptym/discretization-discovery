@@ -28,9 +28,12 @@ from exper_proj_new import projector
 #from experimental_projector_simp_no_neg_w_removal import projector
 from baseline_solver import baseline_solver
 import json
-from class_new_valid import complete_separater_end_to_end 
 from New_valid_sep.check_valid_round_2 import check_valid_round_2
 import pickle
+
+
+from New_valid_sep.graph_localized_g import graph_localized_g
+from New_valid_sep.my_LP_sep_structure import my_LP_sep_structure
 
 
 loaded_object=[]
@@ -41,8 +44,24 @@ my_file_name="GOOD_my_object.pkl"
 my_file_name="R104_iter_1.pkl"
 my_file_name="LAST_112_my_object.pkl"
 my_file_name="Play_my_object.pkl"
+
+
+my_file_name='PlayNEW_my_object.pkl'
+
 with open(my_file_name, "rb") as f:
     loaded_object = pickle.load(f)
+
+loaded_object.OPT['num_LA_cutting_plane']=8
+loaded_object.OPT['max_SRI_Divisor']=2
+loaded_object.OPT['max_SRI_SET_SIZE']=3
+#input('hihi')
+print('loaded_object.my_subset_cust')
+print(loaded_object.my_subset_cust)
+my_graph=graph_localized_g(loaded_object.MF,loaded_object.my_subset_cust,loaded_object.OPT)
+#input('graph made')
+
+my_LP_structure=my_LP_sep_structure(my_graph,loaded_object.MF,loaded_object.OPT)
+input('DONE DINE')
 tmp=check_valid_round_2(loaded_object,do_custom_NG=True,num_LA_cutting_plane=8,max_SRI_Divisor=3,max_SRI_SET_SIZE=5)
 print('done load ')
 input('paused')

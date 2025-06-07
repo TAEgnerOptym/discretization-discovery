@@ -73,7 +73,12 @@ class graph_localized_g:
         self.make_uv_2_e()
         nodes_in_E = {n for edge in self.E for n in edge}
         new_candid_nodes = [n for n in self.my_candid_nodes if n in nodes_in_E]
+        #print('before')
+        #print(len(self.my_candid_nodes))
         self.my_candid_nodes=new_candid_nodes
+        #print('after')
+        #print(len(self.my_candid_nodes))
+        #input('---')
         t1=time.time()
         #self.construct_edge_candidates()
         #my_times['construct_edge_candidates']=time.time()-t1
@@ -163,22 +168,17 @@ class graph_localized_g:
         if v==n[0] or v in n[1]:
             return False
         if len(n[1])==0:
-            #print('in here')
             p=tuple([w,frozenset([]),v])
-            #print(p)
             
             if p in self.arc_2_orderings and len(self.arc_2_orderings[p])>0 and self.arc_2_orderings[p][0].cost<np.inf:
                 return True
 
         prev_cust_set=set(n[1])
         for u in prev_cust_set:
-            #print('u')
-            #print(u)
             N_minus_plus=prev_cust_set.copy()
             if N_minus_plus==None:
                 N_minus_plus=set([])
-            #print('N_minus_plus')
-            #print(N_minus_plus)
+
             N_minus_plus.add(w)
             N_minus_plus.remove(u)
             p=tuple([u,frozenset(N_minus_plus),v])
@@ -189,26 +189,41 @@ class graph_localized_g:
             for my_ord in self.arc_2_orderings[p]:
                 if my_ord.my_order_name[-2]==w and my_ord.cost<np.inf:
                     return True
+                else:
+                    if my_ord.my_order_name[-2]==w:
+                        input('error here')
+        #print('killing ')
+        #print([n,v])
+        #input('ok this did fire')
         return False
 
 
     def making_edges_component(self):
         E=[]
 
-        
+        KilledEdges=[]
+        DoExperiment=False
         for n in self.my_candid_nodes:
              n1_plus_n0=set([n[0]]).union(set(n[1]))
              n1_plus_n0=frozenset(n1_plus_n0)
              for v in self.my_subset_cust-n1_plus_n0:
-                if self.OLD_is_allowable_transition(n,v):
+                if DoExperiment or  self.OLD_is_allowable_transition(n,v)==True:
                     #[new_node]= self.get_new_set_and_lost(n,v) 
                     new_node=tuple([v,n1_plus_n0])
                     e=tuple([n,new_node])
                     E.append(e)
                     #print(e)
                     #input('---')
+                else:
+                    new_node=tuple([v,n1_plus_n0])
+                    e=tuple([n,new_node])
+                    #E.append(e)
+                    KilledEdges.append(e)
         self.E=E
-    
+
+        #print('KilledEdges')
+        #print(KilledEdges)
+        #input('--')
    
     def construct_orderings(self):
     # Group arcs by size of the middle element
@@ -381,32 +396,36 @@ class graph_localized_g:
         my_subsets = set()
         
 
-        for k in range(1, self.OPT['max_SRI_SET_SIZE'] + 1):
+        for k in range(3, self.OPT['max_SRI_SET_SIZE'] + 1):
             for subset in combinations(self.my_subset_cust, k):
                 my_subsets.add(frozenset(subset))
 
         self.subset_2_make_SRI = my_subsets
 
+        
 
     def  generate_SRI(self):
         my_SRI=[]
         max_SRI_size=self.OPT['max_SRI_SET_SIZE']
+        uni_vals=set()
         for p in self.subset_2_make_SRI:
-            max_sz=np.ceil(len(p)/2)
+            max_sz=1+np.floor(len(p)/2)
             max_sz=np.min([max_sz,max_SRI_size])
             max_sz=int(max_sz)
             for k in range(2,max_sz+1):
                 if np.remainder(len(p),k)!=0:
+                    uni_vals.add(tuple([len(p),k]))
                     new_SRI=dict()
                     new_SRI['customers']=p
                     new_SRI['my_divisor']=k
                     new_SRI['my_RHS']=np.floor(len(p)/k)
                     my_SRI.append(new_SRI)
+                    #print(new_SRI)
         self.my_SRI=my_SRI
-
-        #print('my_SRI')
-        #print(my_SRI)
-        #$input('--')
+        #print('uni_vals')
+        #print(uni_vals)
+        #input('---')
+        #input('-sr i are above-')
     
     def generate_node_slack_2_SRI_contib(self):
 
@@ -426,12 +445,12 @@ class graph_localized_g:
             nhat = q['customers']        # frozenset
             k = q['my_divisor']
             rhs = q['my_RHS']
-            k_rhs_inv = 1.0 / (k * rhs)
+            #k_rhs_inv = 1.0 / (k * rhs)
             k_inv=1.0/k
-            nhat_len = len(nhat)
+            #nhat_len = len(nhat)
 
             q_name = f"{nhat}_{k}_{rhs}"
-            self.dict_valid_ineq_name_2_rhs[q_name] = -int(nhat_len / k)
+            self.dict_valid_ineq_name_2_rhs[q_name] = -rhs#-int(nhat_len / k)
 
             # Precompute intersection sizes where meaningful
             intersection_sizes = {

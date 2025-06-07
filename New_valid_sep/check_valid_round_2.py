@@ -16,6 +16,7 @@ from New_valid_sep.graph_localized_g import graph_localized_g
 from New_valid_sep.power_set import power_set
 from New_valid_sep.NEW_order_object_new_sep_backwards import NEW_order_object_new_sep_backwards
 from New_valid_sep.my_LP_sep_structure import my_LP_sep_structure
+import pickle
 class check_valid_round_2:
 
     def make_custom_NG(self, K):
@@ -28,6 +29,13 @@ class check_valid_round_2:
         #print('K')
         #print(K)
         #input('--')
+
+       #for u in range(Nc+2):
+       #     for v in range(Nc+2):
+       #         var_name_1 = f'act_{u}_{v}'
+       #         if var_name_1 in x  and x[var_name_1]>0.001 and x[var_name_1]<0.999:
+       #             print('['+str(u)+','+str(v)+'] ='+str(x[var_name_1]))
+
         for u in range(Nc):
             for v in range(u+1,Nc):
 
@@ -80,10 +88,15 @@ class check_valid_round_2:
         #input('nearest_neighbors')
     def get_uni_groups(self):
         my_uni_groups=set()
+        Nc = self.MF.my_VRP.num_cust
+
         for u in self.u_2_NG:
             #print('self.u_2_NG[u]]')
             #print(self.u_2_NG[u])
             tmp=[u]+self.u_2_NG[u]
+            #if 1>0:
+            #    tmp.append(Nc)
+                #tmp.append(Nc+1)
             new_set=frozenset(tmp)
             #print('new_set')
             #print(new_set)
@@ -106,17 +119,33 @@ class check_valid_round_2:
         self.make_custom_NG(self.OPT['num_LA_cutting_plane'])
         self.get_uni_groups()
         self.tot_viol=0
-        print('self.my_uni_groups')
-        print(self.my_uni_groups)
+#        print('self.my_uni_groups')
+#        print(self.my_uni_groups)
+#        input('---')
+
         #input('heyo')
         #if self.MF.my_VRP.num_cust==6:
         #    self.my_uni_groups=set([frozenset([0,1,2,3,4,5])])
+        obj_list=[]
         for my_subset_cust in self.my_uni_groups:
+            #print('my_subset_cust')
+            #print(my_subset_cust)
+            #input('---')
+            self.my_subset_cust=my_subset_cust
+            with open("PlayNEW_my_object.pkl", "wb") as f:
+                pickle.dump(self, f, protocol=pickle.HIGHEST_PROTOCOL)
             my_graph=graph_localized_g(self.MF,my_subset_cust,self.OPT)
 
             my_LP_structure=my_LP_sep_structure(my_graph,self.MF,self.OPT)
             self.tot_viol+=my_LP_structure.out_solution['objective']
+            obj_list.append(my_LP_structure.out_solution['objective'])
+            #print('my_LP_structure.out_solution[objective]')
+            #print(my_LP_structure.out_solution['objective'])
+            #print('my_subset_cust')
+            #rint(my_subset_cust)
             #input('all done')
+        print('obj_list')
+        print(obj_list)
         print('self.tot_viol')
         print(self.tot_viol)
         print('self.tot_viol')
@@ -125,4 +154,5 @@ class check_valid_round_2:
         print('******')
         print('******')
         print('******')
+       # input('---')
         

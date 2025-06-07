@@ -640,14 +640,22 @@ class complete_separater_end_to_end:
        #         if var_name in x and x[var_name]>0.0001:
        #             print(var_name+"   "+str(x[var_name]))
         for u in range(Nc):
-            for v in range(Nc):
-                if u == v:
-                    continue
-                var_name = f'act_{u}_{v}'
-                if var_name in x and x[var_name]>0.0001:
+            for v in range(u+1,Nc):
+
+                var_name_1 = f'act_{u}_{v}'
+                var_name_2 = f'act_{v}_{u}'
+                amount_1=0
+                amount_2=0
+                if var_name_1 in x and x[var_name_1]>0.0001:
+                    amount_1= x[var_name_1]
+                if var_name_2 in x and x[var_name_2]>0.0001:
+                    amount_2= x[var_name_2]
+                amount_use=max([amount_1+amount_2])
+                if amount_use>0.0001:
                     
-                    weight = 1/(.001+x[var_name])
+                    weight = 1/(.001+amount_use)
                     G.add_edge(u, v, weight=weight)
+                    #tot_weight=tot_weight+weight
                     #print(var_name+"   "+str(x[var_name]))
         # Step 2: Compute all-pairs shortest path lengths
         all_pairs_dist = dict(nx.all_pairs_dijkstra_path_length(G))

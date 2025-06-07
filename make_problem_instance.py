@@ -15,11 +15,12 @@ def make_problem_instance(input_file_path,my_params,my_json_file_path):
     my_instance=vrp_instance_class(input_file_path,my_params)
     dem_thresh=naive_get_dem_thresh_list(my_instance,(my_params['dem_step_sz']))
     time_thresh=naive_get_time_thresh_list(my_instance,(my_params['time_step_sz']))
-    #print(my_instance.NC)
-    #input('start dem')
-
+    
+    
     my_dem_graph=dem_graph(my_instance,dem_thresh)
     #input('done dem')
+    #print(dem_thresh)
+    #input('start dem')
     my_time_graph=time_graph(my_instance,time_thresh)
     my_ng_graph=None
     if my_params['use_ng']>0.5:
@@ -32,9 +33,14 @@ def make_problem_instance(input_file_path,my_params,my_json_file_path):
             
             my_ng_graph=ng_graph(my_instance,ng_neigh_by_cust)
         else:
+            #if 1>0:
             from ng_graph_fancy_slow import ng_graph_fancy_slow
 
             my_ng_graph=ng_graph_fancy_slow(my_instance,ng_neigh_by_cust)
+            #else:
+            #    from TEST_ng_fancy import ng_graph_fancy_slow
+#
+#                my_ng_graph=ng_graph_fancy_slow(my_instance,ng_neigh_by_cust)
 
         #print('done ng making ')
     data=[]

@@ -24,7 +24,8 @@ class vrp_instance_class:
 		yd=np.power(y1-y2,2)
 		act_dist=np.sqrt(xd+yd)
 		if self.my_params['do_round_dist_times']>0.5:
-			act_dist=np.floor(act_dist*10)/10
+
+			act_dist=np.floor(act_dist*self.my_params['digit_mult_use'])/self.my_params['digit_mult_use']
 		return act_dist
 			
 	def	 get_dist_cust_2_cust(self,cust_1,cust_2):
@@ -53,7 +54,7 @@ class vrp_instance_class:
 		if cust_1==cust_2:
 			act_dist=np.inf
 		if self.my_params['do_round_dist_times']>0.5:
-			act_dist=np.floor(act_dist*10)/10
+			act_dist=np.floor(act_dist*self.my_params['digit_mult_use'])/self.my_params['digit_mult_use']
 
 		return act_dist
 	

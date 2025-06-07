@@ -393,20 +393,18 @@ class full_solver:
             #print(self.jy_opt['use_new_valid_ineq'])
             do_wierd_test=True
             if do_wierd_test==True and self.jy_opt['use_new_valid_ineq']==True and  self.history_dict['sum_lp_value_project'][-1]<0.1:
-                #with open("Play_my_object.pkl", "wb") as f:
-                #    pickle.dump(self, f, protocol=pickle.HIGHEST_PROTOCOL)
-                #input('before')
-                lp_cutter=check_valid_round_2(self,num_LA_cutting_plane=8,max_SRI_Divisor=5,max_SRI_SET_SIZE=7)
-                #lp_cutter=check_valid_round_2(self,num_LA_cutting_plane=5,max_SRI_Divisor=2,max_SRI_SET_SIZE=3)
-                #lp_cutter=check_valid_round_2(self,num_LA_cutting_plane=8,max_SRI_Divisor=2,max_SRI_SET_SIZE=3)
-                #lp_cutter=check_valid_round_2(self,num_LA_cutting_plane=12,max_SRI_Divisor=3,max_SRI_SET_SIZE=5)
-                #print('tot_viol')
-                #print(lp_cutter.tot_viol)
-                #input('--')
+                
+                lp_cutter=check_valid_round_2(self,num_LA_cutting_plane=8,max_SRI_Divisor=3,max_SRI_SET_SIZE=4)
+                if 0>1:
+                    self.my_adder=complete_separater_end_to_end(self,do_custom_NG,num_LA_cutting_plane=8,max_SRI_Divisor=3,max_SRI_SET_SIZE=5)
+                    #self.my_adder=complete_separater_end_to_end(self,do_custom_NG,num_LA_cutting_plane=8,max_SRI_Divisor=2,max_SRI_SET_SIZE=3)
+                    self.update_running_average_primal_solution()
+                    self.my_adder.update_given_solution(self.running_average_sol)#self.my_lower_bound_LP.lp_primal_solution)
+                    if self.my_adder.objective_cut>0.01:
+                        continue
                 if lp_cutter.tot_viol>0.01:
                     continue
-                #print('compelted here')
-                #input('---')
+                
 
             if do_wierd_test==False and  self.jy_opt['use_new_valid_ineq']==True and did_compress_call==False and did_split==False :
             #if self.jy_opt['use_new_valid_ineq']==True and self.history_dict['sum_lp_value_project'][-1]<1: 

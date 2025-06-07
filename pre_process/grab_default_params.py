@@ -54,4 +54,5 @@ def grab_default_params():
 	my_params["use_delta_in_lp"]=1
 	my_params["turn_off_non_active_fg_project"]=0
 	my_params['use_new_valid_ineq']=0
+	my_params['digit_mult_use']=10#used for rounding distances
 	return my_params
