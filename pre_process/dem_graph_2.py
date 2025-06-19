@@ -200,7 +200,6 @@ class dem_graph:
 		self.DEBUG_edges_uv_tup[tuple([u,v])]=[]
 		my_j_pos=Nv_j-1
 		for i in range(Nu_i-1,-1,-1):
-			#earliest_arrival_from_i_to_v=self.node_2_early[u][i]-my_dist
 			most_cap_rem_from_i_to_v=self.node_2_most_cap[u][i]-dem_u#veh_cap-dem_u
 			
 			#earliest_arrival_from_i_CHILD_to_v=-np.inf
@@ -212,28 +211,12 @@ class dem_graph:
 				#latest_arrival_allowed=self.node_2_late[v][j]
 				least_cap_arrival_allowed=self.node_2_least_cap[v][j]
 				flag_cond=0
-				#if earliest_arrival_from_i_to_v>= latest_arrival_allowed and latest_arrival_allowed>earliest_arrival_from_i_CHILD_to_v:#-.0001:
 				this_tup=tuple([self.node_list[u][i],self.node_list[v][j]])
-
-				#if u==0 and v==1:
-				#	print(' in before this_tup')
-				#	print(this_tup)
-				#	input('--')
 				if most_cap_rem_from_i_to_v>= least_cap_arrival_allowed and least_cap_arrival_allowed>most_cap_rem_from_i_to_CHILD_to_v:#-.0001:
 					self.E_novel_back.append(this_tup)
 					self.E.append(this_tup)
 					
 					self.DEBUG_edges_uv_tup[tuple([u,v])].append(this_tup)
 					my_j_pos=j-1
-					#if u==0 and v==1:
-					#	print('adding')
-					#	print(this_tup)
-					#	input('--')
 					break
-				#else:
-				#	print('NOT adding')
-				#	print(this_tup)
-				#	input('--')
-#
-				
 			

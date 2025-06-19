@@ -2,6 +2,9 @@
 import numpy as np
 import csv
 #import pandas as pd
+import numpy as np
+from math import gcd
+from functools import reduce
 
 def convert_solomon(file_in,file_out,num_cust_keep,divisor,divisor_time_dist):
 
@@ -76,12 +79,18 @@ def convert_solomon(file_in,file_out,num_cust_keep,divisor,divisor_time_dist):
 
 	#	D(:,3)=D(:,3)/divisor;
 
-	#print('before')
-	#print(Z[:,2])
-	Z[:,2]=Z[:,2]/divisor;
-	#print('after')
-	#print(Z[:,2])
+	print('before')
+	print(Z[:,2])
+	col = Z[:, 2].astype(int)  # Ensure integers
 
+	# Step 2: Compute GCD of the entire column
+	col_gcd = reduce(gcd, col)
+
+	# Step 3: Divide column entries by the GCD
+	Z[:, 2] = col // col_gcd 
+	print('after')
+	print(Z[:,2])
+	#input('---')
 	#D(:,[1,2,4,5,6])=D(:,[1,2,4,5,6])/divisor_time_dist;
 	Z[:,[0,1,3,4,5]]=Z[:,[0,1,3,4,5]]/divisor_time_dist;
 	#D_old=D;
@@ -108,7 +117,7 @@ def convert_solomon(file_in,file_out,num_cust_keep,divisor,divisor_time_dist):
 prefix_list=["C1","C2","R1","R2","RC1","RC2"]
 
 for p in prefix_list:
-	for i in range(1,10):
+	for i in range(1,11):
 		file_in="homberger_200_customer_instances/"+p+"_2_"+str(i)+".TXT";
 		file_out="dataHOM/jyHOM_"+p+"_2_"+str(i)+".txt"
 		convert_solomon(file_in,file_out,200,1,1)

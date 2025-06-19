@@ -21,6 +21,8 @@ from class_new_valid import complete_separater_end_to_end
 #from experimental_projector_simp import projector
 #from experimental_projector_simp_eq import projector
 from exper_proj_new import projector
+#from exper_proj_lazy import LAZY_projector
+
 #from  import projector
 #from experimental_projector_simp_no_neg import projector
 
@@ -111,6 +113,10 @@ class full_solver:
         self.history_dict['objective_cut_list']=[]
         self.apply_complete_algorithm()
 
+
+
+
+
     def apply_splitting(self):
         did_split=False
         #input('before splitting')
@@ -118,9 +124,25 @@ class full_solver:
         count_after_split=dict()
         objective_componentLps=dict()
         time_component_lps=dict()
+        #use_expensive=True
+        #if len(self.history_dict['lblp_lower'])>0 and abs(self.history_dict['lblp_lower'][-1]-self.my_lower_bound_LP.lp_objective)<0.01:
+        #    input('SHOULD NOT FIRE.  FAILED EXPERIMENT')
+        #    use_expensive=True
+        #    print('USING MORE EXPENSIVE PROJECT')
+        #    print(self.history_dict['lblp_lower'][-1])
+        #    print('self.my_lower_bound_LP.lp_objective')
+        #    print(self.my_lower_bound_LP.lp_objective)
+        #    input('--')
         for h in self.graph_names:
             #print('Starting SPlit+'+h)
+        #    my_proj=[]
+        #    if use_expensive==True:
             my_proj=projector(self,h)
+            #else:
+            #    input('SHOULD NOT FIRE.  FAILED EXPERIMENT')
+            
+            #    my_proj=LAZY_projector(self,h)
+
             #print('DONE  SPlit+'+h)
 
             objective=my_proj.lp_objective
@@ -133,13 +155,7 @@ class full_solver:
                 did_split=True
             count_after_split[h]=len(set(self.graph_node_2_agg_node[h].values()))
 
-        #print('time_component_lps')
-        #print(time_component_lps)
-        #print('count_prior_split')
-        #print(count_prior_split)
-        #print('count_after_split')
-        #print(count_after_split)
-        #input('don splits')
+        
         return did_split,objective_componentLps,time_component_lps
     
     def count_size(self,supress_output=True):
@@ -339,6 +355,7 @@ class full_solver:
             self.time_list_outer['part2']=time.time()-t1
             t1=time.time()
             this_prob_sizes_mid=self.count_size()
+            
             [did_split,proj_objective_componentLps,proj_time_component_lps]=self.apply_splitting()
                 
                 #if did_split==False:

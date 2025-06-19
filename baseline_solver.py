@@ -247,12 +247,13 @@ class baseline_solver:
                     self.dict_con_name_2_eq,
                     self.dict_var_name_2_is_binary,self.full_prob.jy_opt['max_ILP_time'])
         else:
+            self.dict_2_is_int=dict()
             out_solution=solve_gurobi_milp_bounds(self.dict_var_name_2_obj,
                 self.CLEAN_dict_var_con_2_lhs_exog,
                 self.CLEAN_dict_con_name_2_LB,
                 self.CLEAN_dict_var_con_2_lhs_eq,
                 self.CLEAN_dict_con_name_2_eq,self.full_prob.delta_name_2_lb,self.full_prob.delta_name_2_ub,
-                self.dict_var_name_2_is_binary,self.full_prob.jy_opt['max_ILP_time'])
+                self.dict_var_name_2_is_binary,self.dict_2_is_int,self.full_prob.jy_opt['max_ILP_time'])
 
         self.milp_solution=out_solution['primal_solution']
         self.milp_solution_objective_value=out_solution['objective']

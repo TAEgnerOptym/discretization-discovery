@@ -4,81 +4,93 @@ all_files=[]
 
 if 0<1:
 
-    all_files.append("jy_r101.txt")
-    all_files.append("jy_r107.txt")
-    all_files.append("jy_r102.txt")
-    all_files.append("jy_r103.txt")
-    all_files.append("jy_r104.txt")
-    all_files.append("jy_r105.txt")
-    all_files.append("jy_r106.txt")
-    all_files.append("jy_r108.txt")
-    all_files.append("jy_r109.txt")
-    all_files.append("jy_r110.txt")
-    all_files.append("jy_r111.txt")
-    all_files.append("jy_r112.txt")
+    all_files.append("jyHOM_C1_2_1.txt")
+    all_files.append("jyHOM_C1_2_2.txt")
+    all_files.append("jyHOM_C1_2_3.txt")
+    all_files.append("jyHOM_C1_2_4.txt")
+    all_files.append("jyHOM_C1_2_5.txt")
+    all_files.append("jyHOM_C1_2_6.txt")
+    all_files.append("jyHOM_C1_2_7.txt")
+    all_files.append("jyHOM_C1_2_8.txt")
+    all_files.append("jyHOM_C1_2_9.txt")
+    all_files.append("jyHOM_C1_2_10.txt")
 
 if 0>1:
-    all_files.append("jy_rc101.txt")
-    all_files.append("jy_rc102.txt")
-    all_files.append("jy_rc103.txt")
-    all_files.append("jy_rc104.txt")
-    all_files.append("jy_rc105.txt")
-    all_files.append("jy_rc106.txt")
-    all_files.append("jy_rc107.txt")
-    all_files.append("jy_rc108.txt")
+    all_files.append("jyHOM_C2_2_1.txt")
+    all_files.append("jyHOM_C2_2_2.txt")
+    all_files.append("jyHOM_C2_2_3.txt")
+    all_files.append("jyHOM_C2_2_4.txt")
+    all_files.append("jyHOM_C2_2_5.txt")
+    all_files.append("jyHOM_C2_2_6.txt")
+    all_files.append("jyHOM_C2_2_7.txt")
+    all_files.append("jyHOM_C2_2_8.txt")
+    all_files.append("jyHOM_C2_2_9.txt")
+    all_files.append("jyHOM_C2_2_10.txt")
 
 
 if 0>1:
-    all_files.append("jy_c101.txt")
-    all_files.append("jy_c102.txt")
-    all_files.append("jy_c103.txt")
-    all_files.append("jy_c104.txt")
-    all_files.append("jy_c105.txt")
-    all_files.append("jy_c106.txt")
-    all_files.append("jy_c107.txt")
-    all_files.append("jy_c108.txt")
-    all_files.append("jy_c109.txt")
+    all_files.append("jyHOM_R1_2_1.txt")
+    all_files.append("jyHOM_R1_2_2.txt")
+    all_files.append("jyHOM_R1_2_3.txt")
+    all_files.append("jyHOM_R1_2_4.txt")
+    all_files.append("jyHOM_R1_2_5.txt")
+    all_files.append("jyHOM_R1_2_6.txt")
+    all_files.append("jyHOM_R1_2_7.txt")
+    all_files.append("jyHOM_R1_2_8.txt")
+    all_files.append("jyHOM_R1_2_9.txt")
+    all_files.append("jyHOM_R1_2_10.txt")
 
 if 0>1:
 
 
-    all_files.append("jy_rc201.txt")
-    all_files.append("jy_rc202.txt")
-    all_files.append("jy_rc203.txt")
-    all_files.append("jy_rc204.txt")
-    all_files.append("jy_rc205.txt")
-    all_files.append("jy_rc206.txt")
-    all_files.append("jy_rc207.txt")
-    all_files.append("jy_rc208.txt")
+    all_files.append("jyHOM_R2_2_1.txt")
+    all_files.append("jyHOM_R2_2_2.txt")
+    all_files.append("jyHOM_R2_2_3.txt")
+    all_files.append("jyHOM_R2_2_4.txt")
+    all_files.append("jyHOM_R2_2_5.txt")
+    all_files.append("jyHOM_R2_2_6.txt")
+    all_files.append("jyHOM_R2_2_7.txt")
+    all_files.append("jyHOM_R2_2_8.txt")
+    all_files.append("jyHOM_R2_2_9.txt")
+    all_files.append("jyHOM_R2_2_10.txt")
 
 
-    all_files.append("jy_r201.txt")
-    all_files.append("jy_r202.txt")
-    all_files.append("jy_r203.txt")
-    all_files.append("jy_r204.txt")
-    all_files.append("jy_r205.txt")
-    all_files.append("jy_r206.txt")
-    all_files.append("jy_r207.txt")
-    all_files.append("jy_r208.txt")
-    all_files.append("jy_r209.txt")
-    all_files.append("jy_r210.txt")
-    all_files.append("jy_r211.txt")
+
+if 0>1:
 
 
-    all_files.append("jy_c201.txt")
-    all_files.append("jy_c202.txt")
-    all_files.append("jy_c203.txt")
-    all_files.append("jy_c204.txt")
-    all_files.append("jy_c205.txt")
-    all_files.append("jy_c206.txt")
-    all_files.append("jy_c207.txt")
-    all_files.append("jy_c208.txt")
+    all_files.append("jyHOM_RC1_2_1.txt")
+    all_files.append("jyHOM_RC1_2_2.txt")
+    all_files.append("jyHOM_RC1_2_3.txt")
+    all_files.append("jyHOM_RC1_2_4.txt")
+    all_files.append("jyHOM_RC1_2_5.txt")
+    all_files.append("jyHOM_RC1_2_6.txt")
+    all_files.append("jyHOM_RC1_2_7.txt")
+    all_files.append("jyHOM_RC1_2_8.txt")
+    all_files.append("jyHOM_RC1_2_9.txt")
+    all_files.append("jyHOM_RC1_2_10.txt")
+
+
+if 0>1:
+
+
+    all_files.append("jyHOM_RC2_2_1.txt")
+    all_files.append("jyHOM_RC2_2_2.txt")
+    all_files.append("jyHOM_RC2_2_3.txt")
+    all_files.append("jyHOM_RC2_2_4.txt")
+    all_files.append("jyHOM_RC2_2_5.txt")
+    all_files.append("jyHOM_RC2_2_6.txt")
+    all_files.append("jyHOM_RC2_2_7.txt")
+    all_files.append("jyHOM_RC2_2_8.txt")
+    all_files.append("jyHOM_RC2_2_9.txt")
+    all_files.append("jyHOM_RC2_2_10.txt")
+
 #all_files.append("jy_c109.txt")
 
-in_fold="data/"
+in_fold="dataHOM/"
 #out_fold="../ALL_JSON_BIG/out_R100_50_yes_delta/"
 #out_fold="../ALL_JSON_BIG/out_R100_50_no_reset_yes_reset_each_end/"
-out_fold="../ALL_JSON_BIG/FIX_out_R100_50_yes_reset_yes_reset_each_end/"
+out_fold="../ALL_JSON_BIG/OUT_Homburg_200_2/"
 my_json_input_path="mid_jnk"
 param_file_path="my_params_Homburg_200.json"
 for my_file in all_files:

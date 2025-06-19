@@ -274,7 +274,7 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
 
     #var_name_map = {v: f"v{i}" for i, v in enumerate(var_names)}
     var_name_map = {
-        v: v if len(v) < 100 else f"v{i}"
+        v: v if len(v) < 10 else f"v{i}"
         for i, v in enumerate(var_names)}
     con_name_map = {c: f"c{i}" for i, c in enumerate(all_con_names)}
     var_name_rev = {v_alias: v for v, v_alias in var_name_map.items()}

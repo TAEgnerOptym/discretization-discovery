@@ -16,10 +16,10 @@ def make_problem_instance(input_file_path,my_params,my_json_file_path):
     dem_thresh=naive_get_dem_thresh_list(my_instance,(my_params['dem_step_sz']))
     time_thresh=naive_get_time_thresh_list(my_instance,(my_params['time_step_sz']))
     
-    
+    print('making dem graph')
     my_dem_graph=dem_graph(my_instance,dem_thresh)
     #input('done dem')
-    #print(dem_thresh)
+    print('done dem graph')
     #input('start dem')
     my_time_graph=time_graph(my_instance,time_thresh)
     my_ng_graph=None
