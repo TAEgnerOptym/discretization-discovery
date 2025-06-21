@@ -1,5 +1,4 @@
-from call_and_run_code import call_and_run_code
-
+from BB_call_and_run_code import BB_call_and_run_code
 import argparse
 
 #default_input='data/jy_C104.txt'
@@ -8,8 +7,12 @@ default_input='jy_nyc_4.txt'
 
 do_BIG_PROBLEM=True
 if do_BIG_PROBLEM==True:
-    default_input='data/jy_C104.txt'
-default_option_path='my_params_R200.json'
+    #default_input='data/jy_RC101.txt'
+    #default_input='data/jy_C104.txt'
+    default_input='data/jy_R104.txt'
+#default_option_path='my_params_BBB.json'
+#default_option_path='my_params_BBB_C104.json'
+default_option_path='my_params_BBB_R100.json'
 
 default_my_json='../ALL_JSON_BIG/sample_json_input_description.json'
 default_out_file_path='../ALL_JSON_BIG/sample_json_output.json'
