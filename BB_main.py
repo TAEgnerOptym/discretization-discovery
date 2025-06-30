@@ -13,6 +13,7 @@ if do_BIG_PROBLEM==True:
 #default_option_path='my_params_BBB.json'
 #default_option_path='my_params_BBB_C104.json'
 default_option_path='my_params_BBB_R100.json'
+#default_option_path='my_params_BBB_RC100.json'
 
 default_my_json='../ALL_JSON_BIG/sample_json_input_description.json'
 default_out_file_path='../ALL_JSON_BIG/sample_json_output.json'

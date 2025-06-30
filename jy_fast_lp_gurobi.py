@@ -7,12 +7,21 @@ from collections import defaultdict
 import time
 import numpy as np
 import re
+import random
+import heapq
+import networkx as nx
 class jy_fast_lp_gurobi:
 
 
     def add_to_forbidden(self, vars_to_remove):
         #input('this may not work here')
-        vars_to_remove = list(set(vars_to_remove) - self.current_forbidden_vars)
+       # print('len(vars_to_remove)')
+        #print(len(vars_to_remove))
+        #input('hihi')
+        set_remove=set(vars_to_remove)
+        vars_to_remove = list(set_remove - self.current_forbidden_vars)
+        print('adding to forbidden '+str(len(vars_to_remove)))
+        #input('---')
         for var in vars_to_remove:
             var.ub = 0
             self.forbidden_var_names.add(self.var_name_rev_map[var.VarName])
@@ -28,13 +37,12 @@ class jy_fast_lp_gurobi:
 
     def remove_all_pos_red_cost_after_improvement(self):
         #input('this may not work here')
-        print('REMOVING IN len(self.pos_red_cost_removable)')
-        print(len(self.pos_red_cost_removable))
+
         self.add_to_forbidden(self.pos_red_cost_removable)
 
     def remove_all_non_pos_after_improvement(self):
         #input('this may not work here')
-        print('REMOVING IN len(self.inactive_removable_vars)')
+        print('len(self.inactive_removable_vars)')
         print(len(self.inactive_removable_vars))
         self.add_to_forbidden(self.inactive_removable_vars)
 
@@ -46,15 +54,6 @@ class jy_fast_lp_gurobi:
         self.remove_from_forbidden(selected)
     
 
-    def add_all_vars(self):
-        #input('this may not work here')
-
-        #self.forbidden_vars_with_neg_red_cost.sort(key=lambda x: -x[1])
-        #selected = [v for v, _ in self.forbidden_vars_with_neg_red_cost[:self.max_terms_add_per_round]]
-        self.remove_from_forbidden(self.current_forbidden_vars.copy())
-
-
-
 
     def __init__(self, dict_var_name_2_obj,
                  dict_var_con_2_lhs_exog,
@@ -62,41 +61,98 @@ class jy_fast_lp_gurobi:
                  dict_var_con_2_lhs_eq,
                  dict_con_name_2_eq,
                  all_possible_forbidden_names,
-                 init_forbidden_names,
-                 K=20, verbose=True, remove_choice=3, alg_use=1, debug_on=False,
-                 min_improvement_dump=0.1, epsilon=1e-4):
-
-        #print('verbose')
-        #print(verbose)
-        #input('--')
+                 init_forbidden_names,my_lower_bound_object,
+                 K=100, verbose=True, remove_choice=3, alg_use=1, debug_on=False,
+                 min_improvement_dump=0.1, epsilon=1e-4,pos_red_cut=0.01,min_dual_slack_add_poss=1,):
+        self.pos_red_cut=pos_red_cut
+        self.min_dual_slack_add_poss=min_dual_slack_add_poss
         self.options = {
                 "WLSACCESSID": "8f7bb9d6-8fe5-4349-9dd3-6abbaa9199a0",
                 "WLSSECRET": "cb02810a-e0e2-4a1f-8fc0-fd375f65fc65",
                 "LICENSEID": 2660300
         }
+        self.my_lower_bound_object=my_lower_bound_object
         self.verbose = verbose
         self.remove_choice = remove_choice
         self.alg_use = alg_use
         self.min_improvement_dump = min_improvement_dump
         self.epsilon = epsilon
         self.debug_on = debug_on
-        self.hist = {'lp': [], 'numCurMid': [], 'numCurEnd': [], 'time_iter': []}
+        self.hist = {'sum_red_cost':[],'lp': [],'numCurStart': [], 'numCurMid': [], 'numCurEnd': [], 'time_iter': []}
         self.max_terms_add_per_round = K
         self.all_possible_forbidden_names = all_possible_forbidden_names
+        self.min_forbidden_apply=len(self.my_lower_bound_object.action_2_cost)*0.095#len(self.my_lower_bound_object.action_2_cost)-9*np.sqrt(len(self.my_lower_bound_object.action_2_cost))
+        print('min_forbidden_apply')
+        print(self.min_forbidden_apply)
+        #init_forbidden_names=[]
+        self.BIG_M=20000
         self.init_forbidden_names = init_forbidden_names
+        num_adds_done=0
+        max_value=0
+        init_forbidden_names=set(init_forbidden_names)
+        for act in self.all_possible_forbidden_names:#.my_lower_bound_object.action_2_cost:
+            max_value=max([max_value,self.my_lower_bound_object.action_2_cost[act]])
+            if self.my_lower_bound_object.action_2_cost[act]>self.BIG_M:#and act in all_possible_forbidden_names:
+                init_forbidden_names.add(act)
+                num_adds_done=num_adds_done+1
+                #print('num_adds_done')
+                #print(num_adds_done)
+                #input('---')
 
+        #print('self.BIG_M)')
+        #print(self.BIG_M)
+        #print('max_value')
+        #print(max_value)
+        print('num_adds_done')
+        print(num_adds_done)
+        print('---')
+        #input('---')
+        init_forbidden_names=list(init_forbidden_names)
+        self.init_forbidden_names=init_forbidden_names
         self.dict_var_name_2_obj=dict_var_name_2_obj
         self.dict_var_con_2_lhs_exog=dict_var_con_2_lhs_exog
         self.dict_con_name_2_LB=dict_con_name_2_LB
         self.dict_var_con_2_lhs_eq=dict_var_con_2_lhs_eq
         self.dict_con_name_2_eq=dict_con_name_2_eq
         self.running_removal=False
-        #self.call_current_solver()
-        self.call_solver_warm_start()
-        #self.call_solver_one_big_extra()
-        #self.call_solver_warm_start_alternative()
-        #self.call_solver_warm_epsilon()
-        #input('all done')
+        self.K=K
+        
+        self.prepare_for_additions_novel()
+        self.prepare_for_clean_novel()
+        baseline_check_debug=False
+        baseline_valu=np.inf
+        baseline_time_lp=np.inf
+        if baseline_check_debug==True:
+            self.init_forbidden_names = []
+            print('running Baseline')
+            #self.call_solver_warm_no_path()
+            self.call_solver_baseline()#_clean_each
+            baseline_valu=self.hist['lp'][-1]
+            baseline_time_lp=self.hist['time_iter'][0]
+            self.hist = {'sum_red_cost':[],'lp': [],'numCurStart': [], 'numCurMid': [], 'numCurEnd': [], 'time_iter': []}
+            
+            
+            #input('done running baseline')
+            self.init_forbidden_names=init_forbidden_names
+        self.call_solver_warm_no_remove()
+        #self.call_solver_warm_just_use_bounds()
+        if baseline_check_debug==True and abs(baseline_valu-self.hist['lp'][-1])>0.001:
+            print('disagreement')
+            print((baseline_valu-self.hist['lp'][-1]))
+            input('ERROR')
+        #
+        if baseline_check_debug==True:
+            print('self.hist')
+            print(self.hist)
+            print('self.hist[lp]')
+            print('time iter base')
+            print(self.hist['time_iter'])
+            print('sum times')
+            print(sum(self.hist['time_iter']))
+            print('baseline_time_lp')
+            print(baseline_time_lp)
+            input('all done')
+    
     def formulate_mapping(self,model):
         dict_var_name_2_obj=self.dict_var_name_2_obj
         dict_var_con_2_lhs_exog=self.dict_var_con_2_lhs_exog
@@ -110,7 +166,8 @@ class jy_fast_lp_gurobi:
         con_name_map = {name: f"c{i}" for i, name in enumerate(original_cons)}
         self.var_name_rev_map = {v: k for k, v in var_name_map.items()}
         self.con_name_rev_map = {v: k for k, v in con_name_map.items()}
-
+        self.var_name_map=var_name_map
+        self.con_name_map=con_name_map
         safe_var_obj = {var_name_map[k]: v for k, v in dict_var_name_2_obj.items()}
         self.safe_exog = {(var_name_map[v], con_name_map[c]): coeff for (v, c), coeff in dict_var_con_2_lhs_exog.items()}
         self.safe_eq_map = {(var_name_map[v], con_name_map[c]): coeff for (v, c), coeff in dict_var_con_2_lhs_eq.items()}
@@ -146,282 +203,343 @@ class jy_fast_lp_gurobi:
             model.addConstr(expr == safe_EQ[con_name], name=con_name)
         model.update()
 
+    def prepare_for_clean_novel(self):
 
-    def call_solver_warm_epsilon(self):
-        options=self.options
-        with gp.Env(params=options) as env:
-            with gp.Model("converted_LP", env=env) as model:
-                model.setParam("OutputFlag", 1)
-                self.formulate_mapping(model)
-                model.update()
-                self.add_expressions(model)
-                self.init_key_info(model)
-               
-
-                model.update()
-                epsilon=.001
-                tiny_tiny=min([0.001,epsilon/100])
-                iter=0
-                for v in self.vars_list:
-                    if v.ub<epsilon:
-                        v.ub=epsilon
-                while(True):
-                    print('iteration')
-                    num_inf_init=0 
-                    for v in self.vars_list:
-                        if v.ub>100:
-                            num_inf_init=num_inf_init+1
-                    t1=time.time()
-                    model.optimize()
-                    t1=time.time()-t1
-
-                    self.tot_lp_time += t1
-
-                    num_add=0
-                    obj_1=model.ObjVal
-                    cur_val=dict()
-                        
+        
+        self.mapping_remove_var=dict()
+        self.mapping_remove_con=dict()
+        self.mapping_equiv=dict()
+        #add in the original varaible name and all constraints corresponding to
+        
+        for act in self.all_possible_forbidden_names:
+            self.mapping_remove_con[act]=[]
+            self.mapping_remove_var[act]=[act]
+            _, u, v = act.split("_")
+            name_uv_cap='cap_uv_'+str(u)+'_'+str(v)
+            name_uv_time='time_uv_'+str(u)+'_'+str(v)
+            self.mapping_remove_con[act].append(name_uv_cap)
+            self.mapping_remove_con[act].append(name_uv_time)
+            for h in self.nov_h_uv_2_fg:
+                for fg in self.nov_h_uv_2_fg[h][act]:
+                    f=fg[0]
+                    g=fg[1]
+                    var_name='EDGE_h='+h+'_f='+f+'_g='+g
+                    
+                    self.mapping_remove_var[act].append(var_name)
+                q=tuple([act])
+                con_name_match='action_match_h='+h+"_p="+str(act)
+                con_name_equiv='equiv_class='+h+"_q="+str(q)
+                var_equiv_remove="fill_PQ_h="+str(h)+"_q="+str(q)+"_p="+str(act)
+                self.mapping_remove_var[act].append(var_equiv_remove)
+                self.mapping_remove_con[act].append(con_name_match)
+                self.mapping_remove_con[act].append(con_name_equiv)
                 
-                    for v in self.vars_list:
-                        cur_val[v]=v.X
-                        if v.ub<gp.GRB.INFINITY and tiny_tiny>abs(cur_val[v]-v.ub):
-                            print('adding')
-                            print([cur_val[v],v.ub,tiny_tiny])
-                            v.ub = gp.GRB.INFINITY
-                            num_add=num_add+1
-                                                    
-                    iter=iter+1
-                    print('iter')
-                    print(iter)
-                    print('num_add,num_inf_init')
-                    print([num_add,num_inf_init])
-                    print('t1')
-                    print([t1,])
-                    print('[obj_1]')
-                    print([obj_1,])
-                    input('---')
-                    if num_add==0:
-                        self.grab_key_info_from_solution(model)
+            #self.mapping_remove_con[act]=[]
+    def clean_model(self,M):
+        #input('do i want to be here')
+        #remove variables forced to zero.  
+        vars_names_to_remove=[]
+        cons_names_to_remove=[]
+        TMP_var_dict = {var.VarName: var for var in M.getVars()}
+        TMP_con_dict = {con.ConstrName: con for con in M.getConstrs()}
 
-                        break
-
-    #def basis_callback(model, where):
-    #    if where == GRB.Callback.SIMPLEX:
-    #        # Access iteration count
-    #        iteration = model.cbGet(GRB.Callback.SPX_ITRCNT)
+        for var in M.getVars():
+            if var.ub<self.epsilon:
+                var.ub=np.inf
+                
+        for var in self.current_forbidden_vars:
+            var_name_orig=self.var_name_rev_map[var.VarName]
             
-    #        # For basic variables at current iteration
-            if iteration % 10 == 0:  # Every 10th iteration
-                print(f"Iteration {iteration}")
-                # You can retrieve basis status for each variable
-                # Note: This requires Gurobi version that supports this specific callback
-        input('--')
-    def call_solver_warm_start(self):
+            for v in self.mapping_remove_var[var_name_orig]:
+                vars_names_to_remove.append(v)
+            for con in self.mapping_remove_con[var_name_orig]:
+                cons_names_to_remove.append(con)
+        
+        vars_to_remove=[]
+        for var_name_orig in vars_names_to_remove:
+            var_name_compress=self.var_name_map[var_name_orig]
+            var=TMP_var_dict[var_name_compress]
+            vars_to_remove.append(var)
+        
+        cons_to_remove=[]
+        for var_name_orig in cons_names_to_remove:
+            con_name_compress=self.con_name_map[var_name_orig]
+            con=TMP_con_dict[con_name_compress]
+            cons_to_remove.append(con)
+        
+        
+        for var in vars_to_remove:
+            M.remove(var)
+        
+        for con in cons_to_remove:
+            M.remove(con)
+        return M
+    
+    def call_solver_baseline(self):
         options=self.options
-        random_num=np.random.randint(10000000)
         with gp.Env(params=options) as env:
             with gp.Model("converted_LP", env=env) as model:
                 model.setParam("OutputFlag", 1)
-                #model.setParam("Method", 0)
                 self.formulate_mapping(model)
                 model.update()
                 self.add_expressions(model)
                 self.init_key_info(model)
                
-                model.update()
-                print("FIRST")
-                print("FIRST")
-                print("FIRST")
-                print("FIRST")
-                print("FIRST")
-                print("FIRST")
-                phase_1_path="../Optym_gurobi_files/phase_1_file_num"+str(random_num)+".mps"
-                #phase_2_path="../Optym_gurobi_files/phase_2_file_num"+str(random_num)+".mps"
-                #model.write(phase_1_path)
                 t1=time.time()
                 model.optimize()
                 t1=time.time()-t1
-                obj_1=model.ObjVal
-                #model.optimize(basis_callback)
-                v_basis = model.getAttr("VBasis", model.getVars())
-                c_basis = model.getAttr("CBasis", model.getConstrs())
-                # Optional: map statuses to readable strings
-                basis_status_map = {
-                    -1: "Nonbasic at lower bound",
-                    0: "Basic",
-                    1: "Nonbasic at upper bound",
-                    2: "Superbasic (for QP problems only)"
-                }
-
-                # Example: print readable basis for variables
-                #for var, status in zip(model.getVars(), v_basis):
-                #    safe_name = var.VarName
-                #    original_name = self.var_name_rev_map.get(safe_name, safe_name)  # fallback to safe_name
-                #    print(f"{original_name}: {basis_status_map.get(status, 'Unknown')}")#self.add_all_vars()
-                cur_val=dict()
-                for v in self.vars_list:
-                    cur_val[v]=v.X
+                self.tot_lp_time += t1
+                self.hist['time_iter'].append(t1)
+                self.hist['lp'].append(model.ObjVal)
+                self.hist['numCurStart'].append(self.countCurP())
                 
-                #model.reset()
-                #model.setParam("Method", 1)  # dual simplex
-                #model.setParam("Crossover", 0) 
-                #varaible hints:  
-                    #else:
-                    #    v.Start=cur_val[v]
-                for v in self.vars_list:
-                    if v.ub<gp.GRB.INFINITY:
-                        v.ub = gp.GRB.INFINITY#gp.GRB.INFINITY
-                model.update()
-                #model.reset()
-                #model.update()
-                if 1>0:
-                    epsilon=.00001
-                    for var in model.getVars():
-                        noise = random.uniform(0, epsilon)  # new random value for each var
-                        var.Obj += noise  # update objective coefficient
-                        model.update()
-                if 1<0:
-                    z = obj_1  # Or set z = some custom upper bound
 
-    # 2. Get all variables and objective coefficients
-                    vars = model.getVars()
-                    obj_expr = gp.LinExpr()
-
-                    for v in vars:
-                        coeff = v.Obj  # Objective coefficient
-                        if coeff != 0:
-                            obj_expr.addTerms(coeff, v)
-
-                    # 3. Add the constraint: c^T x <= z
-                    model.addConstr(obj_expr <= z, name="objective_cut")
-
-                print("SECOND")
-                print("SECOND")
-                print("SECOND")
-                print("SECOND")
-                print("SECOND")
-                print("SECOND")
-                print("SECOND")
-                #model.write(phase_2_path)
-
-                t2=time.time()
-                model.optimize()
-                t2=time.time()-t2
-                self.tot_lp_time =t2+t1
-                obj_2=model.ObjVal
-                self.grab_key_info_from_solution(model)
-                print('t1,t2')
-                print([t1,t2])
-                print('[obj_1,obj_2]')
-                print([obj_1,obj_2])
-                #input('---')
-    def call_current_solver(self):
+    def call_solver_warm_just_use_bounds(self):
         options=self.options
-
-       
-
+        self.time_accel=[]
         with gp.Env(params=options) as env:
             with gp.Model("converted_LP", env=env) as model:
-                model.setParam("OutputFlag", 0)
                 self.formulate_mapping(model)
                 model.update()
                 self.add_expressions(model)
                 self.init_key_info(model)
-                iter = 0
-                #self.add_all_vars()
-                print("HELLO")
-                #model.setParam("Method", 0)
-                model.setParam("Method", 2)  # Barrier
-                model.setParam("Crossover", 1)
-                while True:
-                    iter += 1
-                    model.update()
-                    t_start = time.time()
-                    model.optimize()
-                    t_end = time.time()
-                    t_this_rount_opt=(t_end - t_start)
-                    
-                   
-                    self.tot_lp_time += t_this_rount_opt
-                    self.hist['time_iter'].append(t_this_rount_opt)
+               
 
-                    if model.Status != gp.GRB.OPTIMAL:
-                        input('status failed')
-                
-                    self.grab_key_info_from_solution(model)
-                    #self.compute_bound()
-                    self.hist['lp'].append(self.lp_obj_val)
+                model.update()
+                incubent_bound=np.inf
+                self.tot_lp_time=0
+                counter=0
+                while(True):
+                    vars_current_zero=[]
+                    for var in model.getVars():
+                        if var.ub<self.epsilon:
+                            vars_current_zero.append(var)
+                    vars_current_zero=set(vars_current_zero)  
+                    vars_names_need_zero=[]
+                    for var in self.current_forbidden_vars:
+                        var_name_orig=self.var_name_rev_map[var.VarName]
+                        
+                        for v in self.mapping_remove_var[var_name_orig]:
+                            vars_names_need_zero.append(v)
 
-                    if 1>0:
-
-                        filtered_duals = { k: v for k, v in self.lp_dual_solution.items() if k.startswith("action_match_h")}
-                        pattern = r'action_match_h=(\w+)_p=act_(\d+)_(\d+)'
-
-                        tot_uv_map=defaultdict(float)
-                        time_uv_dual_map=dict()
-                        tot_uv_map_abs=defaultdict(float)
-                        cap_uv_dual_map=dict()
-                        ng_uv_dual_map=dict()
-                        for key, value in filtered_duals.items():
-                            match = re.search(pattern, key)
-                            if match:
-                                graph_type, u, v = match.groups()
-                                u, v = int(u), int(v)
-                                tot_uv_map[(u, v)] += value
-                                tot_uv_map_abs[(u, v)] += abs(value)
-
-                                if graph_type == 'timeGraph':
-                                    time_uv_dual_map[(u, v)] = value
-                                elif graph_type == 'capGraph':
-                                    cap_uv_dual_map[(u, v)] = value
-                                elif graph_type == 'ngGraph':
-                                    ng_uv_dual_map[(u, v)] = value
-
-                    
-                    if self.lp_obj_val > self.incumbent_lp_val + 0.01:
-                        input('Bound increased unexpectedly')
-                    
-
-                    self.apply_compression(model)
-
-                    self.hist['numCurMid'].append(len(self.forbidden_var_names))
-                    self.add_neg_red_cost_vars()
-                    self.hist['numCurEnd'].append(len(self.forbidden_var_names))
-                    if self.verbose:
-                        print(f"Iter {iter}: LP={self.lp_obj_val},TimeLP={self.hist['time_iter'][-1]}, Incumbent={self.incumbent_lp_val}, "
-                            f"Neg RC={len(self.forbidden_vars_with_neg_red_cost)}, Forbidden={len(self.forbidden_var_names)}")
-                    
-                    if len(self.forbidden_vars_with_neg_red_cost) < 0.5:
+                    vars_names_need_zero=set(vars_names_need_zero)
+                    vars_need_zero=[]
+                    for v_name in vars_names_need_zero:
+                        var=self.var_dict[self.var_name_map[v_name]]
+                        vars_need_zero.append(var)
+                    vars_need_zero=set(vars_need_zero)
+                    vars_to_set_inf=vars_current_zero-vars_need_zero
+                    vars_to_set_zero=vars_need_zero-vars_current_zero
+                    print('vars_to_set_inf')
+                    print(len(vars_to_set_inf))
+                    print('vars_to_set_zero')
+                    print(len(vars_to_set_zero))
+                    if len(vars_to_set_inf)<1 and counter>0:
                         break
-                  
-        input('Done CALL')
-    def grab_key_info_from_solution(self,model):
+                    model.update()
 
-        self.lp_obj_val = model.ObjVal
+                    for var in vars_to_set_inf:
+                        #print('var_name')
+                        #print(var_name)
+                        #print('self.var_name_map[var_name]')
+                        #print(self.var_name_map[var_name])
+                        #var=self.var_dict[self.var_name_map[var_name]]
+                        var.ub=np.inf
+                    model.update()
+
+                    for var in vars_to_set_zero:
+                        #var=self.var_dict[self.var_name_map[var_name]]
+
+                        var.ub=0
+                    model.update()
+                    model.reset()
+                    t1=time.time()
+                    model.optimize()
+                    t1=time.time()-t1
+                    self.hist['time_iter'].append(t1)
+                    self.hist['lp'].append(model.ObjVal)
+                    
+                    self.hist['numCurStart'].append(self.countCurP())
+                    cur_bound=model.ObjVal
+                    self.lp_obj_val=cur_bound
+                    self.grab_key_info_from_solution(model)
+
+                    if cur_bound>incubent_bound+0.001:
+                        print('cur_bound')
+                        print(cur_bound)
+                        print('incubent_bound')
+                        print(incubent_bound)
+                        input('error here')
+                    if cur_bound<incubent_bound-0.1:
+                        self.apply_compression()
+                        incubent_bound=cur_bound
+                    self.hist['numCurMid'].append(self.countCurP())
+
+                    self.remove_from_forbidden(self.var_add_novel)
+                    self.hist['numCurEnd'].append(self.countCurP())
+
+                    #print('cur_bound')
+                    #print(cur_bound)
+                    #print('vars_to_set_inf')
+                    #print(len(vars_to_set_inf))
+                    #print('vars_to_set_zero')
+                    #print(len(vars_to_set_zero))
+                    #input('done inter')
+                    counter=counter+1
+                self.apply_compression()
+                #input('done call')
+
+    def call_solver_warm_no_remove(self):
+        options=self.options
+        self.time_accel=[]
+        with gp.Env(params=options) as env:
+            with gp.Model("converted_LP", env=env) as model:
+                model.setParam("OutputFlag", 1)
+                self.formulate_mapping(model)
+                model.update()
+                self.add_expressions(model)
+                self.init_key_info(model)
+               
+
+                model.update()
+                incubent_bound=np.inf
+                self.tot_lp_time=0
+                counter=0
+                while(True):
+                    M=model.copy()
+                    M=self.clean_model(M)
+                    M.update()
+                    M.reset()
+                    t1=time.time()
+                    M.optimize()
+                    t1=time.time()-t1
+                    self.tot_lp_time += t1
+                    
+                    self.hist['time_iter'].append(t1)
+                    self.hist['lp'].append(M.ObjVal)
+                    
+                    self.hist['numCurStart'].append(self.countCurP())
+                    cur_bound=M.ObjVal
+                    print('cur_bound')
+                    print(cur_bound)
+                    print('cur_bound')
+                    #input('cur_bound')
+                    self.grab_key_info_from_solution(M)
+                    self.hist['sum_red_cost'].append(self.sum_negative_rc)
+                    use_PGM=False
+                    if use_PGM==True:
+                        self.compute_pricing_PGM()
+                    if cur_bound>incubent_bound+0.001:
+                        print('cur_bound')
+                        print(cur_bound)
+                        print('incubent_bound')
+                        print(incubent_bound)
+                        input('error here')
+                    #if cur_bound<incubent_bound-0.1 and len(self.forbidden_var_names)<self.min_forbidden_apply:
+                    #    self.apply_compression()
+                    #    incubent_bound=cur_bound
+                        #continue
+                    self.hist['numCurMid'].append(self.countCurP())
+                    print('counter')
+                    print(counter)
+                    print('self.sum_negative_rc')
+                    print(self.sum_negative_rc)
+                    if use_PGM==True:
+                        print('self.sum_negative_rc_PGM')
+                        print(self.sum_negative_rc_PGM)
+                        print('len(self.var_add_novel_pgm)')
+                        print(len(self.var_add_novel_pgm))
+                    print('len(self.var_add_novel)')
+                    print(len(self.var_add_novel))
+                    print('len(self.dual_slack_amounts_rc_no_pgm)')
+                    print( sum(1 for v in self.dual_slack_amounts_rc_no_pgm.values() if v < -0.000001)
+)
+                    if len(self.var_add_novel)==0 and self.sum_negative_rc<-0.01:
+                        break
+                        input('nothing added with neg')
+                    if use_PGM==True:
+                        if self.sum_negative_rc_PGM>-0.0001:
+                            break
+                    else:
+                        if self.sum_negative_rc>-0.01:
+                            break
+                    if use_PGM==True:
+                        self.remove_from_forbidden(self.var_add_novel_pgm)
+                    else:
+                        self.remove_from_forbidden(self.var_add_novel)
+                    self.hist['numCurEnd'].append(self.countCurP())
+                    counter=counter+1
+                    model.update()
+                    if use_PGM==True:
+                        if len(self.var_add_novel_pgm)>0 and len(self.var_add_novel)==0:
+                            print('self.var_add_novel_pgm')
+                            print(self.var_add_novel_pgm)
+                            print('self.var_add_novel')
+                            print(self.var_add_novel)
+                            input('bgi error here')
+                    #input('----')
+                if len(self.forbidden_var_names)<self.min_forbidden_apply:
+
+                    self.apply_compression()
+
+
+   
+    def countCurP(self):
+        count=0
+        for var in self.all_removable_vars:
+            if var.ub <gp.GRB.INFINITY:
+                count=count+1
+        return count
+   
+    def grab_key_info_from_solution(self,M):
+
+        self.lp_obj_val = M.ObjVal
         
         # Primal solution with original variable names
-        lp_primal_solution = {
-            self.var_name_rev_map[v.VarName]: v.X for v in self.vars_list
-        }
+        lp_primal_solution = defaultdict(
+            lambda: 0.0,  # default value for missing keys
+            {self.var_name_rev_map[v.VarName]: v.X for v in M.getVars()}
+        )
         self.lp_primal_solution=lp_primal_solution
-        constrs = model.getConstrs()
-        pi_values = model.getAttr("Pi", constrs)
-        if self.running_removal:
-            pi_values = {
-                constr.getAttr("ConstrName"): pi
-                for constr, pi in zip(constrs, pi_values)
-                if constr.getAttr("ConstrName") not in self.cons_2_remove
-            }
-            constrs = [my_constr for my_constr in constrs if my_constr.getAttr("ConstrName") not in self.cons_2_remove]
+        constrs = M.getConstrs()
+        pi_values = M.getAttr("Pi", constrs)
         rev_map = self.con_name_rev_map
+        self.lp_dual_solution=defaultdict(float)
+        #self.lp_dual_solution = dict(zip((rev_map[c.ConstrName] for c in constrs), pi_values))
+        #self.lp_dual_solution = dict(
+        #    zip(
+        #        (rev_map[c.ConstrName] for c in constrs if c.ConstrName in rev_map),
+        #        (pi for c, pi in zip(constrs, pi_values) if c.ConstrName in rev_map)
+        #    )
+        #)
+
+        #rev_map = self.con_name_rev_map
         
         #self.lp_dual_solution = dict(zip((rev_map[c.ConstrName] for c in constrs), pi_values))
-        self.lp_dual_solution = dict(
-            zip(
-                (rev_map[c.ConstrName] for c in constrs if c.ConstrName in rev_map),
-                (pi for c, pi in zip(constrs, pi_values) if c.ConstrName in rev_map)
-            )
-        )
+        pi_values = M.getAttr("Pi", constrs)
+
+# Map from constraint object to dual value
+        constr_to_pi = dict(zip(constrs, pi_values))
+
+        self.lp_dual_solution = defaultdict(float)
+        for con in M.getConstrs():
+            con_name_simp=con.ConstrName
+            con_name=self.con_name_rev_map[con_name_simp]
+            self.lp_dual_solution[con_name] = constr_to_pi[con]
+        #for con_name, con in self.con_name_map.items():
+        #    dual_val = constr_to_pi[con]
+         #   self.lp_dual_solution[con_name] = dual_val
+        #for 
+        
+        #self.lp_dual_solution = defaultdict(
+        #    lambda: 0,
+        #    dict(
+        #        zip(
+        #            (rev_map[c.ConstrName] for c in constrs if c.ConstrName in rev_map),
+        #            (pi for c, pi in zip(constrs, pi_values) if c.ConstrName in rev_map)
+        #        )
+        #    )
+        #)
 
         self.lp_objective=self.lp_obj_val
         # Identify forbidden vars with nonzero primal values
@@ -430,45 +548,204 @@ class jy_fast_lp_gurobi:
             if lp_primal_solution.get(self.var_name_rev_map[v.VarName], 0.0) > self.epsilon
         ]
         self.inactive_removable_vars = [
-            v for v in self.current_forbidden_vars
-            if self.var_name_rev_map[v.VarName] in self.all_possible_forbidden_names and
-            abs(lp_primal_solution.get(self.var_name_rev_map[v.VarName], 0.0)) < self.epsilon
+            v for v in self.all_removable_vars
+            if lp_primal_solution.get(self.var_name_rev_map[v.VarName], 0.0) < self.epsilon
         ]
-        reduced_costs = model.getAttr("RC", self.vars_list)
+        reduced_costs = M.getAttr("RC", M.getVars())
         self.reduced_costs_dict = {
-            self.var_name_rev_map[v.VarName]: rc for v, rc in zip(self.vars_list, reduced_costs)
+            self.var_name_rev_map[v.VarName]: rc for v, rc in zip(M.getVars(), reduced_costs)
         }
-        self.forbidden_vars_with_neg_red_cost = [
-            (v, self.reduced_costs_dict.get(self.var_name_rev_map[v.VarName], 0.0))
-            for v in self.all_removable_vars
-            if self.var_name_rev_map[v.VarName] in self.forbidden_var_names and
-            self.reduced_costs_dict.get(self.var_name_rev_map[v.VarName], 0.0) < -self.epsilon
-        ]
+        
         
         self.pos_red_cost_removable = [
             v for v in self.all_removable_vars
-            if self.reduced_costs_dict.get(self.var_name_rev_map[v.VarName], 0.0) > self.epsilon
+            if self.reduced_costs_dict.get(self.var_name_rev_map[v.VarName], 0.0) > self.pos_red_cut
         ]
-        self.non_pos_red_cost_removable = [
-            v for v in self.all_removable_vars
-            if self.reduced_costs_dict.get(self.var_name_rev_map[v.VarName], 0.0) < self.epsilon
-        ]
-        #for v in self.all_removable_vars:
-        #    print('v.name')
-        #    print(v.VarName)
-        #    myRed=self.reduced_costs_dict.get(self.var_name_rev_map[v.VarName], 0.0)
-        #    print('myRed')
-        #    print(myRed)
-        #    print('v in self.current_forbidden_vars')
-         #   print(v in self.current_forbidden_vars)
-        #input('--')
-    def apply_compression(self,model):
-        if self.lp_obj_val < self.incumbent_lp_val - self.min_improvement_dump:
-            self.incumbent_lp_val = self.lp_obj_val
-            if self.remove_choice == 2:
-                self.remove_all_non_pos_after_improvement()
-            elif self.remove_choice == 3:
-                self.remove_all_pos_red_cost_after_improvement()
+        #print('set(self.pos_red_cost_removable)')
+        #print(set(self.pos_red_cost_removable))
+        #print('set(self.pos_red_cost_removable)')
+        
+        ### NEW MATERIAL
+        L=self.my_lower_bound_object
+        dual_slack_amounts=dict()
+        dual_con_contrib=dict()
+        dual_big_edge_contrib=dict()
+        for act_uv in L.action_2_cost:
+            dual_slack_amounts[act_uv]=0
+            dual_con_contrib[act_uv]=0
+            dual_big_edge_contrib[act_uv]=0
+ 
+        for v_con in L.action_con_2_contrib:
+            var_name=v_con[0]
+            con_name=v_con[1]
+            weight_use=L.action_con_2_contrib[v_con]
+            dual_val=self.lp_dual_solution[con_name]
+            sign_use=-1
+            tmp=sign_use*weight_use*dual_val
+            dual_con_contrib[var_name]+=tmp
+        self.dual_con_contrib=dual_con_contrib
+        dual_big_edge_contrib_by_h=dict()
+        dual_slack_amounts_components=dict()
+        dual_con_from_lp=dict()
+
+        for my_act in L.action_2_cost:
+            dual_con_from_lp[my_act]=dict()
+            dual_big_edge_contrib_by_h[my_act]=dict()
+            trm1=self.dict_var_name_2_obj[my_act]
+            trm2=dual_con_contrib[my_act]
+            trm_3=0
+            if my_act not in self.forbidden_var_names and my_act !=L.null_action:
+                for h in self.nov_h_uv_2_fg:
+                    con_name='action_match_h='+h+"_p="+my_act
+                    dual_val=self.lp_dual_solution[con_name]
+                    dual_con_from_lp[my_act][h]=dual_val
+            for h in self.nov_h_uv_2_fg:
+                trm3_by_part=np.inf
+                
+                for fg in self.nov_h_uv_2_fg[h][my_act]:
+                    f=fg[0]
+                    g=fg[1]
+                    dual_f=0
+                    dual_g=0
+                    if f!=self.nov_source_node[h]:
+                        flow_con_name_f='flow_in_out_h='+h+"_n="+f#self.nov_node_2_flow_con_name[node_f]
+                        dual_f=self.lp_dual_solution[flow_con_name_f]
+                    if g!=self.nov_sink_node[h]:
+                        flow_con_name_g='flow_in_out_h='+h+"_n="+g#self.nov_node_2_flow_con_name[node_g]
+                        dual_g=self.lp_dual_solution[flow_con_name_g]
+                    
+                    
+
+                    dual_fg_gap=-dual_f+dual_g
+                    
+                    trm3_by_part=min([trm3_by_part,dual_fg_gap])
+                    
+                dual_big_edge_contrib_by_h[my_act][h]=trm3_by_part
+            trm3=sum(dual_big_edge_contrib_by_h[my_act].values())
+            dual_big_edge_contrib[my_act]=trm3
+            
+            dual_slack_amounts_components[my_act]=[trm1,trm2,trm3]
+            dual_slack_amounts[my_act]=trm1+trm2+trm3
+            
+        self.dual_big_edge_contrib_by_h=dual_big_edge_contrib_by_h
+        self.sum_negative_rc = 0
+        self.dual_con_from_lp=dual_con_from_lp
+        self.dual_slack_amounts=dual_slack_amounts.copy()
+        for v in dual_slack_amounts:
+            if dual_slack_amounts[v]<-0.000001:
+                self.sum_negative_rc=self.sum_negative_rc+dual_slack_amounts[v]
+            #    print('dual_slack_amounts[v]')
+            #    print(dual_slack_amounts[v])
+            #    print('self.dual_big_edge_contrib_by_h[v]')
+            #    print(self.dual_big_edge_contrib_by_h[v])
+            #    input('---')
+            if v not in self.forbidden_var_names:
+                dual_slack_amounts[v]=np.inf
+                #print('my_act')
+                #print(my_act)
+                #input('got one')
+        self.dual_slack_amounts_rc_no_pgm=dual_slack_amounts
+        selected = heapq.nsmallest(self.K, (v_uv for v_uv in dual_slack_amounts.items() if v_uv[1] < self.min_dual_slack_add_poss), key=lambda t: t[1])
+        
+        if 1>0:
+            lowest_val_by_u=dict()
+            lowest_val_by_v=dict()
+            lowest_act_by_u=dict()
+            lowest_act_by_v=dict()
+
+            for my_act in dual_slack_amounts:
+                this_red_cost=dual_slack_amounts[my_act]
+                if this_red_cost<-0.01:#self.min_dual_slack_add_poss:
+                    _, u, v = my_act.split("_")
+                    if u not in lowest_val_by_u or lowest_val_by_u[u]>this_red_cost:
+                        lowest_val_by_u[u]=this_red_cost
+                        lowest_act_by_u[u]=my_act
+                    if v not in lowest_val_by_v or lowest_val_by_v[v]>this_red_cost:
+                        lowest_val_by_v[v]=this_red_cost
+                        lowest_act_by_v[v]=my_act
+            all_terms_add=[]
+            s1=set(lowest_act_by_u.values())
+            s2=set(lowest_act_by_v.values())
+            s3 = [
+                v for v, _ in heapq.nsmallest(
+                    self.K,
+                    ((v, slack) for v, slack in dual_slack_amounts.items() if slack < -0.001),
+                    key=lambda t: t[1]
+                )
+            ]           
+            #if len(s1)<len(s2):#len(set(lowest_act_by_u.values()))<len(set(lowest_act_by_v.values())):
+            #    selected=s1#s
+            #else:
+            #    selected=s2
+            selected=s1| s2 #|set(s3)
+        self.var_add_novel=[]
+        #print('dual_slack_amounts')
+        #print(dual_slack_amounts)
+        #print('selected')
+        #print(selected)
+        #print('selected')
+        #print('self.sum_negative_rc')
+        #print(self.sum_negative_rc)
+        #print('---')
+        for act_u_v_term in selected:
+            act_u_v=act_u_v_term#[0]
+            var_name_compress=self.var_name_map[act_u_v]
+            var=self.var_dict[var_name_compress]
+            self.var_add_novel.append(var)
+    
+    def prepare_for_additions_novel(self):
+        L=self.my_lower_bound_object
+        #nov_source_node
+        self.nov_source_node=dict()
+        self.nov_sink_node=dict()
+        for h in L.all_graph_names:
+            source_i=L.h_2_source_id[h]
+            sink_i=L.h_2_sink_id[h]
+            source_f=L.graph_node_2_agg_node[h][source_i]
+            sink_f=L.graph_node_2_agg_node[h][sink_i]
+            self.nov_source_node[h]=source_f
+            self.nov_sink_node[h]=sink_f
+
+
+
+
+        #nov_h_uv_2_fg
+        self.nov_h_uv_2_fg=dict()
+        for h in L.graph_names:
+            self.nov_h_uv_2_fg[h]=dict()
+            self.nov_h_uv_2_fg[h][L.null_action]=[]
+            for my_act in L.all_actions:
+                self.nov_h_uv_2_fg[h][my_act]=[]
+        
+        for h in L.graph_names:
+            for fg in L.h_fg_2_q[h]:
+                if len(L.h_fg_2_q[h][fg])!=1:
+                    print('fg')
+                    print(fg)
+                    print('L.h_fg_2_q[h][fg]')
+                    print(L.h_fg_2_q[h][fg])
+                    input('this is not incorrect but I am assuming for now that p is single element')
+                
+                for my_act in L.h_fg_2_q[h][fg]:
+                    
+                    #print('h')
+                    #print(h)
+                    #print('my_act')
+                    #print(my_act)
+                    #print('L.null_action')
+                    #print(L.null_action)
+                    self.nov_h_uv_2_fg[h][my_act].append(fg)                    
+
+     
+
+
+    def apply_compression(self,):
+        #if self.lp_obj_val < self.incumbent_lp_val - self.min_improvement_dump:
+        self.incumbent_lp_val = self.lp_obj_val
+        if self.remove_choice == 2:
+            self.remove_all_non_pos_after_improvement()
+        elif self.remove_choice == 3:
+            self.remove_all_pos_red_cost_after_improvement()
     def init_key_info(self,model):
     ###    return model, var_dict, var_name_rev_map, con_name_rev_map
         model.ModelSense = gp.GRB.MINIMIZE
@@ -476,7 +753,10 @@ class jy_fast_lp_gurobi:
         ####def setup_alg(self):
         self.forbidden_var_names = set()
         self.tot_lp_time = 0
-        self.all_removable_vars = [self.var_dict[name] for name in self.var_dict if self.var_name_rev_map[name] in self.all_possible_forbidden_names]
+        self.all_removable_vars=[]
+        for my_act_name in self.all_possible_forbidden_names:
+            self.all_removable_vars.append(self.var_dict[self.var_name_map[my_act_name]])
+        #self.all_removable_vars = [self.var_dict[name] for name in self.var_dict if self.var_name_rev_map[name] in self.all_possible_forbidden_names]
         self.vars_list = list(model.getVars())
 
 
@@ -485,217 +765,237 @@ class jy_fast_lp_gurobi:
         self.current_forbidden_vars = set()
         self.forbidden_var_names = set()
 
-        vars_to_forbid = [self.var_dict[name] for name in self.var_dict if self.var_name_rev_map[name] in self.init_forbidden_names]
+
+        vars_to_forbid=[]
+        for my_act_name in self.init_forbidden_names:
+            vars_to_forbid.append(self.var_dict[self.var_name_map[my_act_name]])
+        
+        #vars_to_forbid = [self.var_dict[name] for name in self.var_dict if self.var_name_rev_map[name] in self.init_forbidden_names]
         self.add_to_forbidden(vars_to_forbid)
 
 
-        if len(self.forbidden_var_names) == 0:
-            print("No forbidden variables found in model. This may be a typo.")
-            input('---')
+       # if len(self.forbidden_var_names) == 0:
+       #     print("No forbidden variables found in model. This may be a typo.")
+       #     input('---')
 
+    def compute_pricing_PGM(self):
+        self.all_actions=self.my_lower_bound_object.action_2_cost.keys()
+        L=self.my_lower_bound_object
+        
+        self.edge_weight_pricing_graph=dict()
+        H=self.nov_h_uv_2_fg.keys()
 
-#                    uv_2_red=dict()
-#                    for uv in tot_uv_map_abs:
-#                        u=uv[0]
-#                        v=uv[1]
-#                        my_name='act_'+str(u)+'_'+str(v)
-#                        uv_2_red[uv]=self.reduced_costs_dict[my_name]
-#                        if tot_uv_map_abs[uv]>.0001:
-#                            print('---******--')
-#
-  #                          print('ng_uv_dual_map[uv]')
-  #                          print(ng_uv_dual_map[uv])
-  #                          print('cap_uv_dual_map[uv]')
-  #                          print(cap_uv_dual_map[uv])
-  #                          print('time_uv_dual_map[uv]')
-  #                          print(time_uv_dual_map[uv])
-  #                          print('tot_uv_map[uv]')
-  #                          print(tot_uv_map[uv])
-  #                          print('uv_2_red')
-  #                          print(uv_2_red[uv])
-  #                          input('--')
-  #                          print('-----')
-  #                  print('hihi')
-    def call_solver_warm_start_alternative(self):
-        options=self.options
-        self.running_removal=True
-        with gp.Env(params=options) as env:
-            with gp.Model("converted_LP", env=env) as model:
-                model.setParam("OutputFlag", 1)
-                model.setParam("Method", 0)
-                self.formulate_mapping(model)
-                model.update()
-                self.add_expressions(model)
-                self.init_key_info(model)
-                model.update()
-
-                cons_2_remove=[]
-                con_name_2_var=dict()
-                my_count_2_rem=0
-                #input('hello')
-                for v in self.vars_list:
-                    if v.ub<gp.GRB.INFINITY:
-                        expr = gp.LinExpr()
-                        expr.addTerms(1, v)
-                        con_name="con_to_remove"+str(my_count_2_rem)
-                        cons_2_remove.append(con_name)
-                        model.addConstr(expr <= 0, name=con_name)
-                        #print('con_name')
-                        #print(con_name)
-                        con_name_2_var[con_name]=v
-                        v.ub = gp.GRB.INFINITY
-                        my_count_2_rem=my_count_2_rem+1
-                self.cons_2_remove=cons_2_remove
-                model.update()
-               
-                print("FIRST")
-                print("FIRST")
-                print("FIRST")
-                print("FIRST")
-                print("FIRST")
-                print("FIRST")
-
-                t1=time.time()
-                model.optimize()
-                t1=time.time()-t1
-                obj_1=model.ObjVal
-                #self.add_all_vars()
-                cur_val=dict()
-                for v in self.vars_list:
-                    cur_val[v]=v.X
-                all_constrs = model.getConstrs()
-
-                # Step 2: Create a mapping from constraint names to constraint objects
-                name_to_constr = {c.ConstrName: c for c in all_constrs}
-               
-                model.update()
-
-                for name in cons_2_remove:
-                    if name in name_to_constr:
-                        
-                        #model.remove(name_to_constr[name])
-                        
-                        constr=name_to_constr[name]
-                        #constr.RHS = 1e20
-                        #if 10:
-                        #    constr.RHS = 1e20
-                        #else:
-                        var=con_name_2_var[name]
-                        model.chgCoeff(constr, var, -1)
-                # Step 4: Update the model structure
-                model.update()
-                #model.reset()
-                #model.setParam("Method", 1)  # dual simplex
-                #model.setParam("Crossover", 0) 
-                    #else:
-                    #    v.Start=cur_val[v]
-                #for v in self.vars_list:
-               #     if v.ub<gp.GRB.INFINITY:
-               #         v.ub = gp.GRB.INFINITY#gp.GRB.INFINITY
-               # model.update()
-
-                print("SECOND")
-                print("SECOND")
-                print("SECOND")
-                print("SECOND")
-                print("SECOND")
-                print("SECOND")
-                print("SECOND")
+        phi_by_h_p=dict()
+        E_by_h=dict()
+        for h in H:
+            phi_by_h_p[h]=dict()
+            E_by_h[h]=dict()
+        for my_act in self.all_actions:
+            if my_act=='null_action':
+                continue
+            trm1=self.dict_var_name_2_obj[my_act]
+            trm2=self.dual_con_contrib[my_act]
+            trm3=sum(self.dual_big_edge_contrib_by_h[my_act].values())
+           # print('[trm1,trm2,trm3,my_act in self.forbidden_var_names]')
+           # print([trm1,trm2,trm3,my_act in self.forbidden_var_names])
+            do_add_epsilon=False
+            if abs(trm3)<self.epsilon:
+                do_add_epsilon=True
+                if trm3>=0:
+                    trm3=(len(H)*self.epsilon)
+                else:
+                    trm3=-(len(H)*self.epsilon)
+            #print('my_act')
+            #print(my_act)
+            trm4=sum(self.dual_big_edge_contrib_by_h[my_act].values())
+            slack=trm1+trm2+trm4
+            for h in H:
+                #print('in H')
+                #print(h)
+                #this_weight=self.dual_big_edge_contrib_by_h[my_act][h]#+self.epsilon
+                #if do_add_epsilon:
+                #    this_weight=trm3/len(H)
                 
-                t2=time.time()
-                model.optimize()
-                t2=time.time()-t2
-                self.tot_lp_time =t2+t1
-                obj_2=model.ObjVal
-                self.grab_key_info_from_solution(model)
-                print('t1,t2')
-                print([t1,t2])
-                print('[obj_1,obj_2]')
-                print([obj_1,obj_2])
-                input('---')
-    
-    def call_solver_one_big_extra(self):
-        options=self.options
-        with gp.Env(params=options) as env:
-            with gp.Model("converted_LP", env=env) as model:
-                model.setParam("OutputFlag", 1)
-                #model.setParam("Method", )
-                self.formulate_mapping(model)
-                model.update()
-                self.add_expressions(model)
-                self.init_key_info(model)
-               
-                model.update()
-                print("FIRST")
-                print("FIRST")
-                print("FIRST")
-                print("FIRST")
-                print("FIRST")
-                print("FIRST")
+                dual_val=self.dual_big_edge_contrib_by_h[my_act][h]
+                phi_by_h_p[h][my_act]=dual_val#-(slack/len(H))
+                if h=='timeGraph':
+                    phi_by_h_p[h][my_act]=phi_by_h_p[h][my_act]-slack
+                    #phi_by_h_p[h][my_act]=(-trm1-trm2)*this_weight/trm3
+                    #phi_by_h_p[h][my_act]=-slack/len(H)
 
-                t1=time.time()
-                model.optimize()
-                t1=time.time()-t1
-                obj_1=model.ObjVal
-                model.optimize()
-# Solve the model
+                #print('phi_by_h_p[h][my_act]')
+                #print(phi_by_h_p[h][my_act])
+                #print('h')
+                #print(h)
+                #print('my_act')
+                #print(my_act)
+                #print('this_weight')
+                #print(this_weight)
+                #print('trm3')
+                #print(trm3)
+                #print('do_add_epsilon')
+                #print(do_add_epsilon)
+                if my_act not in self.forbidden_var_names and my_act!='null_action':
+                    
+                    if (phi_by_h_p[h][my_act]-dual_val)>0.01:
+                        print('-------')
+                        print('-------')
+                        print('-------')
+                        print('-------')
+                        print('my_act')
+                        print(my_act)
+                        print('dual_val')
+                        print(dual_val)
+                        print('phi_by_h_p[h][my_act]')
+                        print(phi_by_h_p[h][my_act])
+                        print('self.dual_big_edge_contrib_by_h[my_act]')
+                        print(self.dual_big_edge_contrib_by_h[my_act])
+                        print('this_weight')
+                        print(this_weight)
+                        print('trm3')
+                        print(trm3)
+                        print('[trm1,trm2]')
+                        print([trm1,trm2])
+                        print()
 
-                # Step 1: Get the objective value of the current solution
-                # Step 1: Solve the model
+                        input('wrong lilely could be numerical ')
+                #print('here')
+                #print('self.dual_big_edge_contrib_by_h[my_act]')
+                #print(self.dual_big_edge_contrib_by_h[my_act])
+                #print('self.dual_slack_amounts[my_act]')
+                #print(self.dual_slack_amounts[my_act])
+                #print('phi_by_h_p[h][my_act]')
+                #print(phi_by_h_p[h][my_act])
+                #input('hihii')
 
-                # Step 2: Extract the solution's objective value
-                # Step 1: Solve the model
-                model.optimize()
+                #if phi_by_h_p[h][my_act]>0.1:
+                #    print('phi_by_h_p[h][my_act]')
+                #    print(phi_by_h_p[h][my_act])
+                #    
+                #    input('found one ')
+            #print('self.dual_big_edge_contrib_by_h[my_act]')
+            #print(self.dual_big_edge_contrib_by_h[my_act])
+            #print('trm3')
+            #print(trm3)
+            #print('[trm1,trm2]')
+            #print([trm1,trm2])
+            #print('[phi_by_h_p][TIME][my_act]')
+            #print(phi_by_h_p['timeGraph'][my_act]) 
+            #print('ng')
+            #print(phi_by_h_p['ngGraph'][my_act]) 
+            #input('---')
+        L=self.my_lower_bound_object
+        all_p_found=set([])
+        self.sum_negative_rc_PGM = 0
+        for h in H:
+            source=L.graph_node_2_agg_node[h][L.h_2_source_id[h]]
+            sink=L.graph_node_2_agg_node[h][L.h_2_sink_id[h]]
+            phi_by_h_p[h]['null_action']=0
 
-                # Step 2: Extract the solution's objective value
-                solution_obj = model.ObjVal
-                obj_1=solution_obj
-                # Step 3: Get current variable values
-                vars = model.getVars()
-                x_vals = model.getAttr("X", vars)
+            E_list=[]
+            for fg in L.h_fg_2_q[h]:
+                f=fg[0]
+                g=fg[1]
+                q=L.h_fg_2_q[h][fg]
+                p=q[0]
+                weight=-phi_by_h_p[h][p]+0.01
+                #if weight<0:
+                #    print('weight')
+                #    print(weight)
+                #    input('check')
+                E_list.append([f,g,weight,p])
+            #print(E_list)
+            #input('----')
+            out_dict_h=self.analyze_path_or_cycle(E_list, source, sink)
+            if out_dict_h['cost']<-0.1 or out_dict_h['type']=='negative_cycle':
+                #for p in out_dict_h['p_terms']:
+                #    if p_to_cost[p]=min(p_to_cost[p])
+                tmp=set(out_dict_h['p_terms']).intersection(set(self.forbidden_var_names))
+                if len(tmp)<1:
+                    print('out_dict_h')
+                    print(out_dict_h)
+                    print('out_dict_h[cost]')
+                    print(out_dict_h['cost'])
+                    print('out_dict_h[type]')
+                    input('error here')
+                all_p_found=all_p_found.union(tmp)
+                
+                self.sum_negative_rc_PGM=self.sum_negative_rc_PGM+out_dict_h['cost']
+            #print('h')
+            #print(h)
+            #print('out_dict_h[cost')
+            #print(out_dict_h['cost'])
+        self.var_add_novel_pgm=[]
 
-                # Step 4: Build a fast lookup dictionary: variable index → value
-                x_val_dict = {var.index: val for var, val in zip(vars, x_vals)}
+        #print('all_p_found')
+        #print(all_p_found)
+        #print('all_p_found')
+        #print('self.var_name_map')
+        #print(self.var_name_map)
+        did_find=False
+        #all_p_found=set(all_p_found)-set(self.forbidden_var_names)
+        for act_u_v in all_p_found:
+            #print('act_u_v')
+            #print(act_u_v)
+            #print('act_u_v')
+            var_name_compress=self.var_name_map[act_u_v]
+            var=self.var_dict[var_name_compress]
+            self.var_add_novel_pgm.append(var)
 
-                # Step 5: Compute LHS values for each constraint
-                constrs = model.getConstrs()
-                lhs_vals = []
+    def analyze_path_or_cycle(self,E_list, source, sink):
+        G = nx.DiGraph()
+        for f, g, weight, p in E_list:
+            G.add_edge(f, g, weight=weight, p=p)
 
-                for constr in constrs:
-                    row = model.getRow(constr)         # LinExpr
-                    row_lhs = 0.0
-                    for i in range(row.size()):
-                        var = row.getVar(i)
-                        coeff = row.getCoeff(i)
-                        row_lhs += x_val_dict[var.index] * coeff
-                    lhs_vals.append(row_lhs)
+        try:
+            # Attempt shortest path using Bellman-Ford (handles negative weights)
+            path = nx.bellman_ford_path(G, source, sink, weight='weight')
+            cost = nx.path_weight(G, path, weight='weight')
+            p_terms = {G[u][v]['p'] for u, v in zip(path, path[1:])}
+            #print('path')
+            #print(path)
+            #print('p_terms')
+            #print((u, v, G[u][v]['weight'], G[u][v]['p']) for u, v in zip(path, path[1:]))
+            #print('cost')
+            #print(cost)
+            #print('---')
 
-                if 1>0:
-                    # Step 6: Create a new variable representing this solution
-                    new_var = model.addVar(obj=solution_obj+.01, name="column_from_solution")
-
-                    # Step 7: Set this variable’s coefficients in each constraint
-                    for constr, lhs_val in zip(constrs, lhs_vals):
-                        model.chgCoeff(constr, new_var, lhs_val)
-
-                # Step 8: Finalize model update
-                for v in self.vars_list:
-                    if v.ub<gp.GRB.INFINITY:
-                        v.ub = gp.GRB.INFINITY#gp.GRB.INFINITY
-                model.update()
-
-                # Finalize model update
-                model.update()
-                model.reset()
-                model.update()
-                t2=time.time()
-                model.optimize()
-                t2=time.time()-t2
-                obj_2=model.ObjVal
-                self.tot_lp_time =t2+t1
-                self.grab_key_info_from_solution(model)
-                print('t1,t2')
-                print([t1,t2])
-                print('[obj_1,obj_2]')
-                print([obj_1,obj_2])
-                input('---')
+            return {
+                "type": "shortest_path",
+                "cost": cost,
+                "path": [(u, v, G[u][v]['weight'], G[u][v]['p']) for u, v in zip(path, path[1:])],
+                "p_terms": p_terms
+            }
+        except nx.NetworkXUnbounded:
+            # Negative cycle detected
+            for cycle in nx.simple_cycles(G):
+                # Check if it's truly negative
+                cycle_edges = list(zip(cycle, cycle[1:] + [cycle[0]]))
+                weight_sum = sum(G[u][v]['weight'] for u, v in cycle_edges)
+                #print('cycle_edges')
+                #print(cycle_edges)
+                #print('G[u][v][p] for u, v in cycle_edges')
+                #p#rint(G[u][v]['p'] for u, v in cycle_edges)
+                #p#rint('weight_sum')
+                #print(weight_sum)
+                #print('---')
+                if weight_sum < 0:
+                    return {
+                        "type": "negative_cycle",
+                        "cost": weight_sum,
+                        "cycle": [(u, v, G[u][v]['weight'], G[u][v]['p']) for u, v in cycle_edges],
+                        "p_terms": {G[u][v]['p'] for u, v in cycle_edges}
+                    }
+            return {
+                "type": "negative_cycle_detected_but_not_extracted",
+                "cost": None,
+                "cycle": [],
+                "p_terms": set()
+            }
+        except nx.NetworkXNoPath:
+            return {
+                "type": "no_path",
+                "cost": None,
+                "path": [],
+                "p_terms": set()
+            }

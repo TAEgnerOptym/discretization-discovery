@@ -1118,8 +1118,11 @@ class lower_bound_LP_milp:
 
 
     def call_gurobi_solver(self):
-    
-        if len(self.full_prob.history_dict['lp_time_compress'])<1 or  self.full_prob.jy_opt['use_julians_custom_lp_solver']<0.5:
+        did_call_gur_warm=False
+        GUR_CLASS_lp_prob=[]
+        self.new_actions_ignore=None
+        #if len(self.full_prob.history_dict['lp_time_compress'])<1 or  self.full_prob.jy_opt['use_julians_custom_lp_solver']<0.5:
+        if  self.full_prob.jy_opt['use_julians_custom_lp_solver']<0.5:
 
             if 1<0:
                 input('i dont want to be here since i am usign bounds')
@@ -1170,22 +1173,40 @@ class lower_bound_LP_milp:
             #
             #self.actions_ignore_2=set(self.all_actions)-self.full_prob.all_actions_ever_seen
             #self.actions_ignore_2=self.actions_ignore_2.union(self.full_prob.all_actions_not_source_sink_connected)
+            did_call_gur_warm=True
             GUR_CLASS_lp_prob,time_lp_1=warm_start_lp_using_class_gurobi(self.dict_var_name_2_obj,
                     self.dict_var_con_2_lhs_exog,
                     self.dict_con_name_2_LB,
                     self.dict_var_con_2_lhs_eq,
-                    self.dict_con_name_2_eq,self.full_prob.all_actions_not_source_sink_connected,self.actions_ignore)
+                    self.dict_con_name_2_eq,self.full_prob.all_actions_not_source_sink_connected,self.actions_ignore,self)
             self.lp_primal_solution=GUR_CLASS_lp_prob.lp_primal_solution
             self.lp_objective=GUR_CLASS_lp_prob.lp_objective
             self.lp_dual_solution=GUR_CLASS_lp_prob.lp_dual_solution
             self.lp_time=time_lp_1
+            self.new_actions_ignore=list(GUR_CLASS_lp_prob.forbidden_var_names)
             #input('hi im here')
-        self.new_actions_ignore=[]#self.full_prob.all_actions_not_source_sink_connected.copy()
+            if len(self.full_prob.history_dict['lp_time_compress'])<1:
+                print('GUR_CLASS_lp_prob.hist')
+                print(GUR_CLASS_lp_prob.hist)
+                #print('self.actions_ignore')
+                #print(self.actions_ignore)
+                #input('myHist Here')
+        if self.new_actions_ignore==None:
+            self.new_actions_ignore=[]
+            for my_act in self.full_prob.all_actions_not_source_sink_connected:
+                if self.lp_primal_solution[my_act]==0:
+                    self.new_actions_ignore.append(my_act)
+        
 
-        for my_act in self.full_prob.all_actions_not_source_sink_connected:
-            if self.lp_primal_solution[my_act]==0:
-                self.new_actions_ignore.append(my_act)
-
+        #print('set(self.new_actions_ignore)-set(self.actions_ignore)')
+        #print(set(self.new_actions_ignore)-set(self.actions_ignore))
+        #print('set(self.actions_ignore)-set(self.new_actions_ignore)')
+        #print(set(self.actions_ignore)-set(self.new_actions_ignore))
+        #print('len(self.new_actions_ignore)')
+        #print(len(self.new_actions_ignore))
+        #print('len(self.actions_ignore)')
+        #print(len(self.actions_ignore))
+        #input('---')
     def call_gurobi_milp_solver(self):
         out_solution=[]
 

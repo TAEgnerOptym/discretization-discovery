@@ -2,7 +2,10 @@ import xpress as xp
 import time
 import numpy as np
 from  jy_fast_lp import jy_fast_lp
+#from  jy_fast_lp_gurobi import jy_fast_lp_gurobi
 from  jy_fast_lp_gurobi import jy_fast_lp_gurobi
+#from  Backup_jy_fast_lp_gurobi import jy_fast_lp_gurobi
+
 def warm_start_lp(lp_prob, var_dict, zero_names, flags='d'):
     """
     Warm‐start an LP by first fixing a subset of vars to zero,
@@ -306,7 +309,7 @@ def forbidden_variables_loop_dual(lp_prob, var_dict, forbidden_var_names, K=20, 
             for v in vars_to_restrict
             if v.name in forbidden_var_names and reduced_costs_dict.get(v.name, 0.0) < -1e-8
         ]
-
+        
         if verbose:
             print(f"Active forbidden variables with nonzero values: {len(active_vars_with_vals)}")
 
@@ -369,11 +372,11 @@ def warm_start_lp_using_class_gurobi(dict_var_name_2_obj,
                     dict_var_con_2_lhs_exog,
                     dict_con_name_2_LB,
                     dict_var_con_2_lhs_eq,
-                    dict_con_name_2_eq, all_possible_forbidden_names,cur_forbidden_name):
+                    dict_con_name_2_eq, all_possible_forbidden_names,cur_forbidden_name,my_lower_bound_object):
 
     my_jy_lp_fast=jy_fast_lp_gurobi(dict_var_name_2_obj,
                     dict_var_con_2_lhs_exog,
                     dict_con_name_2_LB,
                     dict_var_con_2_lhs_eq,
-                    dict_con_name_2_eq,all_possible_forbidden_names,cur_forbidden_name)
+                    dict_con_name_2_eq,all_possible_forbidden_names,cur_forbidden_name,my_lower_bound_object)
     return [my_jy_lp_fast,my_jy_lp_fast.tot_lp_time]
