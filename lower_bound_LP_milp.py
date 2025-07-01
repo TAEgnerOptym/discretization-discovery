@@ -97,6 +97,18 @@ class lower_bound_LP_milp:
         self.filter_constraints()
         self.times_lp_times['filetering']=time.time()-t1
 
+        if 'var_int_names_fancy_branch' in self.full_prob.D:
+            big_M=2000000
+            if self.OPT_do_ilp>0.5:
+                for var_force_integ in self.full_prob.D['var_int_names_fancy_branch']:
+                    self.dict_var_name_2_is_integer[var_force_integ]=1
+            for var_penalty in self.full_prob.D['var_cont_names_fancy_branch']:
+                self.dict_var_name_2_obj[var_penalty]=big_M
+            print('fancy1')
+            print(self.full_prob.D['var_int_names_fancy_branch'])
+            print('fancy 2')
+            print(self.full_prob.D['var_cont_names_fancy_branch'])
+            input('here')
         if self.OPT_do_ilp==0:
             
             #if self.full_prob.jy_opt['use_delta_in_lp']==False:

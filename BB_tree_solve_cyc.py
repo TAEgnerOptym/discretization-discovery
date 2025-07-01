@@ -38,7 +38,7 @@ class aux_constr:
         self.my_var_name_slack_pos='Delta_var_branch_slack_pos'+str(g)
         self.my_var_name_slack_neg='Delta_var_branch_slack_neg'+str(g)
 class BBNode:
-    def __init__(self,my_BB_tree, must_be_zero, must_be_one, parent,my_aux_constrs):
+    def __init__(self,my_BB_tree, parent,my_aux_constrs):
         """
         Initialize a branch-and-bound node.
 
@@ -52,16 +52,14 @@ class BBNode:
 
         self.M=self.my_BB_tree.BIG_M
         self.act_src_map=self.my_BB_tree.act_src_map
-        self.must_be_zero = must_be_zero
-        self.must_be_one = must_be_one
+        #self.must_be_zero = must_be_zero
+        #self.must_be_one = must_be_one
         self.parent = parent
         self.my_aux_constrs=my_aux_constrs
         self.add_aux_constrs()
         self.add_aux_bounds()
         self.actions_ignore=None#self.self.all_actions_not_source_sink_connected
-        self.pre_process_all_branching()
 
-        self.apply_branching_penalties_fast()
         jy_opt=self.my_BB_tree.my_params
         debug_bef_vals=dict()
         self.par_lb=0
@@ -132,7 +130,7 @@ class BBNode:
                     branch_term_cur=my_act
                     biggest_prod=y*(1-y)
         self.term_2_branch_on=branch_term_cur
-        self.select_branch_customer()
+        self.eval_separ()
         self.data=dict()
         self.data['LB']=self.LB
         self.data['LB_init']=self.LB_init
@@ -145,15 +143,17 @@ class BBNode:
         self.data['parent_slack']=self.parent_slack
         self.data['prob_sizes_at_start_last_iter']=self.my_solver.history_dict['prob_sizes_at_start'][-1]
         self.data['primal_sol_act_sparse']=self.primal_sol_act_sparse
-        self.data['must_be_zero']=list(self.must_be_zero)
-        self.data['must_be_one']=list(self.must_be_one)
+        #self.data['must_be_zero']=list(self.must_be_zero)
+        #self.data['must_be_one']=list(self.must_be_one)
         self.data['lb_hist']=list(self.my_solver.history_dict['lblp_lower'])
     
     def add_aux_constrs(self):
 
+        self.D['actionCon2Contrib']=self.my_BB_tree.D['actionCon2Contrib'].copy()
+        self.D['allExogNames']=self.my_BB_tree.D['allExogNames'].copy()
         self.D['exogName2Rhs']=self.my_BB_tree.D['exogName2Rhs'].copy()
-        self.D['action_con_2_contrib']=self.my_BB_tree.D['action_con_2_contrib'].copy()
-        self.D['all_delta']=self.my_BB_tree.D['all_delta'].copy()
+        self.D['deltaCon2Contrib']=self.my_BB_tree.D['deltaCon2Contrib'].copy()
+        self.D['allDelta']=self.my_BB_tree.D['allDelta'].copy()
         self.D['delta_name_2_ub']=self.my_BB_tree.D['delta_name_2_ub'].copy()
         self.D['delta_name_2_lb']=self.my_BB_tree.D['delta_name_2_lb'].copy()
         self.D['con_names_fancy_branch']=[]
@@ -167,17 +167,21 @@ class BBNode:
             my_var_slack_neg=my_con.my_var_name_slack_neg
             g=my_con.g
 
-            self.D['delta_con_2_contrib'][tuple([my_var_name,my_con_name_pos])]=-1
-            self.D['delta_con_2_contrib'][tuple([my_var_slack_pos,my_con_name_pos])]=-1
-            self.D['delta_con_2_contrib'][tuple([my_var_slack_neg,my_con_name_pos])]=1
+            self.D['allExogNames'].append(my_con_name_neg)
+            self.D['allExogNames'].append(my_con_name_pos)
+            self.D['exogName2Rhs'][my_con_name_neg]=0
+            self.D['exogName2Rhs'][my_con_name_pos]=0
+            self.D['deltaCon2Contrib'][tuple([my_var_name,my_con_name_pos])]=-1
+            self.D['deltaCon2Contrib'][tuple([my_var_slack_pos,my_con_name_pos])]=-1
+            self.D['deltaCon2Contrib'][tuple([my_var_slack_neg,my_con_name_pos])]=1
 
-            self.D['delta_con_2_contrib'][tuple([my_var_name,my_con_name_neg])]=1
-            self.D['delta_con_2_contrib'][tuple([my_var_slack_pos,my_con_name_neg])]=1
-            self.D['delta_con_2_contrib'][tuple([my_var_slack_neg,my_con_name_neg])]=-1
+            self.D['deltaCon2Contrib'][tuple([my_var_name,my_con_name_neg])]=1
+            self.D['deltaCon2Contrib'][tuple([my_var_slack_pos,my_con_name_neg])]=1
+            self.D['deltaCon2Contrib'][tuple([my_var_slack_neg,my_con_name_neg])]=-1
 
-            self.D['all_delta'].append(my_var_name)
-            self.D['all_delta'].append(my_var_slack_pos)
-            self.D['all_delta'].append(my_var_slack_neg)
+            self.D['allDelta'].append(my_var_name)
+            self.D['allDelta'].append(my_var_slack_pos)
+            self.D['allDelta'].append(my_var_slack_neg)
 
             self.D['delta_name_2_ub'][my_var_slack_pos]=np.inf
             self.D['delta_name_2_lb'][my_var_slack_pos]=0
@@ -190,12 +194,11 @@ class BBNode:
             self.D['var_int_names_fancy_branch'].append(my_var_name)
             self.D['var_cont_names_fancy_branch'].append(my_var_slack_pos)
             self.D['var_cont_names_fancy_branch'].append(my_var_slack_neg)
-            for act in self.my_BB_tree.D['Z_by_group'][g]:
-                self.D['action_con_2_contrib'][tuple([act,my_con_name_neg])]=-1
-                self.D['action_con_2_contrib'][tuple([act,my_con_name_pos])]=1
+            for act in self.my_BB_tree.Z_by_group[g]:
+                self.D['actionCon2Contrib'][tuple([act,my_con_name_neg])]=-1
+                self.D['actionCon2Contrib'][tuple([act,my_con_name_pos])]=1
 
     def add_aux_bounds(self):
-
         
         for my_con in self.my_aux_constrs:
             my_var_name=my_con.my_var_name
@@ -204,66 +207,10 @@ class BBNode:
             else:
                 self.D['delta_name_2_lb'][my_var_name]=my_con.rhs_amount_unsigned
 
+
     
-    def select_branch_customer(self):
-        """
-        Select the customer u ∈ N that minimizes max_{v} x_{uv}.
-        Used to guide branching on customer successors.
 
-        Returns:
-            u_best (str): The selected customer ID as a string.
-        """
-        Nc=self.D['my_VRP'].num_cust
-        customer_ids = [str(u) for u in range(0, Nc )]  # Excludes depots (0, Nc+1)
-
-        best_u = None
-        best_max = float('inf')
-
-        for u in customer_ids:
-            max_val = 0.0
-            has_valid = False
-            for v, act in self.act_src_map[u]:
-                max_val = max(max_val, self.my_solver.my_lower_bound_LP.lp_primal_solution[act])
-                has_valid = True
-            if has_valid and max_val < best_max:
-                best_max = max_val
-                best_u = u
-        self.cust_branch_on=best_u
-
-
-    def apply_branching_penalties_fast(self):
-        
-        """
-        Fast version of penalty application using source-action indexing.
-
-        Parameters:
-            act_2_cost (dict[str, float]): Action cost dictionary.
-            must_be_zero (set[str]): Actions forced to zero (penalized).
-            must_be_one (set[str]): Actions forced to one (others from same source penalized).
-            M (float): Large penalty cost.
-        """
-        # Index actions by source node: act_src_map[u] = list of act_u_w
-        
-
-        # Apply penalties for must_be_zero directly
-        must_be_zero=self.must_be_zero
-        must_be_one=self.must_be_one
-        M=self.M
-        act_2_cost=dict()
-        for p in self.D['action2Cost']:
-            act_2_cost[p]=self.D['action2Cost'][p]
-        for act in must_be_zero:
-            act_2_cost[act] = M
-
-        # Apply implied-zero penalties from must_be_one constraints
-        for act in must_be_one:
-            _, u, v_fixed = act.split("_")
-            for v, other_act in self.act_src_map[u]:
-                if v != v_fixed and other_act in act_2_cost:
-                    act_2_cost[other_act] = M
-        self.D['action2Cost']=act_2_cost
-
-    def branch_on(self, action):
+    def branch_on_g(self):
         """
         Branch on action 'act_u_v': return two new child nodes.
         Left: x_{uv} = 0
@@ -274,87 +221,54 @@ class BBNode:
         Returns:
             (BBNode, BBNode): Left and right child nodes
         """
-        if not action.startswith("act_") or len(action.split("_")) != 3:
-            raise ValueError(f"Invalid action format: {action}. Expected 'act_u_v'.")
 
-        _, u, v = action.split("_")
-
+        new_con_lb=aux_constr(self.g_star,False,self.lb_term_separ)
+        new_con_ub=aux_constr(self.g_star,True,self.ub_term_separ)
         # Left child: add action to must_be_zero
-        add_left_must_zeo=self.must_be_zero | {action}
-        add_right_must_one=self.must_be_one | {action}
-        left = BBNode(self.my_BB_tree,add_left_must_zeo,self.must_be_one,self)
+        my_cosntrs_left=self.my_aux_constrs+[new_con_lb]#self.must_be_zero | {action}
+        my_cosntrs_right=self.my_aux_constrs+[new_con_ub]#self.must_be_zero | {action}
+        left = BBNode(self.my_BB_tree,self,my_cosntrs_left)
 
 
-        right = BBNode(self.my_BB_tree,self.must_be_zero,add_right_must_one,self)
+        right = BBNode(self.my_BB_tree,self,my_cosntrs_right)
 
         return left, right
 
     def eval_separ(self):
+        print('my_lp_sol')
+        print(self.primal_sol_act)
+        input('---')
         amount_inside = {
-            g: sum(self.my_lp_sol.get(act, 0.0) for act in self.my_BB_tree.Z_by_group[g])
-            for g in self.G
+            g: sum(self.primal_sol_act.get(act, 0.0) for act in self.my_BB_tree.Z_by_group[g])
+            for g in self.my_BB_tree.G
         }
+        print('amount_inside')
+        print(amount_inside)
+        print(np.unique(amount_inside.values()))
+        print('np.unique(amount_inside.keys())')
+        input('---')
         frac_amount = {
             g: min(
                 amount_inside[g] - int(amount_inside[g]),
-                math.ceil(amount_inside[g]) - amount_inside[g]
+                np.ceil(amount_inside[g]) - amount_inside[g]
             )
-            for g in G
+            for g in self.my_BB_tree.G
         }
-        g_star = max(G, key=lambda g: frac_amount[g])
+        self.g_star = max(self.my_BB_tree.G, key=lambda g: frac_amount[g]*self.my_BB_tree.pred_val_gain[g])
+        self.lb_term_separ=np.ceil(amount_inside[self.g_star])
+        self.ub_term_separ=np.floor(amount_inside[self.g_star])
 
-    def branch_on_customer(self):
-        """
-        Branch on successors of customer u.
-        Returns two BBNode objects corresponding to:
-        - left: x_{uv} = 0 for v in group A
-        - right: x_{uv} = 0 for v in group B
-
-        Greedy balanced partitioning based on LP solution values.
-        """
-        # Collect successors of u from act_src_map
-        u=self.cust_branch_on
-        primal_sol=self.my_lp_sol
-        candidate_vs = [v for v, act in self.act_src_map[u] if act in primal_sol]
-        
-        # Compute weights with small noise for tie-breaking
-        weight = {
-            v: primal_sol[f"act_{u}_{v}"] + 0.00001 * random.random()
-            for v in candidate_vs
-        }
-
-        # Sort successors in decreasing order of weight
-        sorted_vs = sorted(weight, key=weight.get, reverse=True)
-
-        group_A, group_B = [], []
-        sum_A, sum_B = 0.0, 0.0
-
-        for v in sorted_vs:
-            if sum_A <= sum_B:
-                group_A.append(v)
-                sum_A += weight[v]
-            else:
-                group_B.append(v)
-                sum_B += weight[v]
-        #print('group_A')
-        #print(group_A)
-        #print('group_B')
-        #print(group_B)
-        #print('sum_B,sum_A')
-        #print([sum_B,sum_A])
-        #print('u')
-        #print(u)
-        #input('---')
-        # Force actions in group_A to zero in left branch
-        left_zero_set = self.must_be_zero | {f"act_{u}_{v}" for v in group_A}
-        right_zero_set = self.must_be_zero | {f"act_{u}_{v}" for v in group_B}
-
-        # Create child nodes
-        left = BBNode(self.my_BB_tree, left_zero_set, self.must_be_one, parent=self)
-        right = BBNode(self.my_BB_tree, right_zero_set, self.must_be_one, parent=self)
-
-        return left, right
-
+        #print('frac_amount')
+        #print(frac_amount)
+        print('amount_inside[self.g_star]')
+        print(amount_inside[self.g_star])
+        print('self.g_star')
+        print(self.g_star)
+        print('self.lb_term_separ')
+        print(self.lb_term_separ)
+        print('self.ub_term_separ')
+        print(self.ub_term_separ)
+        input('---')
 
 class BB_tree_solve:
     def  __init__(self,D,my_params,my_output_path):
@@ -363,15 +277,18 @@ class BB_tree_solve:
         self.my_output_path=my_output_path
         self.my_params=my_params
         self.my_params['do_ilp']=False
+        self.my_params['num_ng_use_separ']=10
         initial_max_iter=self.my_params['max_iterations_loop_compress_project']
         self.my_params['max_iterations_loop_compress_project']=100
         self.act_src_map = defaultdict(list)
         self.BIG_M=20000000
+        self.pre_process_all_branching()
+
         for act in self.D['action2Cost']:#.act_2_cost:
             if act.startswith("act_"):
                 _, u, v = act.split("_")
                 self.act_src_map[u].append((v, act))
-        self.root_node=BBNode(self,set([]),set([]),None,[])
+        self.root_node=BBNode(self,None,[])
         self.my_params['max_iterations_loop_compress_project']=initial_max_iter
         self.call_branch_bound()
 
@@ -401,16 +318,16 @@ class BB_tree_solve:
             self.data_hist.append(node.data)
             self.lb_hist.append([cur_LB,node.par_lb,node.LB_init])
             self.write_history()
-            print('self.lb_hist')
-            print(self.lb_hist)
-            print('cur_LB')
-            print(cur_LB)
-            print('node.must_be_zero')
-            print(node.must_be_zero)
-            print('node.must_be_one')
-            print(node.must_be_one)
+            #print('self.lb_hist')
+            #print(self.lb_hist)
+            #print('cur_LB')
+            ##print('node.must_be_zero')
+            #print(node.must_be_zero)
+            #print('node.must_be_one')
+            #print(node.must_be_one)
             print('lower hist')
             print(node.my_solver.history_dict['lblp_lower'])
+            input('---')
             if node.parent!=None:
                 print('lower Parent')
                 print(node.parent.my_solver.history_dict['lblp_lower'])
@@ -432,13 +349,8 @@ class BB_tree_solve:
                 break 
 
             # Branch on the most fractional variable
-            left_node=[]
-            right_node=[]
-            if self.use_uniform_split==False:
-                #input('i do nto think I want to be here')
-                left_node, right_node = node.branch_on(node.term_2_branch_on)
-            else:
-                left_node, right_node = node.branch_on_customer()
+            
+            left_node, right_node = node.branch_on_g()
 
             heapq.heappush(heap, (left_node.LB, node_counter, left_node))
             node_counter += 1
@@ -452,14 +364,15 @@ class BB_tree_solve:
         print(self.lb_hist)
     
     def pre_process_all_branching(self):
-
-        Nc=self.D['my_VRP'].num_cust
-        
-        [ng_neigh_by_cust,junk]=naive_get_LA_neigh(self['D'],(self['D']['my_params']['num_NG']))
+        my_VRP=self.D['my_VRP']
+        print(my_VRP)
+        Nc=my_VRP.num_cust
+        D=self.D
+        [ng_neigh_by_cust,junk]=naive_get_LA_neigh(my_VRP,self.my_params['num_ng_use_separ'])
         G=set()
         for u in range(0,Nc):
 
-            neighborhood = ng_neigh_by_cust[u] | {u}
+            neighborhood = set(ng_neigh_by_cust[u]) | {u}
             for g in power_set(neighborhood):
                 if g:  # skip empty set
                     G.add(frozenset(g))
@@ -467,14 +380,15 @@ class BB_tree_solve:
         self.G=G
 
         self.Z_by_group = defaultdict(set)  # g → set of act_u_v
-        all_actions=self.D['action_2_cost'].keys()
+        all_actions=self.D['action2Cost'].keys()
         for act in all_actions:
             _, u, v = act.split("_")
             for g in G:
                 if u in g and v not in g:
                     self.Z_by_group[g].add(act)
-
-        costs=self.D['action_2_cost']
+        print(self.Z_by_group)
+        print(self.Z_by_group)
+        costs=self.D['action2Cost']
         self.pred_val_gain = {
             g: min(costs[act] for act in self.Z_by_group[g]) if self.Z_by_group[g] else float("inf")
             for g in G

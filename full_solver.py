@@ -35,6 +35,7 @@ class full_solver:
     def __init__(self,full_input_dict,jy_opt,output_file_path,actions_ignore=None):
         print('type(full_input_dict)')
         print(type(full_input_dict))
+        self.D=full_input_dict
         self.count_cutting_planes=0
         self.jy_opt=jy_opt
         self.actions_ignore=actions_ignore

@@ -8,7 +8,7 @@ from grab_default_params import grab_default_params
 from grab_params import grab_params
 import json
 import ast
-from BB_tree_solve import BB_tree_solve
+from BB_tree_solve_cyc import BB_tree_solve
 
 def BB_call_and_run_code(input_file_path,my_params_path,my_json_file_path,my_output_path):
 
