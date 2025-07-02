@@ -55,4 +55,6 @@ def grab_default_params():
 	my_params["turn_off_non_active_fg_project"]=0
 	my_params['use_new_valid_ineq']=0
 	my_params['digit_mult_use']=10#used for rounding distances
+
+	my_params['use_branch_on_g']=True
 	return my_params

@@ -309,7 +309,9 @@ def forbidden_variables_loop_dual(lp_prob, var_dict, forbidden_var_names, K=20, 
             for v in vars_to_restrict
             if v.name in forbidden_var_names and reduced_costs_dict.get(v.name, 0.0) < -1e-8
         ]
-        
+        sum_negative_rc = sum(val for _, val in active_vars_with_vals)
+        print('sum_negative_rc')
+        print(sum_negative_rc)
         if verbose:
             print(f"Active forbidden variables with nonzero values: {len(active_vars_with_vals)}")
 

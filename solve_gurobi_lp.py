@@ -115,11 +115,11 @@ def solve_gurobi_lp(dict_var_name_2_obj,
             model.ModelSense = GRB.MINIMIZE
 
             time_pre = time.time() - time_pre
-            #print('Starting Gur LP')
+            print('Starting Gur LP')
             time_opt = time.time()
             model.optimize()
             time_opt = time.time() - time_opt
-            #print('DONE Gur LP')
+            print('DONE Gur LP')
             #if time_opt>0:
             #print()
             #model.write('LONG_proj.mps')
@@ -507,6 +507,18 @@ def solve_gurobi_lp_bounds(dict_var_name_2_obj,
                 expr = gp.LinExpr()
                 for var, coeff in terms:
                     expr.addTerms(coeff, var)
+
+                #print('con_name_rev[con_name]')
+                #print(con_name_rev[con_name])
+                #input('---')
+                #if "NEW_BOUND_Branch" in con_name_rev[con_name]:#.startswith(""):
+                #    print('con_name_rev[con_name]')
+                #    print(con_name_rev[con_name])
+                #    print('expr')
+                #    print(expr)
+                #    print('safe_LB[con_name]')
+                #    print(safe_LB[con_name])
+                #    input('FOUND IT ')
                 model.addConstr(expr >= safe_LB[con_name], name=con_name)
 
             for con_name, terms in group_eq.items():

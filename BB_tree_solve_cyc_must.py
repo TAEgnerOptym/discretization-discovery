@@ -38,7 +38,7 @@ class aux_constr:
         self.my_var_name_slack_pos='Delta_var_branch_slack_pos'+str(g)
         self.my_var_name_slack_neg='Delta_var_branch_slack_neg'+str(g)
 class BBNode:
-    def __init__(self,my_BB_tree, parent,my_aux_constrs):
+    def __init__(self,my_BB_tree, parent,my_aux_constrs,must_be_zero,must_be_one):
         """
         Initialize a branch-and-bound node.
 
@@ -52,10 +52,12 @@ class BBNode:
 
         self.M=self.my_BB_tree.BIG_M
         self.act_src_map=self.my_BB_tree.act_src_map
-        #self.must_be_zero = must_be_zero
-        #self.must_be_one = must_be_one
+        self.must_be_zero = must_be_zero
+        self.must_be_one = must_be_one
         self.parent = parent
         self.my_aux_constrs=my_aux_constrs
+        self.apply_branching_penalties_fast()
+
         self.add_aux_constrs()
         self.add_aux_bounds()
         self.actions_ignore=None#self.self.all_actions_not_source_sink_connected
@@ -140,6 +142,7 @@ class BBNode:
                     biggest_prod=y*(1-y)
         self.term_2_branch_on=branch_term_cur
         self.eval_separ()
+        self.select_branch_customer()
         self.data=dict()
         self.data['LB']=self.LB
         self.data['LB_init']=self.LB_init
@@ -156,6 +159,44 @@ class BBNode:
         #self.data['must_be_one']=list(self.must_be_one)
         self.data['lb_hist']=list(self.my_solver.history_dict['lblp_lower'])
     
+    def apply_branching_penalties_fast(self):
+        
+        """
+        Fast version of penalty application using source-action indexing.
+
+        Parameters:
+            act_2_cost (dict[str, float]): Action cost dictionary.
+            must_be_zero (set[str]): Actions forced to zero (penalized).
+            must_be_one (set[str]): Actions forced to one (others from same source penalized).
+            M (float): Large penalty cost.
+        """
+        # Index actions by source node: act_src_map[u] = list of act_u_w
+        
+
+        # Apply penalties for must_be_zero directly
+        must_be_zero=self.must_be_zero
+        must_be_one=self.must_be_one
+        M=self.M
+        act_2_cost=dict()
+        for p in self.D['action2Cost']:
+            act_2_cost[p]=self.D['action2Cost'][p]
+        for act in must_be_zero:
+            act_2_cost[act] = M
+
+        # Apply implied-zero penalties from must_be_one constraints
+        for act in must_be_one:
+            _, u, v_fixed = act.split("_")
+            for v, other_act in self.act_src_map[int(u)]:
+                if v != int(v_fixed) and other_act in act_2_cost:
+                    act_2_cost[other_act] = M
+        self.D['action2Cost']=act_2_cost
+        #print('M')
+        #print(M)
+        #print('len(must_be_zero)')
+        #print(len(self.must_be_zero))
+        #input('---')
+
+
     def add_aux_constrs(self):
 
         self.D['actionCon2Contrib']=self.my_BB_tree.D['actionCon2Contrib'].copy()
@@ -213,6 +254,98 @@ class BBNode:
                 #print('my_con_name_pos')
                 #print(my_con_name_pos)
         #input('done constrs')   
+    
+    def branch_on_customer(self):
+        """
+        Branch on successors of customer u.
+        Returns two BBNode objects corresponding to:
+        - left: x_{uv} = 0 for v in group A
+        - right: x_{uv} = 0 for v in group B
+
+        Greedy balanced partitioning based on LP solution values.
+        """
+        # Collect successors of u from act_src_map
+        u=self.cust_branch_on
+        primal_sol=self.my_lp_sol
+        candidate_vs = [v for v, act in self.act_src_map[int(u)] if act in primal_sol]
+        
+        # Compute weights with small noise for tie-breaking
+        weight = {
+            v: primal_sol[f"act_{u}_{v}"] + 0.00001 * random.random()
+            for v in candidate_vs
+        }
+
+        # Sort successors in decreasing order of weight
+        sorted_vs = sorted(weight, key=weight.get, reverse=True)
+
+        group_A, group_B = [], []
+        sum_A, sum_B = 0.0, 0.0
+
+        for v in sorted_vs:
+            if sum_A <= sum_B:
+                group_A.append(v)
+                sum_A += weight[v]
+            else:
+                group_B.append(v)
+                sum_B += weight[v]
+        #print('group_A')
+        #print(group_A)
+        #print('group_B')
+        #print(group_B)
+        #print('sum_B,sum_A')
+        #print([sum_B,sum_A])
+        #print('u')
+        #print(u)
+        #input('---')
+        # Force actions in group_A to zero in left branch
+        left_zero_set = set(self.must_be_zero) | {f"act_{u}_{v}" for v in group_A}
+        right_zero_set = set(self.must_be_zero) | {f"act_{u}_{v}" for v in group_B}
+
+        #print('left_zero_set')
+        #print(left_zero_set)
+        #print('right_zero_set')
+        #print(right_zero_set)
+        #print('u=self.cust_branch_on')
+        #print(self.cust_branch_on)
+        #input('---')
+        # Create child nodes
+        left = BBNode(self.my_BB_tree,self,self.my_aux_constrs, left_zero_set, self.must_be_one)
+        right = BBNode(self.my_BB_tree,self,self.my_aux_constrs, right_zero_set, self.must_be_one)
+
+        return left, right
+
+    def select_branch_customer(self):
+        """
+        Select the customer u ∈ N that minimizes max_{v} x_{uv}.
+        Used to guide branching on customer successors.
+
+        Returns:
+            u_best (str): The selected customer ID as a string.
+        """
+        Nc=self.D['my_VRP'].num_cust
+        customer_ids = [str(u) for u in range(0, Nc )]  # Excludes depots (0, Nc+1)
+
+        best_u = None
+        best_max = float('inf')
+
+        #print('self.act_src_map')
+        #print(self.act_src_map)
+        for u in customer_ids:
+            #print('u')
+            #print(u)
+            max_val = 0.0
+            has_valid = False
+            for v, act in self.act_src_map[int(u)]:
+                #print([u,v,act,max_val,self.my_solver.my_lower_bound_LP.lp_primal_solution[act]])
+                max_val = max(max_val, self.primal_sol_act[act])
+                has_valid = True
+            if has_valid and max_val < best_max:
+                best_max = max_val
+                best_u = u
+        self.cust_branch_on=best_u
+        #print('self.cust_branch_on')
+        #print(self.cust_branch_on)
+        #input('done this selection')
     def add_aux_bounds(self):
         #print('starting changes ')
         #print('self.my_aux_constrs')
@@ -265,10 +398,10 @@ class BBNode:
         # Left child: add action to must_be_zero
         my_cosntrs_left=self.my_aux_constrs+[new_con_lb]#self.must_be_zero | {action}
         my_cosntrs_right=self.my_aux_constrs+[new_con_ub]#self.must_be_zero | {action}
-        left = BBNode(self.my_BB_tree,self,my_cosntrs_left)
+        left = BBNode(self.my_BB_tree,self,my_cosntrs_left,self.must_be_zero,self.must_be_one)
 
 
-        right = BBNode(self.my_BB_tree,self,my_cosntrs_right)
+        right = BBNode(self.my_BB_tree,self,my_cosntrs_right,self.must_be_zero,self.must_be_one)
 
         return left, right
 
@@ -312,18 +445,19 @@ class BBNode:
         self.g_star = max(self.my_BB_tree.G, key=lambda g: frac_amount[g]*self.my_BB_tree.pred_val_gain[g])
         self.lb_term_separ=np.ceil(amount_inside[self.g_star])
         self.ub_term_separ=np.floor(amount_inside[self.g_star])
-
+        if frac_amount[self.g_star]<0.001:
+            self.g_star=None
         #print('frac_amount')
         #print(frac_amount)
-        print('amount_inside[self.g_star]')
-        print(amount_inside[self.g_star])
-        print('self.g_star')
-        print(self.g_star)
-        print('self.lb_term_separ')
-        print(self.lb_term_separ)
-        print('self.ub_term_separ')
-        print(self.ub_term_separ)
-        input('---')
+        #print('amount_inside[self.g_star]')
+        #print(amount_inside[self.g_star])
+        #print('self.g_star')
+        #print(self.g_star)
+        #print('self.lb_term_separ')
+        #print(self.lb_term_separ)
+        #print('self.ub_term_separ')
+        #print(self.ub_term_separ)
+        #input('---')
 
 class BB_tree_solve:
     def  __init__(self,D,my_params,my_output_path):
@@ -345,7 +479,7 @@ class BB_tree_solve:
                 u=int(u)
                 v=int(v)
                 self.act_src_map[u].append((v, act))
-        self.root_node=BBNode(self,None,[])
+        self.root_node=BBNode(self,None,[],[],[])
         self.my_params['max_iterations_loop_compress_project']=initial_max_iter
         self.call_branch_bound()
 
@@ -407,8 +541,12 @@ class BB_tree_solve:
                 break 
 
             # Branch on the most fractional variable
-            
-            left_node, right_node = node.branch_on_g()
+            left_node=[]
+            right_node=[]
+            if node.g_star!=None and self.my_params['use_branch_on_g']==True:
+                left_node, right_node = node.branch_on_g()
+            else:
+                left_node, right_node = node.branch_on_customer()
 
             heapq.heappush(heap, (left_node.LB, node_counter, left_node))
             node_counter += 1

@@ -104,11 +104,30 @@ class lower_bound_LP_milp:
                     self.dict_var_name_2_is_integer[var_force_integ]=1
             for var_penalty in self.full_prob.D['var_cont_names_fancy_branch']:
                 self.dict_var_name_2_obj[var_penalty]=big_M
-            print('fancy1')
-            print(self.full_prob.D['var_int_names_fancy_branch'])
-            print('fancy 2')
-            print(self.full_prob.D['var_cont_names_fancy_branch'])
-            input('here')
+            if 0>1:
+                print('con names branch')
+                print(self.full_prob.D['con_names_fancy_branch'])
+                print('fancy1')
+                print(self.full_prob.D['var_int_names_fancy_branch'])
+                for my_name in self.full_prob.D['var_int_names_fancy_branch']:
+                    print('INT my_name in self.full_prob.D[delta_name_2_ub]')
+                    print(my_name in self.full_prob.D['delta_name_2_ub'])
+                    print('INT my_name in self.full_prob.D[delta_name_2_lb]')
+                    print(my_name in self.full_prob.D['delta_name_2_lb'])
+                    ub=self.full_prob.D['delta_name_2_ub'][my_name]
+                    lb=self.full_prob.D['delta_name_2_lb'][my_name]
+                    print([my_name+' lb=  '+str(lb)+' ub=. '+str(ub) ])
+                print('fancy 2')
+                print(self.full_prob.D['var_cont_names_fancy_branch'])
+                for my_name in self.full_prob.D['var_cont_names_fancy_branch']:
+                    print('my_name in self.full_prob.D[delta_name_2_ub]')
+                    print(my_name in self.full_prob.D['delta_name_2_ub'])
+                    print('my_name in self.full_prob.D[delta_name_2_lb]')
+                    print(my_name in self.full_prob.D['delta_name_2_lb'])
+                    ub=self.full_prob.D['delta_name_2_ub'][my_name]
+                    lb=self.full_prob.D['delta_name_2_lb'][my_name]
+                    print([my_name+' lb=  '+str(lb)+' ub=. '+str(ub) ])
+                input('here')
         if self.OPT_do_ilp==0:
             
             #if self.full_prob.jy_opt['use_delta_in_lp']==False:
@@ -121,6 +140,7 @@ class lower_bound_LP_milp:
             if self.full_prob.jy_opt['use_gurobi']>0.5:# and self.full_prob.jy_opt['use_gurobi']==False:
                 #if self.full_prob.jy_opt['think_compress'] and len(self.full_prob.all_actions_ever_seen)>0:
                 #    self.THINK_aggregate_constraints_dictionary()
+                #input('hihi')
                 self.call_gurobi_solver()
                 t1=time.time()
                 self.get_ij_poss_active()
@@ -1130,6 +1150,7 @@ class lower_bound_LP_milp:
 
 
     def call_gurobi_solver(self):
+        #input('in this call ')
         did_call_gur_warm=False
         GUR_CLASS_lp_prob=[]
         self.new_actions_ignore=None
@@ -1145,11 +1166,14 @@ class lower_bound_LP_milp:
                         self.dict_var_con_2_lhs_eq,
                         self.dict_con_name_2_eq)
             else:
+                #input('in this call 2')
+
                 delta_name_2_lb=dict()
                 delta_name_2_ub=dict()
                 if self.full_prob.jy_opt['use_delta_in_lp']==True:
                     delta_name_2_lb=self.full_prob.delta_name_2_lb
                     delta_name_2_ub=self.full_prob.delta_name_2_ub
+                #input("mooose")
                 out_solution=solve_gurobi_lp_bounds(self.dict_var_name_2_obj,
                     self.CLEAN_dict_var_con_2_lhs_exog,
                     self.CLEAN_dict_con_name_2_LB,
