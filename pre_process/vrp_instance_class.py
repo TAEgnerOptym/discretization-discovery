@@ -45,17 +45,21 @@ class vrp_instance_class:
 		xd=np.power(x1-x2,2)
 		yd=np.power(y1-y2,2)
 		act_dist=np.sqrt(xd+yd)
+		
 		act_dist=act_dist+self.service_time[cust_1]
+		act_dist_orig=act_dist
+		if self.my_params['do_round_dist_times']>0.5:
+			act_dist=np.floor(act_dist*self.my_params['digit_mult_use'])/self.my_params['digit_mult_use']
 		if e1-act_dist<f2:
 			act_dist=np.inf
-		
+		#if e1-act_dist_orig<f2 and act_dist<np.inf:
+		#	print('[e1,act_dist_orig,f2]')
+		#	print([e1,act_dist_orig,f2])
+	#		input('maybe i foudn my issue')
 		if d2+d1>self.vehicle_capacity:	
 			act_dist=np.inf
 		if cust_1==cust_2:
 			act_dist=np.inf
-		if self.my_params['do_round_dist_times']>0.5:
-			act_dist=np.floor(act_dist*self.my_params['digit_mult_use'])/self.my_params['digit_mult_use']
-
 		return act_dist
 	
 	

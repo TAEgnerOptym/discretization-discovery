@@ -605,6 +605,7 @@ class full_solver:
                 print('running baseline')
                 if (self.jy_opt['in_demo_mode']==True):
                     input('Press enter about to start the running of the baseline ILP')
+                self.jy_opt['max_ILP_time']=1000000
                 my_base=baseline_solver(self,True,False)
                 self.history_dict['BASE_ILP_sol_obj']=my_base.milp_solution_objective_value
                 self.history_dict['BASE_milp_solution']=my_base.milp_solution
