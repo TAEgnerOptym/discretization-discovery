@@ -577,26 +577,25 @@ class BB_tree_solve:
 
         self.Z_by_group = defaultdict(set)  # g → set of act_u_v
         all_actions=self.D['action2Cost'].keys()
+        u_in_groups = defaultdict(set)
+        v_not_in_groups = defaultdict(set)
+
+        for g in G:
+            for u in g:
+                u_in_groups[u].add(g)
+            for v in range(0,Nc+2):  # include depot if needed
+                if v not in g:
+                    v_not_in_groups[v].add(g)
+
+        # Step 2: Build Z_by_group using set intersection
         for act in all_actions:
-            _, u, v = act.split("_")
-            u=int(u)
-            v=int(v)
-            for g in G:
-                #print('g')
-                #print(g)
-                #print('[u,v]')
-                #print([u,v])
-                #print('u in g and v not in g')
-                #print(u in g and v not in g)
-                #print('g is ')
-                #for w in g:
-                #    print(w)
-                #input('---')
-                if u in g and v not in g:
-                    self.Z_by_group[g].add(act)
-                    #input('adding')
-        #print(self.Z_by_group)
-        #print(self.Z_by_group)
+            _, u_str, v_str = act.split("_")
+            u, v = int(u_str), int(v_str)
+
+            relevant_groups = u_in_groups[u] & v_not_in_groups[v]
+            for g in relevant_groups:
+                self.Z_by_group[g].add(act)
+
         costs=self.D['action2Cost']
         self.pred_val_gain = {
             g: min(costs[act] for act in self.Z_by_group[g]) if self.Z_by_group[g] else float("inf")
