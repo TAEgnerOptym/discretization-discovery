@@ -45,5 +45,5 @@
 "in_demo_mode":0,
 "offset_cost_edge_project":0,
 "weight_slack_projector":0.00001,
-"max_ILP_time":200
+"max_ILP_time":1000
 }

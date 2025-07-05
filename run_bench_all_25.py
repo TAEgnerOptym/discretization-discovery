@@ -47,15 +47,15 @@ if file_set=='c100':
 
 if file_set=='rc200':
 
-    param_file_path='my_param_fold/my_params_25_rc_200.json'
+    param_file_path='my_param_fold/my_param_25_rc_200.json'
 
-    #all_files.append("jy_rc201.txt")
-    #all_files.append("jy_rc202.txt")
-    #all_files.append("jy_rc203.txt")
-    #all_files.append("jy_rc204.txt")
-    #all_files.append("jy_rc205.txt")
-    #all_files.append("jy_rc206.txt")
-    #all_files.append("jy_rc207.txt")
+    all_files.append("jy_rc201.txt")
+    all_files.append("jy_rc202.txt")
+    all_files.append("jy_rc203.txt")
+    all_files.append("jy_rc204.txt")
+    all_files.append("jy_rc205.txt")
+    all_files.append("jy_rc206.txt")
+    all_files.append("jy_rc207.txt")
     all_files.append("jy_rc208.txt")
 
 if file_set=='r200':
