@@ -608,10 +608,10 @@ class full_solver:
                 if (self.jy_opt['in_demo_mode']==True):
                     input('Press enter about to start the running of the baseline ILP')
                 self.jy_opt['max_ILP_time']=1000000
-                print('wriitng ilp to user')
-                with open("my_object.pkl", "wb") as f:
-                    pickle.dump(self, f, protocol=pickle.HIGHEST_PROTOCOL)
-                print('done wriitng user ilp')
+                #print('wriitng ilp to user')
+                #with open("my_object.pkl", "wb") as f:
+                #    pickle.dump(self, f, protocol=pickle.HIGHEST_PROTOCOL)
+                #print('done wriitng user ilp')
                 my_base=baseline_solver(self,True,False)
                 self.history_dict['BASE_ILP_sol_obj']=my_base.milp_solution_objective_value
                 self.history_dict['BASE_milp_solution']=my_base.milp_solution
