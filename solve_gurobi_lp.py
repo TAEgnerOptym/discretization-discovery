@@ -9,6 +9,7 @@ import time
 import io
 import sys
 import os
+import numpy as np
 
 class Tee(io.TextIOBase):
     def __init__(self, *streams):
@@ -145,6 +146,7 @@ def solve_gurobi_lp(dict_var_name_2_obj,
             #print(len(model.getConstrs()))
             objective = model.ObjVal
             time_post = time.time() - time_post
+            reduced_costs   = {var_name_rev[var.VarName]: var.RC for var in model.getVars()}
 
             return {
                 "primal_solution": primal_solution,
@@ -152,7 +154,8 @@ def solve_gurobi_lp(dict_var_name_2_obj,
                 "objective": objective,
                 "time_pre": time_pre,
                 "time_opt": time_opt,
-                "time_post": time_post
+                "time_post": time_post,
+                "reduced_costs":reduced_costs
             }
 
 
@@ -263,7 +266,7 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
                       dict_var_con_2_lhs_eq,
                       dict_con_name_2_eq,
                       dict_var_name_2_LB,dict_var_name_2_UB,
-                      dict_binary_vars,dict_var_name_2_is_integer,max_ILP_time=1000):
+                      dict_binary_vars,dict_var_name_2_is_integer,max_ILP_time=1000,pred_val_gain=None):
     time_pre = time.time()
 
     # Step 0: Name remapping for Gurobi safety
@@ -339,7 +342,7 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
                     orig_name = var_name_rev[safe_name]
                     
                     if orig_name.startswith("act"):
-                        v.BranchPriority = 100
+                        v.BranchPriority = 50
                         count_1=count_1+1
                     else:
                         v.BranchPriority = 1
@@ -350,12 +353,43 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
                     v.BranchPriority = 1
                     #print('[count_1,count_2]')
                     #print([count_1,count_2])
+                #count_3=0
+                #count_4=0
+                for v_name in safe_integer_set:
+                    v=var_dict[v_name]
+                    orig_name = var_name_rev[v_name]
+                    if orig_name.startswith("fancy_branching_var"):
+                        v.BranchPriority = 100
+                        #print('v_name 3 ')
+                        #print(v_name)
+                        #if orig_name in pred_val_gain:
+                        #    v.BranchPriority =int(np.ceil(pred_val_gain[orig_name]))+51
+                        #    print('v.BranchPriority')
+                        #    print(v.BranchPriority)
+                        #else:
+                        #    if pred_val_gain!=None:
+                        #        input('error here dict should not be empty')
+                        #count_3=count_3+1
+                    #else:
+                    #    v.BranchPriority = 1
+                    #    count_4=count_4+1
             #print('len(safe_binary_set)')
             #print(len(safe_binary_set))
             #input('hihi')
             #model.setParam("VarBranch", 2)
-            model.update()
-
+            #print('count_3')
+            #print(count_3)
+            
+            #model.update()
+            #count_4=0
+            #for v in model.getVars():
+            #    if v.BranchPriority>600:
+            #        count_4=count_4+1
+                    #print('v_name 3 ')
+            #input('---')
+            #print('count_4')
+            #print(count_4)
+            #input('--')
             # Group and add constraints
             group_exog = defaultdict(list)
             for (var, con), coeff in safe_exog.items():
@@ -384,6 +418,11 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
             log_buffer = io.StringIO()
             print('writing ')
             model.write("model_name.mps")
+            with open("branch_priorities.txt", "w") as f:
+                for v in model.getVars():
+                    bp = v.getAttr("BranchPriority")
+                    if bp != 0:
+                        f.write(f"{v.VarName} {bp}\n")            
             print('done writing')
             if 1<0:
                 model.setParam("Cuts", 0)                # Disable all cutting planes
@@ -416,6 +455,7 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
 
             # Extract primal solution and objective only (no duals in MILP)
             primal_solution = {var_name_rev[var.VarName]: var.X for var in model.getVars()}
+            
             objective = model.ObjVal
             time_post = time.time() - time_post
 
@@ -426,7 +466,7 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
                 "time_opt": time_opt,
                 "time_post": time_post,
                 "MIP_lower_bound":MIP_lower_bound,
-                "gurobi_log_string":gurobi_log_string
+                "gurobi_log_string":gurobi_log_string,
             }
 
 
@@ -555,6 +595,7 @@ def solve_gurobi_lp_bounds(dict_var_name_2_obj,
 
             objective = model.ObjVal
             time_post = time.time() - time_post
+            reduced_costs   = {var_name_rev[var.VarName]: var.RC for var in model.getVars()}
 
             return {
                 "primal_solution": primal_solution,
@@ -562,6 +603,7 @@ def solve_gurobi_lp_bounds(dict_var_name_2_obj,
                 "objective": objective,
                 "time_pre": time_pre,
                 "time_opt": time_opt,
-                "time_post": time_post
+                "time_post": time_post,
+                "reduced_costs":reduced_costs
             }
 

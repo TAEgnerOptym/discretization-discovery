@@ -22,7 +22,7 @@
 "use_delta_in_milp":1,
 "use_delta_in_lp":1,
 "turn_off_non_active_fg_project":0,
-"max_iterations_loop_compress_project":3,
+"max_iterations_loop_compress_project":25,
 "use_new_valid_ineq":0,
 
 
@@ -45,5 +45,5 @@
 "in_demo_mode":0,
 "offset_cost_edge_project":0,
 "weight_slack_projector":0.00001,
-"max_ILP_time":60
+"max_ILP_time":1000
 }

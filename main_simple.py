@@ -8,8 +8,8 @@ default_input='jy_nyc_4.txt'
 
 do_BIG_PROBLEM=True
 if do_BIG_PROBLEM==True:
-    #default_input='data/jy_C104.txt'
-    default_input='data/jy_RC107.txt'
+    default_input='data/jy_C104.txt'
+    #default_input='data/jy_RC107.txt'
     #default_input='data/jy_RC101.txt'
     #default_input='data/jy_RC203.txt'
     #default_input='dataHOM/jyHOM_C2_25.txt'
@@ -19,7 +19,7 @@ if do_BIG_PROBLEM==True:
 
 #default_option_path='my_params_Homburg_200.json'
 default_option_path='my_params_R200.json'
-
+#default_option_path='my_params_debug_branch_RMP.json'
 #for any given group of 7 customers.  The number of routes that use 
 # 3,4 of those Plus 2* number that use 5,6,7 can not exceed 2
 #default_input='data/jy_R104.txt'

@@ -1,4 +1,5 @@
 import numpy as np
+
 class vrp_instance_class:
 
 
@@ -166,5 +167,3 @@ class vrp_instance_class:
 		self.orig_dist_mat_full[self.num_cust+1,:]=np.inf
 		self.orig_dist_mat_full[:,self.num_cust]=np.inf
 		
-		
-		#self.round_restrict()

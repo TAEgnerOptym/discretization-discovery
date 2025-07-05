@@ -157,7 +157,9 @@ class full_solver:
                 did_split=True
             count_after_split[h]=len(set(self.graph_node_2_agg_node[h].values()))
 
-        
+        print('objective_componentLps')
+        print(objective_componentLps)
+        print('--')
         return did_split,objective_componentLps,time_component_lps
     
     def count_size(self,supress_output=True):
@@ -606,6 +608,10 @@ class full_solver:
                 if (self.jy_opt['in_demo_mode']==True):
                     input('Press enter about to start the running of the baseline ILP')
                 self.jy_opt['max_ILP_time']=1000000
+                print('wriitng ilp to user')
+                with open("my_object.pkl", "wb") as f:
+                    pickle.dump(self, f, protocol=pickle.HIGHEST_PROTOCOL)
+                print('done wriitng user ilp')
                 my_base=baseline_solver(self,True,False)
                 self.history_dict['BASE_ILP_sol_obj']=my_base.milp_solution_objective_value
                 self.history_dict['BASE_milp_solution']=my_base.milp_solution

@@ -15,6 +15,9 @@ import re
 from scipy.sparse import csr_matrix
 import pulp
 import sys
+import itertools
+
+from pre_process.naive_pre import *
 sys.path.append("exper_ideas")
 from jy_active_set_lp import jy_active_set_lp
 from jy_active_set_lp import jy_active_set_lp_primal_dual
@@ -39,7 +42,7 @@ class lower_bound_LP_milp:
         self.full_prob=full_prob
         full_input_dict=full_prob.full_input_dict
         self.actions_ignore=full_prob.actions_ignore
-
+        self.dict_pred_gain=None
         #print('self.actions_ignore=')
         #print(self.actions_ignore)
         #input('hi')
@@ -94,6 +97,9 @@ class lower_bound_LP_milp:
         if ( self.OPT_do_ilp==0 and self.full_prob.jy_opt['use_delta_in_lp']==False) or (self.OPT_do_ilp!=0 and self.full_prob.jy_opt['use_delta_in_milp']==False):
             self.remove_remove_delta_and_delta_con()
         t1=time.time()
+        if self.OPT_do_ilp!=0 and self.full_prob.jy_opt['LAB_MP_ON']>0.5:
+            self.apply_LA_branching()
+
         self.filter_constraints()
         self.times_lp_times['filetering']=time.time()-t1
 
@@ -104,30 +110,7 @@ class lower_bound_LP_milp:
                     self.dict_var_name_2_is_integer[var_force_integ]=1
             for var_penalty in self.full_prob.D['var_cont_names_fancy_branch']:
                 self.dict_var_name_2_obj[var_penalty]=big_M
-            if 0>1:
-                print('con names branch')
-                print(self.full_prob.D['con_names_fancy_branch'])
-                print('fancy1')
-                print(self.full_prob.D['var_int_names_fancy_branch'])
-                for my_name in self.full_prob.D['var_int_names_fancy_branch']:
-                    print('INT my_name in self.full_prob.D[delta_name_2_ub]')
-                    print(my_name in self.full_prob.D['delta_name_2_ub'])
-                    print('INT my_name in self.full_prob.D[delta_name_2_lb]')
-                    print(my_name in self.full_prob.D['delta_name_2_lb'])
-                    ub=self.full_prob.D['delta_name_2_ub'][my_name]
-                    lb=self.full_prob.D['delta_name_2_lb'][my_name]
-                    print([my_name+' lb=  '+str(lb)+' ub=. '+str(ub) ])
-                print('fancy 2')
-                print(self.full_prob.D['var_cont_names_fancy_branch'])
-                for my_name in self.full_prob.D['var_cont_names_fancy_branch']:
-                    print('my_name in self.full_prob.D[delta_name_2_ub]')
-                    print(my_name in self.full_prob.D['delta_name_2_ub'])
-                    print('my_name in self.full_prob.D[delta_name_2_lb]')
-                    print(my_name in self.full_prob.D['delta_name_2_lb'])
-                    ub=self.full_prob.D['delta_name_2_ub'][my_name]
-                    lb=self.full_prob.D['delta_name_2_lb'][my_name]
-                    print([my_name+' lb=  '+str(lb)+' ub=. '+str(ub) ])
-                input('here')
+            
         if self.OPT_do_ilp==0:
             
             #if self.full_prob.jy_opt['use_delta_in_lp']==False:
@@ -176,6 +159,7 @@ class lower_bound_LP_milp:
             #    self.THINK_aggregate_constraints_dictionary()
             #    input('STARTING LP_PRE')
 
+            
             if self.full_prob.jy_opt['use_gurobi']>0.5:
                 self.call_gurobi_milp_solver()
             if self.full_prob.jy_opt['use_gurobi']<0.5 and self.full_prob.jy_opt['use_Xpress']==True:
@@ -1256,7 +1240,7 @@ class lower_bound_LP_milp:
             self.CLEAN_dict_con_name_2_LB,
             self.CLEAN_dict_var_con_2_lhs_eq,
             self.CLEAN_dict_con_name_2_eq,delta_name_2_lb,delta_name_2_ub,
-            self.dict_var_name_2_is_binary,self.dict_var_name_2_is_integer,self.full_prob.jy_opt['max_ILP_time'])
+            self.dict_var_name_2_is_binary,self.dict_var_name_2_is_integer,self.full_prob.jy_opt['max_ILP_time'],self.dict_pred_gain)
 
 
         self.gurobi_MILP_str=out_solution['gurobi_log_string']
@@ -1558,3 +1542,90 @@ class lower_bound_LP_milp:
         print('[t_first,t_sec]')
         print([t_first,t_sec])
         #input('---')
+
+    def apply_LA_branching(self):
+
+         
+
+        #make big range sets 
+
+        #make power set; sets
+
+        
+    
+        my_VRP=self.full_prob.D['my_VRP']
+        D=self.full_prob.D
+        print(my_VRP)
+        Nc=my_VRP.num_cust
+        self.dict_pred_gain=dict()
+        [ng_neigh_by_cust_power,junk]=naive_get_LA_neigh(my_VRP,self.full_prob.jy_opt['LAB_MP_neigh_use_power'])
+        [ng_neigh_by_cust_all,junk]=naive_get_LA_neigh(my_VRP,self.full_prob.jy_opt['LAB_MP_neigh_use_all'])
+        G=set()
+        for u in range(0,Nc):
+
+            neighborhood = set(ng_neigh_by_cust_power[u]) | {u}
+            for g in power_set(neighborhood):
+                if len(g)>1:  # skip empty set and size 1 sets
+                    G.add(frozenset(g))
+            for i in range(1,len(ng_neigh_by_cust_all[u])):
+                g=set(ng_neigh_by_cust_all[u][0:i]).union(set([u]))
+                G.add(frozenset(g))
+        G.add(frozenset(np.arange(0,Nc)))
+        self.G=G
+
+        self.Z_by_group = defaultdict(set)  # g → set of act_u_v
+        all_actions=D['action2Cost'].keys()
+        u_in_groups = defaultdict(set)
+        v_not_in_groups = defaultdict(set)
+
+        for g in G:
+            for u in g:
+                u_in_groups[u].add(g)
+            for v in range(0,Nc+2):  # include depot if needed
+                if v not in g:
+                    v_not_in_groups[v].add(g)
+
+        # Step 2: Build Z_by_group using set intersection
+        for act in all_actions:
+            _, u_str, v_str = act.split("_")
+            u, v = int(u_str), int(v_str)
+
+            relevant_groups = u_in_groups[u] & v_not_in_groups[v]
+            for g in relevant_groups:
+                self.Z_by_group[g].add(act)
+
+        costs=D['action2Cost']
+        self.pred_val_gain = {
+            g: min(costs[act] for act in self.Z_by_group[g]) if self.Z_by_group[g] else float("inf")
+            for g in G
+        }
+
+        #make auxiliary variables
+        print('len(G)')
+        print(len(G))
+        print('G')
+        for g in G:
+            con_name_eq='NEW_BOUND_Branch_eq'+str(g)
+            my_var_name='fancy_branching_var_'+str(g)
+            self.dict_var_name_2_obj[my_var_name]=0
+            self.dict_con_name_2_eq[con_name_eq]=0
+            self.dict_pred_gain[my_var_name]=self.pred_val_gain[g]
+            self.dict_var_con_2_lhs_eq[tuple([my_var_name,con_name_eq])]=1#self.delta_con_2_contrib[v_con]
+            self.dict_var_name_2_is_integer[my_var_name]=1
+            for my_act in self.Z_by_group[g]:
+                self.dict_var_con_2_lhs_eq[tuple([my_act,con_name_eq])]=-1
+            
+           
+
+def power_set(s):
+    """
+    Returns the power set of the input collection `s` as a list of tuples.
+    The power set is defined as all possible subsets of `s`.
+    
+    Example:
+        power_set({1, 2}) returns [(), (1,), (2,), (1, 2)]
+    """
+    s_list = list(s)  # Ensure the input is ordered
+    return list(itertools.chain.from_iterable(
+        itertools.combinations(s_list, r) for r in range(len(s_list) + 1)
+    ))

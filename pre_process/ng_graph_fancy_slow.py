@@ -1,6 +1,6 @@
 import itertools
 import numpy as np
-
+import networkx as nx
 
 class order_object:
     def __init__(self,my_order_name,pred_order,my_instance):
@@ -18,6 +18,11 @@ class order_object:
         #if self.my_instance.my_params['DEBUG_NG_turn_off_CLEAN']==False:
         if self.lateDepart>self.my_instance.early_start[self.u]:
             self.cost=np.inf
+        self.capacity_use=0
+        for w in self.my_order_name:
+            self.capacity_use=self.capacity_use+self.my_instance.dem_full[w]
+        if self.capacity_use>self.my_instance.vehicle_capacity:
+            self.cost=np.inf 
                 #if 1>0:
                 #    self.pretty_print_order()
 
@@ -33,6 +38,25 @@ class order_object:
         #if len(my_order_name)==4 and my_order_name[-1]==22 and my_order_name[-2]==24 and my_order_name[-3]==23 and  my_order_name[-4]==19:
         #    self.pretty_print_order
         #    input('len 4')
+    
+    def compute_if_extension_at_end_possible(self,v):
+        M=self.my_instance
+        is_valid=True
+        if v in self.my_order_name:
+            is_valid=False
+            return False
+        if self.capacity_use+M.dem_full[v]>M.vehicle_capacity:
+            is_valid=False
+            return False
+
+        fin_cust=self.my_order_name[-1]
+        early_start_penulimate=min(self.earlyArrival,M.early_start_full[fin_cust])
+        dist_2_v=M.dist_mat_full[fin_cust,v]
+        early_arrival_v=early_start_penulimate+dist_2_v
+        if early_arrival_v<M.late_start_full[v]:
+            return False
+        return True
+
     def extend_order(self,new_u):
         
         trm1=tuple([new_u])
@@ -238,6 +262,7 @@ class ng_graph_fancy_slow:
 
         self.LAish_remove_edges_slow()
         self.clean_order()
+        #self.check_for_rc_107_feasibility()
 
     def LA_ish_update_efficient(self,my_tup):
         u=my_tup[0]
@@ -338,7 +363,23 @@ class ng_graph_fancy_slow:
 
         for obj in objects_sorted:
             # Only keep obj if it's not dominated by previous ones
-            if obj.earlyArrival > best_early or obj.lateDepart < best_late:
+            is_tie=False
+            if frontier:
+                last = frontier[-1]
+                is_exact_tie = (
+                    obj.cost == last.cost and
+                    obj.earlyArrival == last.earlyArrival and
+                    obj.lateDepart == last.lateDepart
+                )
+                if is_exact_tie:
+                    #print('last.my_order_name')
+                    #print(last.my_order_name)
+                    #print('obj.my_order_name')
+                    #print(obj.my_order_name)
+                    
+                    #input('FOUND ONE')
+                    is_tie = True
+            if is_tie or obj.earlyArrival > best_early or obj.lateDepart < best_late:
                 frontier.append(obj)
                 best_early = max(best_early, obj.earlyArrival)
                 best_late = min(best_late, obj.lateDepart)
@@ -369,6 +410,17 @@ class ng_graph_fancy_slow:
                 continue
             N_i=set(e[0][1])
             N_j=set(e[1][1])
+            DEBUG_ON=False
+            in_place=False
+            if DEBUG_ON:
+                tmp_set_1=set([0, 2, 5, 6, 7, 41, 44])
+                tmp_set_2=set([0, 2, 5, 7, 44, 45])
+                
+                if u==45 and v==3 and N_i==tmp_set_1 and N_j==tmp_set_2:
+                    print('e')
+                    print(e)
+                    in_place=True
+                    input('im here')
             if len(N_j)==0:
                 new_E.append(e)
                 num_empty_nj=num_empty_nj+1
@@ -377,15 +429,24 @@ class ng_graph_fancy_slow:
                 new_E.append(e)
                 num_just_u=num_just_u+1
                 continue
+            if DEBUG_ON==True and in_place==True:
+                input('made it here')
             poss_first=N_j-set([u])
             #print('poss_first')
             #print(poss_first)
             did_add_ever=False
             my_tups_used=[]
+            #print('----')
+            #print('----')
+            #print('----')
+            #print('----')
+            #print('----')
             for w in poss_first:
-                N_q=set([u]).union(N_j)-set([w])
+                #N_q=set([u]).union(N_j)-set([w])
+                N_q=N_j-set([w,u])
                 N_q=frozenset(N_q)
-                this_tup=tuple([w,N_q,v])
+                this_tup=tuple([w,N_q,u])
+                
                 if this_tup not in self.eff_front_tup_2_list:
                     self.LA_ish_update_efficient(this_tup)
                     #if len(self.eff_front_tup_2_list[this_tup])==0:
@@ -394,8 +455,34 @@ class ng_graph_fancy_slow:
                     #    input('ok i found an empty')
                 my_tups_used.append(this_tup)
                 list_of_orders=self.eff_front_tup_2_list[this_tup]
+                if DEBUG_ON and in_place:
+                    print('w')
+                    print(w)
+                    print('this_tup')
+                    print(this_tup)
+                    #print('list_of_orders')
+                    #print(list_of_orders)
+                    print('---')
                 for my_order in list_of_orders:
-                    if my_order.my_order_name[-2]==u:
+                    tmp_order=my_order.compute_if_extension_at_end_possible(v)
+
+                    if DEBUG_ON and in_place:
+                        print('this_tup')
+                        print(this_tup)
+                        print('my_order.my_order_name')
+                        print(my_order.my_order_name)
+                        print('my_order.cost')
+                        print(my_order.cost)
+                        print('tmp_order')
+                        #print(tmp_order.my_order_name)
+                        #print('tmp_order.cost')
+                        #print(tmp_order.cost)
+                    #    print(my_order.my_order_name[-2]==u)
+                    if my_order.compute_if_extension_at_end_possible(v)<np.inf:
+                        if DEBUG_ON and in_place:
+                            input('AWESOME')
+                    #candid_order=my_order.my_order_name,u
+                    #if my_order.my_order_name[-2]==u:
                         did_add_ever=True
                         break
                 if did_add_ever==True:
@@ -418,6 +505,10 @@ class ng_graph_fancy_slow:
             else: #did_add_ever==True:
                 new_E.append(e)
                 num_spared=num_spared+1
+            if DEBUG_ON==True and in_place==True:
+                print('did_add_ever')
+                print(did_add_ever)
+                input('AT END it here')
         print('len(new_E)')
         print(len(new_E))
         print('len(self.E)')
@@ -452,3 +543,159 @@ class ng_graph_fancy_slow:
             this_new_edge=tuple([this_node_1,this_node_2])
             E_2.append(this_new_edge)
         self.E=E_2
+
+
+    def  check_for_rc_107_feasibility(self):
+
+        fabian_solution=[[50],
+            [11, 12, 14, 47, 17, 16, 15 ,13, 9, 10],
+            [23, 25, 21, 49, 19, 18, 48, 22, 20, 24], 
+            [2, 6, 7, 8, 5, 3, 1, 45, 46, 4],
+            [31, 29, 27, 28, 26, 34, 32, 30, 33], 
+            [41, 38, 42, 44, 43, 40, 37, 35, 36, 39],
+		]
+        jy_route_list=[]
+        start_depot=50
+        end_depot=51
+
+        E_consider=[]
+        import networkx as nx
+
+# Step 1: Build the directed graph
+        
+        for e in self.E:
+            n1=e[0]
+            n2=e[1]
+            u=n1[0]
+            v=n2[0]
+            #print('n1')
+            #print(n1)
+            #print('n2')
+            #print(n2)
+            #print('[u,v]')
+            #print([u,v])
+            #input('---')
+            if u==v:
+                E_consider.append([str(n1),str(n2),0])
+            else:
+                E_consider.append([str(n1),str(n2),1])
+            #if u==50:# and len(n1[1])==0:
+            #    print(E_consider[-1])
+            #    input('---')
+
+        G = nx.DiGraph()
+        for n1, n2, weight in E_consider:
+            G.add_edge(n1, n2, weight=weight)
+
+        M=self.my_instance
+        for my_route in fabian_solution:
+            this_route=[start_depot]
+            for z_tmp in my_route:
+                z=z_tmp-1
+                this_route.append(z)
+            this_route.append(end_depot)
+            jy_route_list.append(this_route)
+        route_by_major_node=[]
+
+        
+        for r in jy_route_list:
+            cur_node=(start_depot,[])
+            cur_node_match=[start_depot,[]]
+            major_nodes_on_route=[cur_node]
+            major_nodes_on_route_match=[cur_node_match]
+            major_and_minor_nodes_on_route_match=[cur_node_match]
+            for i in range(0,len(r)-1):
+                cur_node=major_nodes_on_route[-1]
+                u=r[i]
+                v=r[i+1]
+                neigh_u=self.ng_neigh_by_cust[u]
+                neigh_v=self.ng_neigh_by_cust[v]
+                helper=list(cur_node[1])+[u]
+                if neigh_v==None:
+                    neigh_v=[]
+                #print('neigh_v')
+                #print(neigh_v)
+                #print('cur_node')
+                #print(cur_node)
+                #print('cur_node[1]')
+                #print(cur_node[1])
+                #print('helper')
+                #print(helper)
+                helper=set(helper)
+                #print('helper')
+                #print(helper)
+                new_ng=helper.intersection(set(neigh_v))
+                
+                
+                #print('new_ng')
+                #print(new_ng)
+                new_node=[v,new_ng]
+                new_node_match=[v,list(sorted(new_ng))]
+                if new_node_match not in self.node_list[v]:
+                    print('r')
+                    print(r)
+                    print('self.node_list[u]')
+                    print(self.node_list[u])
+                    print('new_node_match')
+                    print(new_node_match)
+                    input('error here')
+                major_nodes_on_route.append(new_node)
+                major_nodes_on_route_match.append(new_node_match)
+                prev_node_ng=list(cur_node[1])
+                #print('prev_node_ng')
+                #print(prev_node_ng)
+                for w in neigh_u:
+                    if w not in neigh_v and w!=v:
+                        prev_node_ng.append(w)
+                minor_node_match=[u,list(sorted(list(set(prev_node_ng))))]
+                major_and_minor_nodes_on_route_match.append(minor_node_match)
+                major_and_minor_nodes_on_route_match.append(new_node_match)
+                e_candid=tuple([minor_node_match,new_node_match])
+                if e_candid not in self.E:
+                    print('r')
+                    print(r)
+                    print('major_and_minor_nodes_on_route_match')
+                    print(major_and_minor_nodes_on_route_match)
+                    print('e_candid')
+                    print(e_candid)
+                    input('error here ')
+                n1=major_nodes_on_route_match[-2]
+                n2=major_nodes_on_route_match[-1]
+                #print('n1')
+                #print(n1)
+                #print('n2')
+                #print(n2)
+                path = nx.shortest_path(G, source=str(n1), target=str(n2), weight="weight")
+                path_length = nx.shortest_path_length(G, source=str(n1), target=str(n2), weight="weight")
+                if path_length!=1:
+                    print('r')
+                    print(r)
+                    print('u')
+                    print(u)
+                    print('v')
+                    print(v)
+                    print('n1')
+                    print(n1)
+                    print('n2')
+                    print(n2)
+                    print('self.ng_neigh_by_cust[u]')
+                    print(self.ng_neigh_by_cust[u])
+                    print('self.ng_neigh_by_cust[v]')
+                    print(self.ng_neigh_by_cust[v])
+                    print('path')
+                    print(path)
+                    print('path_length')
+                    print(path_length)
+                    input('error here big')
+                    #11,8,10
+                    #11,[8,10]
+                    #13,[10,11]
+                #input('done a step')
+            #input('done a route')
+            route_by_major_node.append(major_nodes_on_route)
+
+        
+        print('len(E_consider)')
+        print(len(E_consider))
+        print(len(self.E))
+        input('---')

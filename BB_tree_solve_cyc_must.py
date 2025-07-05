@@ -442,22 +442,29 @@ class BBNode:
             )
             for g in self.my_BB_tree.G
         }
-        self.g_star = max(self.my_BB_tree.G, key=lambda g: frac_amount[g]*self.my_BB_tree.pred_val_gain[g])
+        #self.g_star = max(self.my_BB_tree.G, key=lambda g: frac_amount[g]*self.my_BB_tree.pred_val_gain[g])
+        self.g_star = max(self.my_BB_tree.G, key=lambda g: frac_amount[g]*self.my_BB_tree.pred_val_gain[g]/amount_inside[g])
         self.lb_term_separ=np.ceil(amount_inside[self.g_star])
         self.ub_term_separ=np.floor(amount_inside[self.g_star])
         if frac_amount[self.g_star]<0.001:
             self.g_star=None
-        #print('frac_amount')
-        #print(frac_amount)
-        #print('amount_inside[self.g_star]')
-        #print(amount_inside[self.g_star])
-        #print('self.g_star')
-        #print(self.g_star)
-        #print('self.lb_term_separ')
-        #print(self.lb_term_separ)
-        #print('self.ub_term_separ')
-        #print(self.ub_term_separ)
-        #input('---')
+        else:
+            utility=frac_amount[self.g_star]*self.my_BB_tree.pred_val_gain[self.g_star]/amount_inside[self.g_star]
+            print('amount_inside[self.g_star]')
+            print(amount_inside[self.g_star])
+            print('frac_amount[self.g_star]')
+            print(frac_amount[self.g_star])
+            print('self.g_star')
+            print(self.g_star)
+            print('utility')
+            print(utility)
+            print('self.my_BB_tree.pred_val_gain[g]')
+            print(self.my_BB_tree.pred_val_gain[self.g_star])
+            #print('self.lb_term_separ')
+            #print(self.lb_term_separ)
+            #print('self.ub_term_separ')
+            #print(self.ub_term_separ)
+            #input('---')
 
 class BB_tree_solve:
     def  __init__(self,D,my_params,my_output_path):
@@ -508,7 +515,7 @@ class BB_tree_solve:
             cur_LB, _, node = heapq.heappop(heap)
             self.data_hist.append(node.data)
             self.lb_hist.append(cur_LB)#,node.par_lb,node.LB_init])
-            #self.write_history()
+            self.write_history()
             #print('self.lb_hist')
             #print(self.lb_hist)
             #print('cur_LB')
@@ -519,7 +526,7 @@ class BB_tree_solve:
             print('self.lb_hist')
             print(self.lb_hist)
             #print(node.my_solver.history_dict['lblp_lower'])
-            input('---')
+            #input('---')
             if node.parent!=None:
                 print('lower Parent')
                 print(node.parent.my_solver.history_dict['lblp_lower'])
