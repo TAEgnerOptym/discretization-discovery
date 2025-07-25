@@ -64,9 +64,9 @@ def solve_gurobi_lp(dict_var_name_2_obj,
     safe_EQ = {con_name_map[k]: v for k, v in dict_con_name_2_eq.items()}
     
     options = {
-        "WLSACCESSID": "8f7bb9d6-8fe5-4349-9dd3-6abbaa9199a0",
-        "WLSSECRET": "cb02810a-e0e2-4a1f-8fc0-fd375f65fc65",
-        "LICENSEID": 2660300
+        "WLSACCESSID": "b7836a23-3df1-40ac-be4d-310282e2178e",
+        "WLSSECRET": "8dd2c11c-cb9b-46f3-b072-4887712ea0c9",
+        "LICENSEID": 2690165
     }
     old_old=sys.stdout
     sys.stdout = open(os.devnull, 'w')
@@ -299,9 +299,9 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
     safe_var_UB = {var_name_map[k]: v for k, v in dict_var_name_2_UB.items()}
 
     options = {
-        "WLSACCESSID": "8f7bb9d6-8fe5-4349-9dd3-6abbaa9199a0",
-        "WLSSECRET": "cb02810a-e0e2-4a1f-8fc0-fd375f65fc65",
-        "LICENSEID": 2660300
+        "WLSACCESSID": "b7836a23-3df1-40ac-be4d-310282e2178e",
+        "WLSSECRET": "8dd2c11c-cb9b-46f3-b072-4887712ea0c9",
+        "LICENSEID": 2690165
     }
 
     with gp.Env(params=options) as env:
@@ -509,9 +509,9 @@ def solve_gurobi_lp_bounds(dict_var_name_2_obj,
     safe_var_UB = {var_name_map[k]: v for k, v in dict_var_name_2_UB.items()}
 
     options = {
-        "WLSACCESSID": "8f7bb9d6-8fe5-4349-9dd3-6abbaa9199a0",
-        "WLSSECRET": "cb02810a-e0e2-4a1f-8fc0-fd375f65fc65",
-        "LICENSEID": 2660300
+        "WLSACCESSID": "b7836a23-3df1-40ac-be4d-310282e2178e",
+        "WLSSECRET": "8dd2c11c-cb9b-46f3-b072-4887712ea0c9",
+        "LICENSEID": 2690165
     }
     original_stdout = sys.stdout
     sys.stdout = open(os.devnull, 'w')

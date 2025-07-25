@@ -5,11 +5,19 @@ options = {
         "LICENSEID": 2660300
     }
     
-prune_by_branch_priority=True
+options = {
+        "WLSACCESSID": "b7836a23-3df1-40ac-be4d-310282e2178e",
+        "WLSSECRET": "8dd2c11c-cb9b-46f3-b072-4887712ea0c9",
+        "LICENSEID": 2690165
+    }
+prune_by_branch_priority=False
 model_path="model_name.mps"
 with gp.Env(params=options) as env:
     with gp.read(model_path, env=env) as model:
-    
+        model.setParam("Method", 3)
+        #model.setParam("BranchDir", 1)
+        model.setParam("Presolve", 0)
+        model.setParam("Cuts", 0)
 
         if prune_by_branch_priority: #options.get("prune_by_branch_priority", False):
             # Step 1: Identify variables to remove

@@ -30,6 +30,7 @@ from exper_proj_new import projector
 from baseline_solver import baseline_solver
 import json
 from New_valid_sep.check_valid_round_2 import check_valid_round_2
+from projector_on_lb import projector_on_lb
 class full_solver:
 
     def __init__(self,full_input_dict,jy_opt,output_file_path,actions_ignore=None):
@@ -113,11 +114,51 @@ class full_solver:
         self.history_dict['sum_lp_time_project']=[]
         self.history_dict['history_of_graphs_by_iter']=[]
         self.history_dict['objective_cut_list']=[]
+
         self.apply_complete_algorithm()
 
 
+    def apply_splitting_2(self):
+        actions_ignore=set(self.all_actions_not_source_sink_connected)
+        actions_ignore=actions_ignore-self.all_actions_ever_seen
+        my_proj=projector_on_lb(self,actions_ignore)
+        objective_gain=my_proj.lp_objective-self.my_lower_bound_LP.lp_objective
+        print('my_proj.lp_objective')
+        print(my_proj.lp_objective)
+        #print('self.my_lower_bound_LP.lp_objective')
+        #print(self.my_lower_bound_LP.lp_objective)
+        #input('---')
+        my_Lp_time=my_proj.lp_time
+        did_split=False
+        #FINEST_MAPPING=dict()
+        #for g in self.D['initGraphNode2AggNode']:
+        #    mykeys=self.D['initGraphNode2AggNode'][g]
+        #    tmp = {k: k for k in mykeys}
+#
+#            FINEST_MAPPING[g]=tmp
+        if objective_gain>0.001:#%self.jy_opt['epsilon']:
+            for g in self.graph_node_2_agg_node:
+                if self.graph_node_2_agg_node[g].keys() != my_proj.NAIVE_graph_node_2_agg_node[g].keys():
+                    input("Error here")
+            #print('self.graph_node_2_agg_node.keys()')
+            #print(self.graph_node_2_agg_node.keys())
+            #input('---')
+            #self.graph_node_2_agg_node['timeGraph']=my_proj.NAIVE_graph_node_2_agg_node['timeGraph']
+            #self.graph_node_2_agg_node=FINEST_MAPPING#my_proj.NAIVE_graph_node_2_agg_node#my_proj.NEW_node_2_agg_node
+            self.graph_node_2_agg_node=my_proj.NAIVE_graph_node_2_agg_node
+            #for g in self.graph_node_2_agg_node:
+                #self.graph_node_2_agg_node[g]=self.D['initGraphNode2AggNode'][g].copy()
+                #self.graph_node_2_agg_node[g]=FINEST_MAPPING[g].copy()#self.D['initGraphNode2AggNode'][g].copy()
+            did_split=True
+        objective_componentLps=dict()
+        time_component_lps=dict()
+        for h in self.graph_names:
+            objective_componentLps[h]=objective_gain/len(self.graph_names)
+            time_component_lps[h]=my_Lp_time/len(self.graph_names)
 
-
+        #self.count_size(False)
+        #input('hold')
+        return did_split,objective_componentLps,time_component_lps
 
     def apply_splitting(self):
         did_split=False
@@ -126,15 +167,6 @@ class full_solver:
         count_after_split=dict()
         objective_componentLps=dict()
         time_component_lps=dict()
-        #use_expensive=True
-        #if len(self.history_dict['lblp_lower'])>0 and abs(self.history_dict['lblp_lower'][-1]-self.my_lower_bound_LP.lp_objective)<0.01:
-        #    input('SHOULD NOT FIRE.  FAILED EXPERIMENT')
-        #    use_expensive=True
-        #    print('USING MORE EXPENSIVE PROJECT')
-        #    print(self.history_dict['lblp_lower'][-1])
-        #    print('self.my_lower_bound_LP.lp_objective')
-        #    print(self.my_lower_bound_LP.lp_objective)
-        #    input('--')
         for h in self.graph_names:
             #print('Starting SPlit+'+h)
         #    my_proj=[]
@@ -311,7 +343,6 @@ class full_solver:
                 if self.my_lower_bound_LP.lp_primal_solution[p]>0:
                     self.all_actions_ever_seen.add(p)
             
-            #self.THINK_get_p_h_mapping()
             self.actions_ignore=self.my_lower_bound_LP.new_actions_ignore.copy()
             t1=time.time()
             lblp_time=self.my_lower_bound_LP.lp_time
@@ -360,15 +391,9 @@ class full_solver:
             t1=time.time()
             this_prob_sizes_mid=self.count_size()
             
-            [did_split,proj_objective_componentLps,proj_time_component_lps]=self.apply_splitting()
+            #[did_split,proj_objective_componentLps,proj_time_component_lps]=self.apply_splitting()
+            [did_split,proj_objective_componentLps,proj_time_component_lps]=self.apply_splitting_2()
                 
-                #if did_split==False:
-                #    print('braeking do to no split')
-                #    print('new_lp_value=  '+str(new_lp_value))
-                #    break
-            
-
-
             self.time_list_outer['part3']=time.time()-t1
 
             t1=time.time()
@@ -398,7 +423,10 @@ class full_solver:
             print('lp compress time '+str(self.history_dict['lp_time_compress'][-1]))
             print('lplb time '+str(self.history_dict['lp_time_LB'][-1]))
             print('sum_lp_value_project '+str(self.history_dict['sum_lp_value_project'][-1]))
-            self.count_size(False)
+            print('final sizes')
+            final_size=self.count_size()
+            print('final_size')
+            print(final_size)
             print('prob_sizes_at_start')
             print(prob_sizes_at_start)
             print('this_prob_sizes_mid')
@@ -509,9 +537,9 @@ class full_solver:
                     self.graph_node_2_agg_node=self.my_lower_bound_LP.NAIVE_graph_node_2_agg_node
                 #if self.jy_opt['restore_after_each_step']>0.5:
                 #    self.split_based_init()
-
+                print('final sizes')
                 self.count_size(False)
-
+                print('--')
                 self.history_dict['lblp_lower'].append(new_lp_value)
                 self.history_dict['prob_sizes_at_start'].append(prob_sizes_at_start)
                 self.history_dict['did_compress'].append(did_compress_call)

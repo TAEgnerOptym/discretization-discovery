@@ -15,7 +15,7 @@
 "use_time_graph":1,
 "use_ng":1,
 "num_terms_per_bin_init_construct":100,
-"use_julians_custom_lp_solver":1,
+"use_julians_custom_lp_solver":0,
 "threshold_split":0.01,
 "roundingDiscretization_num_digits_keep":3,
 "min_inc_2_compress":0.00001,
