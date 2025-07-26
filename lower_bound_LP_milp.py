@@ -1488,8 +1488,8 @@ class lower_bound_LP_milp:
                     #    can_same_link[h][i]=can_same_link[h][i]-1
                     #    self.maybe_mapping[h][ij]=1
         t_sec=time.time()-t_sec
-        print('[t_first,t_sec]')
-        print([t_first,t_sec])
+        #print('[t_first,t_sec]')
+        #print([t_first,t_sec])
         #input('---')
 
 
@@ -1539,8 +1539,8 @@ class lower_bound_LP_milp:
             #for ij in active_ij:
             #    self.maybe_mapping[h][ij] = 1            
         t_sec=time.time()-t_sec
-        print('[t_first,t_sec]')
-        print([t_first,t_sec])
+        #print('[t_first,t_sec]')
+        #print([t_first,t_sec])
         #input('---')
 
     def apply_LA_branching(self):

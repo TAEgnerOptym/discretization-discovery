@@ -56,11 +56,11 @@ class projector_on_lb:
         self.all_graph_names=full_input_dict['allGraphNames']
 
         self.graph_node_2_agg_node=dict()
-        for h in full_prob.graph_name_2_nodes:
-            mykeys=full_prob.graph_name_2_nodes[h]
+        for g in full_prob.graph_name_2_nodes:
+            mykeys=full_prob.graph_name_2_nodes[g]
             tmp = {k: k for k in mykeys}
 
-            self.graph_node_2_agg_node[h]=tmp
+            self.graph_node_2_agg_node[g]=tmp
         #graph_name_2_nodes:  given a graph_name gives  you the nodes  names
         self.graph_name_2_nodes=full_input_dict['graphName2Nodes']
         #self.all_actions:  list of the names of all actions
@@ -72,7 +72,7 @@ class projector_on_lb:
         #all_non_null_action:  list of the all_non_null_action
         self.all_non_null_action=full_input_dict['allNonNullAction']
         #self.exog_name_2_rhs:  mapping of exogenous contraitns to RHS
-        self.exog_name_2_rhs=full_input_dict['exogName2Rhs'].copy()
+        self.exog_name_2_rhs=full_input_dict['exogName2Rhs']
         #self.all_integCon:  all of the contraints used to intregrate with the psi constriants 
         self.all_integCon=full_input_dict['allIntegCon']
         #self.all_primitive_vars;  list of all primitive varaiables names of psi
@@ -80,66 +80,16 @@ class projector_on_lb:
         # dictionary to mapping compact variable name to cost
         self.action_2_cost=full_input_dict['action2Cost']
         # dictionary to mapping compact variable name and constriant name to contirbutoin
-        self.action_con_2_contrib=full_input_dict['actionCon2Contrib'].copy()
+        self.action_con_2_contrib=full_input_dict['actionCon2Contrib']
         #delta_con_2_contrib:   dictionary to mapping delta,constraint 2 contrib
-        self.delta_con_2_contrib=full_input_dict['deltaCon2Contrib'].copy()
+        self.delta_con_2_contrib=full_input_dict['deltaCon2Contrib']
         #action_integCon_2_contrib
         self.action_integCon_2_contrib=full_input_dict['actionIntegCon2Contrib']
         #given any action, and interCon maps it to a contribution
         self.prim_integCon_2_contrib=full_input_dict['primIntegCon2Contrib']
         #gien any h,i,j it maps it to the ids for p
         #indexed first by h then by [i,j]
-        #self.hij_2_P=full_input_dict['hij2P']
-        self.KEEP_all_non_null_action=set(self.all_non_null_action)-dict_2_action_ignore
-        self.KEEP_all_action=set(self.all_actions)-dict_2_action_ignore
-        if 'null_action' not in self.KEEP_all_action:
-            self.KEEP_all_action.add('null_action')
-        if 'null_action' in self.KEEP_all_non_null_action:
-            self.KEEP_all_non_null_action.remove('null_action')
-        cons_to_grab = {
-            con for (action, con) in self.action_con_2_contrib
-            if action not in self.KEEP_all_action
-        }
-
-        cons_to_grab = {
-            con for (action, con) in self.action_con_2_contrib
-            if action not in self.KEEP_all_action and (con.startswith("cap_uv_") or con.startswith("time_uv_"))
-        }
-
-        self.action_con_2_contrib = {
-            (action, con): val
-            for (action, con), val in self.action_con_2_contrib.items()
-            if action  in self.KEEP_all_action
-        }
-
-        cons_to_grab
-        self.delta_con_2_contrib = {
-            (delta_term, con): val
-            for (delta_term, con), val in self.delta_con_2_contrib.items()
-            if con not in cons_to_grab
-        }
-        self.exog_name_2_rhs = {
-            (con): val
-            for (con), val in self.exog_name_2_rhs.items()
-            if con not in cons_to_grab
-        }
-        if 1>0:
-            self.hij_2_P=dict()
-            for h in full_input_dict['hij2P']:
-                self.hij_2_P[h]=dict()
-                for ij in full_input_dict['hij2P'][h]:
-                    p_list=full_input_dict['hij2P'][h][ij]
-                    p_this=p_list[0]
-                    if p_this in self.KEEP_all_action:
-                        self.hij_2_P[h][ij]=full_input_dict['hij2P'][h][ij]
-                    #else:
-                    #    print('killing')
-                    #    print(ij)
-                    #    print('this')
-                    #    print(full_input_dict['hij2P'][h][ij])
-                    #    input('---')
-        else:
-            self.hij_2_P=full_input_dict['hij2P']
+        self.hij_2_P=full_input_dict['hij2P']
         #maps the names of the graphs to the id for the source
         self.h_2_source_id=full_input_dict['h2SourceId']
         
@@ -149,6 +99,7 @@ class projector_on_lb:
         self.OPT_use_psi=False
         self.OPT_do_ilp=False
         self.times_lp_times['prior']=time.time()-t1
+
         self.construct_LB_or_ILP(self.OPT_use_psi,self.OPT_do_ilp)
         t1=time.time()
   
@@ -170,18 +121,13 @@ class projector_on_lb:
         self.make_new_splits()
 
     def make_agg_node_2_nodes(self):
-        #self.agg_node_2_nodes = {
-        #    h: {
-        #        f: { i for i, f_val in self.graph_node_2_agg_node[h].items() if f_val == f }
-        #        for f in set(self.graph_node_2_agg_node[h].values())
-        #    }
-        #    for h in self.graph_names
-        #}
-        self.agg_node_2_nodes=dict()
-        for h in self.full_prob.graph_node_2_agg_node:
-            mykeys=self.full_prob.graph_node_2_agg_node[h]
-            tmp = {k: k for k in mykeys}
-            self.agg_node_2_nodes[h]=tmp
+        self.agg_node_2_nodes = {
+            h: {
+                f: { i for i, f_val in self.graph_node_2_agg_node[h].items() if f_val == f }
+                for f in set(self.graph_node_2_agg_node[h].values())
+            }
+            for h in self.graph_names
+        }
 
     def make_edge_fg_2_ij_reverse(self):
         self.h_fg_2_ij = {}
@@ -210,27 +156,46 @@ class projector_on_lb:
         self.h_fg_2_q=dict() #given h,fg gives the equvelence_class
         self.h_q_2_q_id=dict()
         for h in self.graph_names:
-            
-            all_fg_edges = self.h_fg_2_ij[h]
-            self.h_fg_2_q[h] = dict()
-            self.h_q_2_fg[h] = dict()
-            self.h_q_2_q_id[h] = dict()
-            count = 0
+            if 1<0:
+                all_fg_edges=self.h_fg_2_ij[h]
+                self.h_fg_2_q[h]=dict()
+                self.h_q_2_fg[h]=dict()
+                self.h_q_2_q_id[h]=dict()
+                count=0
+                for  tup_fg in all_fg_edges:
+                    my_set=set([])
+                    for tup_ij in  self.h_fg_2_ij[h][tup_fg]:
+                        for p in self.hij_2_P[h][tup_ij]:
+                            my_set.add(p)
+                    my_tup_pq=tuple(sorted(list(my_set)))
+                    self.h_fg_2_q[h][tup_fg]=my_tup_pq
+                    
+                    if my_tup_pq not in self.h_q_2_fg[h]:
+                        self.h_q_2_fg[h][my_tup_pq]=set([])
+                        self.h_q_2_q_id[h][my_tup_pq]=tuple([h,count])
+                        count=count+1
+                    self.h_q_2_fg[h][my_tup_pq].add(tup_fg)
+            else:
+                all_fg_edges = self.h_fg_2_ij[h]
+                self.h_fg_2_q[h] = dict()
+                self.h_q_2_fg[h] = dict()
+                self.h_q_2_q_id[h] = dict()
+                count = 0
 
-            for tup_fg in all_fg_edges:
-                # Collect all sets of p-values quickly
-                sets_to_union = (self.hij_2_P[h][tup_ij] for tup_ij in self.h_fg_2_ij[h][tup_fg])
-                # Use set union in bulk
-                my_set = set().union(*sets_to_union)
-                
-                my_tup_pq = tuple(sorted(my_set))
-                self.h_fg_2_q[h][tup_fg] = my_tup_pq
+                for tup_fg in all_fg_edges:
+                    # Collect all sets of p-values quickly
+                    sets_to_union = (self.hij_2_P[h][tup_ij] for tup_ij in self.h_fg_2_ij[h][tup_fg])
+                    # Use set union in bulk
+                    my_set = set().union(*sets_to_union)
+                    
+                    my_tup_pq = tuple(sorted(my_set))
+                    self.h_fg_2_q[h][tup_fg] = my_tup_pq
 
-                if my_tup_pq not in self.h_q_2_fg[h]:
-                    self.h_q_2_fg[h][my_tup_pq] = set()
-                    self.h_q_2_q_id[h][my_tup_pq] = (h, count)
-                    count += 1
-                self.h_q_2_fg[h][my_tup_pq].add(tup_fg)
+                    if my_tup_pq not in self.h_q_2_fg[h]:
+                        self.h_q_2_fg[h][my_tup_pq] = set()
+                        self.h_q_2_q_id[h][my_tup_pq] = (h, count)
+                        count += 1
+                    self.h_q_2_fg[h][my_tup_pq].add(tup_fg)
 
     def make_mappings(self):
         t1=time.time()
@@ -256,7 +221,7 @@ class projector_on_lb:
         t1=time.time()
         
         my_x_typr='Continuous'
-        for var_name in self.KEEP_all_non_null_action:
+        for var_name in self.all_non_null_action:
             self.dict_var_name_2_obj[var_name]=self.action_2_cost[var_name]
         self.times_lp_times['help_construct_LB_make_vars_2']=time.time()-t1
         t1=time.time()
@@ -309,7 +274,9 @@ class projector_on_lb:
         for exog_name in self.exog_name_2_rhs:
             self.dict_con_name_2_LB[exog_name]=self.exog_name_2_rhs[exog_name]
             
-
+        if self.OPT_use_psi==True and self.OPT_do_ilp==True:
+            for con_name in self.all_integCon:
+                self.dict_con_name_2_eq[con_name]=0
         for h in self.graph_names:
             this_sink=self.graph_node_2_agg_node[h][self.h_2_sink_id[h]]
             this_source=self.graph_node_2_agg_node[h][self.h_2_source_id[h]]
@@ -324,7 +291,7 @@ class projector_on_lb:
                 self.dict_con_name_2_eq[con_name]=0
         for h in self.graph_names:
             prefix='action_match_h='+h+"_p="
-            new_entries = {prefix + p: 0 for p in self.KEEP_all_non_null_action}
+            new_entries = {prefix + p: 0 for p in self.all_non_null_action}
             self.dict_con_name_2_eq.update(new_entries)
         t2=time.time()
         
@@ -373,7 +340,7 @@ class projector_on_lb:
         constraints_1 = {
             (p, f"action_match_h={h}_p={p}"): -1
             for h in self.graph_names
-            for p in self.KEEP_all_non_null_action
+            for p in self.all_non_null_action
         }
 
         # Second set: iterate over each graph h, each q in h_q_2_fg[h], and then each p in q,
@@ -479,16 +446,8 @@ class projector_on_lb:
         for var in self.full_prob.delta_name_2_ub:
             ub_use[var]=self.full_prob.delta_name_2_ub[var]
         for var in self.actions_ignore:
-            if var in self.dict_var_name_2_obj:
-                ub_use[var]=0
-                #input('error here')
-        #for (v,c) in self.CLEAN_dict_var_con_2_lhs_exog:
-        #    if v in self.actions_ignore:
-        #        input('error here')
-        
-        #for (v,c) in self.CLEAN_dict_var_con_2_lhs_eq:
-        ##    if v in self.actions_ignore:
-        #        input('error here')
+            ub_use[var]=0
+
         #input("mooose")
         out_solution=solve_gurobi_lp_bounds(self.dict_var_name_2_obj,
             self.CLEAN_dict_var_con_2_lhs_exog,
@@ -537,13 +496,11 @@ class projector_on_lb:
         }
 
     def make_new_splits(self):
-        self.MF.jy_opt['threshold_split']=0.1#0.01
-        self.MF.jy_opt['max_nodes_split']=20000
-
+        self.MF.jy_opt['threshold_split']=0.01
         #get max value
         self.NAIVE_graph_node_2_agg_node=dict()#self.graph_node_2_agg_node.copy()
         #max_val=max(self.graph_node_2_agg_node.values())
-        self.num_do_split=0
+        
         for h in self.all_graph_names:
             self.NAIVE_graph_node_2_agg_node[h]=self.MF.my_lower_bound_LP.graph_node_2_agg_node[h].copy()
             start_value=0
@@ -552,6 +509,7 @@ class projector_on_lb:
             compact_sink=self.MF.h_2_sink_id[h]
             compact_source=self.MF.h_2_source_id[h]
             non_source_sink=set(self.graph_node_2_agg_node[h])-set([compact_sink ,compact_source])
+            self.MF.jy_opt['max_nodes_split']=50
             for i_orig in non_source_sink:
                 i=i_orig[:]
             
@@ -639,7 +597,7 @@ class projector_on_lb:
                 do_split_f,
                 key=lambda f: f_2_max_val[f] - f_2_min_val[f]
             )
-            self.num_do_split+=len(do_split_f)
+
             for f in do_split_f:
                 start_value=start_value+num_thesh_use
                 count_pos=0

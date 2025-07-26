@@ -119,12 +119,40 @@ class full_solver:
 
 
     def apply_splitting_2(self):
+        if 'ub_lp' not in self.history_dict:
+            self.history_dict['ub_lp']=[]
+            self.history_dict['ignore_set']=[]
         actions_ignore=set(self.all_actions_not_source_sink_connected)
         actions_ignore=actions_ignore-self.all_actions_ever_seen
         my_proj=projector_on_lb(self,actions_ignore)
         objective_gain=my_proj.lp_objective-self.my_lower_bound_LP.lp_objective
+        if len(self.history_dict['ub_lp'])>0.5 and my_proj.lp_objective>self.history_dict['ub_lp'][-1]+0.1:
+            print('ignore old')
+            print(self.history_dict['ignore_set'][-1])
+            print('actions_ignore')
+            print(actions_ignore)
+            ts1=self.history_dict['ignore_set'][-1]
+            tmp=actions_ignore-ts1
+            print('tmp')
+            print(tmp)
+            print('len(tmp)')
+            print(len(tmp))
+            print('self.history_dict[ub_lp][-1]')
+            print(self.history_dict['ub_lp'][-1])
+            print('my_proj.lp_objective')
+            print(my_proj.lp_objective)
+            input('error here this value went up not down')
+            my_proj2=projector_on_lb(self,ts1)
+            print('my_proj2.lp_objective')
+            print(my_proj2.lp_objective)
+            my_proj3=projector_on_lb(self,set([]))
+            print('my_proj3.lp_objective')
+            print(my_proj3.lp_objective)
+            input('lets run')
         print('my_proj.lp_objective')
         print(my_proj.lp_objective)
+        self.history_dict['ub_lp'].append(my_proj.lp_objective)
+        self.history_dict['ignore_set'].append(actions_ignore)
         #print('self.my_lower_bound_LP.lp_objective')
         #print(self.my_lower_bound_LP.lp_objective)
         #input('---')
@@ -136,7 +164,7 @@ class full_solver:
         #    tmp = {k: k for k in mykeys}
 #
 #            FINEST_MAPPING[g]=tmp
-        if objective_gain>0.001:#%self.jy_opt['epsilon']:
+        if objective_gain>0.1 and my_proj.num_do_split>0.5:#%self.jy_opt['epsilon']:
             for g in self.graph_node_2_agg_node:
                 if self.graph_node_2_agg_node[g].keys() != my_proj.NAIVE_graph_node_2_agg_node[g].keys():
                     input("Error here")
@@ -283,10 +311,12 @@ class full_solver:
                     out_sol[my_prim]=my_ilp_sol[my_prim]
             self.history_dict['jy_opt']=self.jy_opt
             self.history_dict['output_ilp_solution']=out_sol
-
+        self.history_dict['ignore_set']=[]
+        #self.find_non_serializable_fields(self.history_dict)
         with open(self.output_file_path, 'w') as file:
             json.dump(self.history_dict, file)
 
+    
     def augment_history_graphs(self):
 
         new_hist=dict()
@@ -379,6 +409,8 @@ class full_solver:
 
                 else:
                     self.graph_node_2_agg_node=self.my_lower_bound_LP.NAIVE_graph_node_2_agg_node
+                    #self.do_compress_till_no_change(self.jy_opt['restore_after_each_step'])
+
                 #self.count_size()
                 did_compress_call=True
                 #input('done compression ')
@@ -510,13 +542,15 @@ class full_solver:
                 #input('---')
                 if self.my_adder.objective_cut>0.01:
                     continue
-            if did_compress_call==False and did_split==False:
+            #if did_compress_call==False and did_split==False:
+            if  did_split==False:
                 print('breaking do to no split')
                 break
         #input('done entire call')
         if  use_compression>0.5:#1>0:#did_compress_call==False and use_compression==True and iter>0:
             #input('here')
-            if did_compress_call==False or self.history_dict['sum_lp_value_project'][-1]>.001:
+            if 1>0:
+            #if did_compress_call==False or self.history_dict['sum_lp_value_project'][-1]>.001:
                 print('Doing final Clean up operations')
                 self.my_lower_bound_LP=lower_bound_LP_milp(self,self.graph_node_2_agg_node,False,False)
                 prob_sizes_at_start=self.count_size()
@@ -555,6 +589,10 @@ class full_solver:
             print('-----')
             print('-----')
             print('-----')
+            USE_do_compress_till_no_change=False
+            if USE_do_compress_till_no_change:
+                self.do_compress_till_no_change(False)
+
             print('FINAL CLEANUP FINISHE:  ')
             print('new_lp_value=  '+str(self.history_dict['lblp_lower'][-1]))
             #print('did_compress_call:  '+str(did_compress_call))
@@ -668,7 +706,42 @@ class full_solver:
             #self.history_dict['milp_solution_objective_value']=milp_solution_objective_value
         self.prepare_ILP_solution()
 
+    def do_compress_till_no_change(self,do_restore):
+        count=0
+        list_all_sizes=[]
+        start_value_lp=self.my_lower_bound_LP.lp_objective
+        #print('starting repeat calls')
+        #input('--')
+        lp_time_compress=0
+        if do_restore>0.5:
+            self.split_based_init()
+        while True:
+            my_sizes=self.count_size()
+            print(['my_sizes='+str(my_sizes)+' at '+str(count),'  lp_time_compress. '+str(lp_time_compress)])
+            old_value=sum(my_sizes.values())
+            self.my_lower_bound_LP=lower_bound_LP_milp(self,self.graph_node_2_agg_node,False,False)
+            self.graph_node_2_agg_node=self.my_lower_bound_LP.NAIVE_graph_node_2_agg_node
+            #print(['BEFORE my_sizes='+str(my_sizes)+' at '+str(count),'  lp_time_compress. '+str(lp_time_compress)])
 
+            if do_restore>0.5:
+                self.split_based_init()
+            #print(['AFTER my_sizes='+str(my_sizes)+' at '+str(count),'  lp_time_compress. '+str(lp_time_compress)])
+
+            new_value_lp=self.my_lower_bound_LP.lp_objective
+            lp_time_compress+=self.my_lower_bound_LP.lp_time
+            if abs(new_value_lp-start_value_lp)>0.001:
+                print('new_value_lp')
+                print(new_value_lp)
+                print('start_value_lp')
+                print(start_value_lp)
+                input('error ')
+            my_sizes=self.count_size()
+            list_all_sizes.append(my_sizes)
+            new_value=sum(my_sizes.values())
+            if new_value==old_value:
+                break
+            count=count+1
+        #input('done ')
     def update_running_average_primal_solution(self):
         
         if len(self.running_average_sol)==0:
