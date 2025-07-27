@@ -4,21 +4,12 @@ import argparse
 
 #default_input='data/jy_C104.txt'
 
-default_input='jy_nyc_4.txt'
 
-do_BIG_PROBLEM=True
-if do_BIG_PROBLEM==True:
-    default_input='data/jy_C104.txt'
-    #default_input='data/jy_RC107.txt'
-    #default_input='data/jy_RC101.txt'
-    #default_input='data/jy_RC203.txt'
-    #default_input='dataHOM/jyHOM_C2_25.txt'
-    #default_input='dataHOM/jyHOM_C2_2_1.txt'
-    
-    #default_input='data/jy_R211.txt'
+default_input='data/jy_C103.txt'
+default_option_path='my_params_C.json'
+#default_input='data/jy_R107.txt'
+#default_option_path='my_params_R200.json'
 
-#default_option_path='my_params_Homburg_200.json'
-default_option_path='my_params_R200.json'
 #default_option_path='my_params_debug_branch_RMP.json'
 #default_option_path='my_params_debug_branch_RMP.json'
 #for any given group of 7 customers.  The number of routes that use 

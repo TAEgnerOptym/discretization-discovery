@@ -16,6 +16,7 @@ from scipy.sparse import csr_matrix
 import pulp
 import sys
 import itertools
+import heapq
 
 from pre_process.naive_pre import *
 sys.path.append("exper_ideas")
@@ -198,7 +199,162 @@ class lower_bound_LP_milp:
             #print('self.DEBUG_len')
             #print(self.DEBUG_len)
             input('look here')
-    
+        #input('hih')
+        if  1>0 and self.OPT_do_ilp==0:
+            self.select_low_reduced_cost_actions()
+        #input('done')
+
+    def select_low_reduced_cost_actions(self):
+        ub_current=np.inf
+        #ub_current=358.1#822.95
+        ub_current=822.95
+        upper_bound_valid=True
+        if self.full_prob.jy_opt['do_ilp']==False:
+            ub_current=np.inf
+        if self.full_prob.jy_opt['do_ilp']==False and 'ub_lp' in self.full_prob.history_dict:
+            ub_current=self.full_prob.history_dict['ub_lp'][-1]
+        
+        eta=(ub_current-self.lp_objective)+0.001
+        print('eta')
+        print(eta)
+        primal_solution=self.out_solution_JY['primal_solution']
+        reduced_costs=self.out_solution_JY['reduced_costs']
+        usedTerms=set(self.all_actions)-set(self.actions_ignore)
+        pattern = re.compile(r"act_(\d+)_(\d+)")
+        candidate_per_u = defaultdict(list)
+        num_found_high=0
+        num_found_low=0
+        num_used=0
+        num_already_gone=0
+        terms_remove=[]
+        for act in primal_solution:
+            #if act in usedTerms:
+            #    num_used=num_used+1
+            #    continue
+            if act in self.full_prob.delta_name_2_ub and self.full_prob.delta_name_2_ub[act]<0.001:
+                num_already_gone=num_already_gone+1
+                continue
+            match = pattern.fullmatch(act)
+            if not match:
+                continue
+
+            u, v = match.groups()
+            rc = reduced_costs.get(act, float('inf'))
+            red_val_sum=0
+            tmp_val=dict()
+            for h in self.graph_names:
+                red_val=np.inf
+                for v_name in self.mapping_h_p_to_vars_use[h][act]:
+                    red_val=min([red_val,reduced_costs[v_name]])
+                red_val_edge=np.inf
+                for v_name_2 in self.mapping_h_p_to_fg_vars_use[h][act]:
+                    red_val_edge=min([red_val_edge,reduced_costs[v_name_2]])
+
+                tmp_val[h]=[red_val,red_val_edge]
+                red_val_sum=red_val_sum+red_val+red_val_edge
+
+            #if rc<eta  and rc+red_val_sum>eta:
+            #    print('rc,red_val_sum')
+            #    print([rc,red_val_sum])
+            #    input('look here ')
+            rc=rc+red_val_sum
+            
+            if rc>eta:
+                #print('rc')
+                #p#rint(rc)
+                terms_remove.append(act)
+                num_found_high=num_found_high+1
+                #input('hold')
+            else:
+                num_found_low=num_found_low+1
+            if rc >= eta:
+                continue
+
+            # Store (rc, act) so we can heapq.nsmallest later
+            candidate_per_u[u].append((rc, act))
+
+        # Now select the 2 smallest per u
+        #result = {
+        #    u: [act for _, act in heapq.nsmallest(2, entries)]
+        #    for u, entries in candidate_per_u.items()
+        #}
+        result = {
+            u: heapq.nsmallest(2, entries)
+            for u, entries in candidate_per_u.items()
+        }
+        print('num_found_high')
+        print(num_found_high)
+        print('num_found_low')
+        print(num_found_low)
+        print('num_used')
+        print(num_used)
+        print('num_already_gone')
+        print(num_already_gone)
+        print('---')
+        #print(result)
+        #print('result')
+       # input('--')
+
+        if upper_bound_valid==True:
+            for p in terms_remove:
+                self.full_prob.delta_name_2_ub[p]=0
+           # given set terms_to_remove. got through the dictionary hijp  which we index by ij and remove any terms for which hijp[ij] for which p in hijp[ij]
+            allowed_terms=set(self.all_actions)-set(terms_remove)
+            allowed_terms.add('null_action')
+            print('removing')
+            t_list=[]
+
+            t1=time.time()
+            for h in self.graph_names:
+                hijp=self.full_prob.full_input_dict['hij2P'][h]
+                for h in self.graph_names:
+                    hijp = self.full_prob.full_input_dict['hij2P'][h]
+                    self.full_prob.full_input_dict['hij2P'][h] = {
+                        ij: p_list for ij, p_list in hijp.items()
+                        #if p_list[0] not in terms_remove
+                        if p_list[0] in allowed_terms#not in terms_remove
+                    }
+                #for ij in list(hijp.keys()):
+                #    p = hijp[ij][0]
+                #    if p in terms_remove:
+                #        del hijp[ij]
+            t_list.append(time.time()-t1)
+            t1=time.time()
+            cons_to_grab = {
+                con for (action, con) in self.action_con_2_contrib
+                if  (con.startswith("cap_uv_") or con.startswith("time_uv_")) and action in terms_remove
+            }
+            t_list.append(time.time()-t1)
+            t1=time.time()
+            
+            self.action_con_2_contrib = {
+                (action, con): val
+                for (action, con), val in self.action_con_2_contrib.items()
+                #if action  not in terms_remove
+                if action  in allowed_terms#not in terms_remove
+            }
+
+            t_list.append(time.time()-t1)
+            t1=time.time()
+            self.delta_con_2_contrib = {
+                (delta_term, con): val
+                for (delta_term, con), val in self.delta_con_2_contrib.items()
+                if con not in cons_to_grab
+            }
+            t_list.append(time.time()-t1)
+            t1=time.time()
+            self.exog_name_2_rhs = {
+                (con): val
+                for (con), val in self.exog_name_2_rhs.items()
+                if con not in cons_to_grab
+            }
+            t_list.append(time.time()-t1)
+            t1=time.time()
+            print('t_list')
+            print(t_list)
+            print('done removing')
+        return result        
+
     def remove_remove_delta_and_delta_con(self):
         print('rmoving')
         delta_vars = set()
@@ -412,17 +568,26 @@ class lower_bound_LP_milp:
         for var_name in self.all_delta:
             self.dict_var_name_2_obj[var_name]=0
         self.times_lp_times['help_construct_LB_make_vars_4']=time.time()-t1
+        
+        self.mapping_h_p_to_fg_vars_use=dict()
+
         t1=time.time()
         for h in self.graph_names:
+            self.mapping_h_p_to_fg_vars_use[h]=defaultdict(list)
+
             for tup_fg in self.h_fg_2_ij[h]:
                 
                 f=tup_fg[0]
                 g=tup_fg[1]
                 var_name='EDGE_h='+h+'_f='+f+'_g='+g
                 self.dict_var_name_2_obj[var_name]=0
+                
                 #if (self.full_prob.jy_opt['allOneBig_init']==False and self.full_prob.jy_opt['do_split_based_init']==True) and self.full_prob.jy_opt['all_vars_binary']==True:
                 if self.full_prob.jy_opt['all_vars_binary']==True:
                     self.dict_var_name_2_is_integer[var_name]=1
+                q=self.h_fg_2_q[h][tup_fg]
+                for p in q:
+                    self.mapping_h_p_to_fg_vars_use[h][p].append(var_name)
         self.times_lp_times['help_construct_LB_make_vars_5']=time.time()-t1
         t1=time.time()
         t1 = time.time()
@@ -430,12 +595,15 @@ class lower_bound_LP_milp:
         vars_names_ignore_set = set(self.vars_names_ignore)  # For O(1) lookups
         dict_update = {}  # Collect all new entries for one bulk update
         dict_update_non_null = {}  # Collect all new entries for one bulk update
-
+        self.mapping_h_p_to_vars_use=dict()
         for h in self.graph_names:
+            self.mapping_h_p_to_vars_use[h]=defaultdict(list)
             for q in self.h_q_2_q_id[h]:
                 prefix = f"fill_PQ_h={h}_q={q}_p="
                 for p in q:
                     var_name = prefix + p
+                    self.mapping_h_p_to_vars_use[h][p].append(var_name)
+
                     dict_update[var_name] = 0
                     
                     if p in vars_names_ignore_set:
@@ -1188,7 +1356,7 @@ class lower_bound_LP_milp:
             self.times_lp_times['GUR_time_opt']=out_solution['time_opt']
             self.times_lp_times['GUR_time_post']=out_solution['time_post']
             self.lp_time=out_solution['time_opt']
-            
+            self.out_solution_JY=out_solution
         else:
             #
             #self.actions_ignore_2=set(self.all_actions)-self.full_prob.all_actions_ever_seen
@@ -1282,7 +1450,7 @@ class lower_bound_LP_milp:
                 #this_con_name= this_con_name.replace("(", "_")
                 #this_con_name= this_con_name.replace(")", "_")
                 self.Naive_h_f_2_dual[h][f]=self.lp_dual_solution[this_con_name]
-                new_val=round(self.Naive_h_f_2_dual[h][f],3)
+                new_val=round(self.Naive_h_f_2_dual[h][f],self.full_prob.jy_opt['roundingDiscretization_num_digits_keep'])
                 self.Naive_h_f_2_dual_sig_fig[h][f]=new_val
                 if tuple([h,new_val]) not in self.Naive_h_val_2_id[h]:
                     self.Naive_h_val_2_id[h][tuple([h,new_val])]=counter_h

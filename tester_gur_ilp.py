@@ -3,9 +3,9 @@ from gurobipy import GRB
 import time
 # Set desired solver options
 options = {
-        "WLSACCESSID": "8f7bb9d6-8fe5-4349-9dd3-6abbaa9199a0",
-        "WLSSECRET": "cb02810a-e0e2-4a1f-8fc0-fd375f65fc65",
-        "LICENSEID": 2660300
+        "WLSACCESSID": "b7836a23-3df1-40ac-be4d-310282e2178e",
+        "WLSSECRET": "8dd2c11c-cb9b-46f3-b072-4887712ea0c9",
+        "LICENSEID": 2690165
     }
 #model_path="../Optym_gurobi_files_R107_LP/phase_1_file_num8417073.mps"
 #model_path="../optym_gurobi_file_ILP/C_104_50_458.mps"
@@ -26,6 +26,7 @@ model_path="R104_super_fine.mps"
 #model_path="R_104_just_flip.mps"
 #model_path="../optym_gurobi_file_ILP/C_104_50_25_compress.mps"
 model_path="Z7_model_name.mps"
+model_path="model_name.mps"
 with gp.Env(params=options) as env:
     with gp.read(model_path, env=env) as model:
         model.setParam("DisplayInterval", 1)
@@ -52,7 +53,7 @@ with gp.Env(params=options) as env:
             #model.setParam("CutPasses", 0)           # No passes even beyond root
             model.setParam("MIPFocus", 3)
             #model.setAttr("BranchDir", 1)
-            model.setParam("Method", 2)
+            #model.setParam("Method", 2)
             #for var in model.getVars():
             #    if var.VType != GRB.CONTINUOUS:
             #        var.setAttr("BranchDir", 1)

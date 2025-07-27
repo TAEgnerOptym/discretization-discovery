@@ -474,10 +474,12 @@ class projector_on_lb:
         #    lb_use=self.full_prob.delta_name_2_lb.copy()
         #    ub_use=self.full_prob.delta_name_2_ub.copy()
         for var in self.full_prob.delta_name_2_lb:
-            lb_use[var]=self.full_prob.delta_name_2_lb[var]
+            if var in self.dict_var_name_2_obj:
+                lb_use[var]=self.full_prob.delta_name_2_lb[var]
         
         for var in self.full_prob.delta_name_2_ub:
-            ub_use[var]=self.full_prob.delta_name_2_ub[var]
+            if var in self.dict_var_name_2_obj:
+                ub_use[var]=self.full_prob.delta_name_2_ub[var]
         for var in self.actions_ignore:
             if var in self.dict_var_name_2_obj:
                 ub_use[var]=0
@@ -538,7 +540,7 @@ class projector_on_lb:
 
     def make_new_splits(self):
         self.MF.jy_opt['threshold_split']=0.1#0.01
-        self.MF.jy_opt['max_nodes_split']=20000
+        self.MF.jy_opt['max_nodes_split']=1000
 
         #get max value
         self.NAIVE_graph_node_2_agg_node=dict()#self.graph_node_2_agg_node.copy()
@@ -632,6 +634,8 @@ class projector_on_lb:
             num_thesh_use=self.MF.jy_opt['num_thresh_split_projector']
             all_keys_h=set()
             num_constrs_add=min([len(do_split_f),self.MF.jy_opt['max_nodes_split']])
+            print('h')
+            print(h)
             print('len(do_split_f)')
             print(len(do_split_f))
             do_split_f = heapq.nlargest(

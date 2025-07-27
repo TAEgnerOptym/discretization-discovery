@@ -66,10 +66,11 @@ class jy_fast_lp_gurobi:
                  min_improvement_dump=0.1, epsilon=1e-4,pos_red_cut=0.01,min_dual_slack_add_poss=1,):
         self.pos_red_cut=pos_red_cut
         self.min_dual_slack_add_poss=min_dual_slack_add_poss
+        
         self.options = {
-                "WLSACCESSID": "8f7bb9d6-8fe5-4349-9dd3-6abbaa9199a0",
-                "WLSSECRET": "cb02810a-e0e2-4a1f-8fc0-fd375f65fc65",
-                "LICENSEID": 2660300
+            "WLSACCESSID": "b7836a23-3df1-40ac-be4d-310282e2178e",
+            "WLSSECRET": "8dd2c11c-cb9b-46f3-b072-4887712ea0c9",
+            "LICENSEID": 2690165
         }
         self.my_lower_bound_object=my_lower_bound_object
         self.verbose = verbose

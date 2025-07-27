@@ -119,12 +119,41 @@ class full_solver:
 
 
     def apply_splitting_2(self):
+        incumbent_lp=np.inf
         if 'ub_lp' not in self.history_dict:
             self.history_dict['ub_lp']=[]
             self.history_dict['ignore_set']=[]
-        actions_ignore=set(self.all_actions_not_source_sink_connected)
-        actions_ignore=actions_ignore-self.all_actions_ever_seen
+        else:
+            incumbent_lp=self.history_dict['ub_lp'][-1]
+
+        #actions_ignore=set(self.all_actions_not_source_sink_connected)
+        #actions_ignore=actions_ignore-self.all_actions_ever_seen
+        #if 'null_action' in actions_ignore:
+        #    actions_ignore.remove('null_action')
+        #actions_ignore=set(self.all_non_null_action)-self.all_actions_inclumbent
+        if len(self.all_actions_inclumbent-self.all_actions_ever_seen)>0:
+            print('self.all_actions_inclumbent-self.all_actions_ever_seen')
+            print(self.all_actions_inclumbent-self.all_actions_ever_seen)
+            print('self.all_actions_ever_seen')
+            print(self.all_actions_ever_seen)
+            input('error here')
+        actions_ignore=set(self.all_non_null_action)-self.all_actions_inclumbent
+        #actions_ignore=set(self.all_non_null_action)-self.all_actions_ever_seen
+        if 'null_action' in actions_ignore:
+            #input('error ')
+            actions_ignore.remove('null_action')
         my_proj=projector_on_lb(self,actions_ignore)
+        duality_gap=my_proj.lp_objective-self.my_lower_bound_LP.lp_objective
+        if my_proj.lp_objective<incumbent_lp-duality_gap/100:
+            print('BEFORE len(all_actions_inclumbent)')
+            print(len(self.all_actions_inclumbent))
+            self.all_actions_inclumbent=set([])
+            for p in self.action_2_cost:
+                if p in my_proj.lp_primal_solution and my_proj.lp_primal_solution[p]>0.0001:
+                    self.all_actions_inclumbent.add(p)
+                    self.all_actions_ever_seen.add(p)
+            print('BEFORE len(all_actions_inclumbent)')
+            print(len(self.all_actions_inclumbent))
         objective_gain=my_proj.lp_objective-self.my_lower_bound_LP.lp_objective
         if len(self.history_dict['ub_lp'])>0.5 and my_proj.lp_objective>self.history_dict['ub_lp'][-1]+0.1:
             print('ignore old')
@@ -353,8 +382,9 @@ class full_solver:
         #    print('DONE PRE-PROCESSING THE SEPARATOR')
         if self.actions_ignore==None:
             self.actions_ignore=self.all_actions_not_source_sink_connected
-        self.all_actions_ever_seen=set([])#set(self.all_non_null_action.copy())#set()
-        #self.all_actions_ever_seen=set(self.all_non_null_action.copy())#set()
+        self.all_actions_ever_seen=set(self.all_actions)-set(self.all_actions_not_source_sink_connected.copy())#set()
+        self.all_actions_ever_seen.add('null_action')
+        self.all_actions_inclumbent=set(self.all_actions)-set(self.all_actions_not_source_sink_connected)
         self.running_average_sol=[]
         while iter<self.jy_opt['max_iterations_loop_compress_project']:
             self.time_list_outer=dict()
@@ -370,9 +400,9 @@ class full_solver:
             print('DONE lower bound computing ')
             
             for p in self.all_non_null_action:
-                if self.my_lower_bound_LP.lp_primal_solution[p]>0:
+                if self.my_lower_bound_LP.lp_primal_solution[p]>0.0001:
                     self.all_actions_ever_seen.add(p)
-            
+                    self.all_actions_inclumbent.add(p)
             self.actions_ignore=self.my_lower_bound_LP.new_actions_ignore.copy()
             t1=time.time()
             lblp_time=self.my_lower_bound_LP.lp_time
