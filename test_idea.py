@@ -32,40 +32,24 @@ with gp.Env(params=options) as env:
         model.setParam("DisplayInterval", 1)
         bin_set=[]
         counter=0
-        if 0>1:
+        if 1>0:
+            var_to_orig_type=dict()
             for var in model.getVars():
-
-                if abs(var.Obj)<0.001:# and  == GRB.BINARY:
-                    var.VType = GRB.CONTINUOUS
-                    #print(var.Obj)
-                    counter=counter+1
-                    #bin_set.append(var)
-        #print('counter')
-        #print(counter)
-        #input('---')
-        print('len(bin_set)')
-        print(len(bin_set))
-        model.update()
-        if 1>0: 
-            print('changing options')
-            model.setParam("Cuts", 0)                # Disable all cutting planes
-            #model.setParam("Heuristics", 0.2)          # Disable primal heuristics
-            model.setParam("CutPasses", 0)           # No passes even beyond root
-            #model.setParam("MIPFocus", 3)
-           #model.setAttr("BranchDir", 1)
-            #model.setParam("Method", 2)
-            #for var in model.getVars():
-            #    if var.VType != GRB.CONTINUOUS:
-            #        var.setAttr("BranchDir", 1)
-            model.setParam("Presolve", 0)
-
-            #model.setParam("MIRCuts", 0)
-           # model.setParam("FlowCoverCuts", 0)
-           # model.setParam("ZeroHalfCuts", 2)
-
-
+                var_to_orig_type[var]=var.VType
+                var.VType = GRB.CONTINUOUS
+            model.optimize()
+            obj_target=822.95
+            obj_val=model.ObjVal
+            min_rc_remove=0.001+(obj_target-model.ObjBound)
+            num_count=0
+            for var in model.getVars():
+                if min_rc_remove<var.RC:
+                    var.UB=0
+                    num_count=num_count+1
+            for var in model.getVars():
+                var.VType = var_to_orig_type[var]
+            print('num_count')
+            print(num_count)
             model.update()
-        
-         
-
         model.optimize()
+        

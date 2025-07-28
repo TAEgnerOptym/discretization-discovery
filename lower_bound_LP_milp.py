@@ -1754,7 +1754,12 @@ class lower_bound_LP_milp:
                     v_not_in_groups[v].add(g)
 
         # Step 2: Build Z_by_group using set intersection
+        num_add=0
         for act in all_actions:
+            if act in self.full_prob.delta_name_2_ub and self.full_prob.delta_name_2_ub[act]<0.001:
+                #num_already_gone=num_already_gone+1
+                continue
+            num_add=num_add+1
             _, u_str, v_str = act.split("_")
             u, v = int(u_str), int(v_str)
 
@@ -1762,28 +1767,74 @@ class lower_bound_LP_milp:
             for g in relevant_groups:
                 self.Z_by_group[g].add(act)
 
+        print('num_add')
+        print(num_add)
+        input('---')
         costs=D['action2Cost']
-        self.pred_val_gain = {
+        self.cost_val = {
             g: min(costs[act] for act in self.Z_by_group[g]) if self.Z_by_group[g] else float("inf")
             for g in G
         }
+        primal_sol_lp=self.full_prob.current_LP_solution
+        amount_inside = {
+            g: (sum(primal_sol_lp[act] for act in self.Z_by_group[g]))
+            for g in G
+        }
 
+        frac_amount = {
+            g: min(
+                amount_inside[g] - int(amount_inside[g]),
+                np.ceil(amount_inside[g]) - amount_inside[g]
+            )
+            for g in G
+        }
+        self.pred_val_gain={
+            g: self.cost_val[g]*frac_amount[g]/(amount_inside[g])
+            for g in G
+        }
+        pred_val_gain=self.pred_val_gain
+        G = {
+            g for g in G
+            if pred_val_gain[g] > 0.0
+            and amount_inside[g] < 1.999
+            and frac_amount[g] > 0.01
+            #and len(g)>=2
+        }
+
+        num_Keep=20
+        G = heapq.nlargest(
+            num_Keep,
+            G,
+            key=lambda g: pred_val_gain[g]
+        )
+        for g in G:
+            print('self.cost_val[g]*frac_amount[g]/amount_inside[g]. '+str( self.cost_val[g]*frac_amount[g]/amount_inside[g]))
+            print('[self.cost_val[g],self.frac_amount[g],self.amount_inside[g]]')
+            print([self.cost_val[g],frac_amount[g],amount_inside[g]])
+            print('g')
+            print(g)
         #make auxiliary variables
         print('len(G)')
         print(len(G))
         print('G')
+        if 1>0:
+            print('turning off binary and integer for test')
+            self.dict_var_name_2_is_integer=dict()
+            self.dict_var_name_2_is_binary=dict()
+            input('---')
+        
         for g in G:
             con_name_eq='NEW_BOUND_Branch_eq'+str(g)
             my_var_name='fancy_branching_var_'+str(g)
             self.dict_var_name_2_obj[my_var_name]=0
             self.dict_con_name_2_eq[con_name_eq]=0
-            self.dict_pred_gain[my_var_name]=self.pred_val_gain[g]
+            self.dict_pred_gain[my_var_name]=1#self.pred_val_gain[g]
             self.dict_var_con_2_lhs_eq[tuple([my_var_name,con_name_eq])]=1#self.delta_con_2_contrib[v_con]
             self.dict_var_name_2_is_integer[my_var_name]=1
             for my_act in self.Z_by_group[g]:
                 self.dict_var_con_2_lhs_eq[tuple([my_act,con_name_eq])]=-1
             
-           
+
 
 def power_set(s):
     """

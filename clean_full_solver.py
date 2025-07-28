@@ -140,7 +140,7 @@ class full_solver:
  
         my_Lp_time=my_proj.lp_time
         did_split=False
-        if objective_gain>0.001 and my_proj.num_do_split>0.5:#%self.jy_opt['epsilon']:
+        if objective_gain>0.1 and my_proj.num_do_split>0.5:#%self.jy_opt['epsilon']:
             self.graph_node_2_agg_node=my_proj.NAIVE_graph_node_2_agg_node
             
             did_split=True
@@ -197,6 +197,7 @@ class full_solver:
         self.incumbant_lp=-np.inf
         iter=0
         did_split=True
+        self.current_LP_solution=[]
         while iter<self.jy_opt['max_iterations_loop_compress_project'] and did_split==True:
             self.time_list_outer=dict()
             iter=iter+1
@@ -205,6 +206,7 @@ class full_solver:
             prob_sizes_at_start=self.count_size()
             self.time_list_outer['part0']=time.time()-t1
             self.my_lower_bound_LP=lower_bound_LP_milp(self,self.graph_node_2_agg_node,False,False)            
+            self.current_LP_solution=self.my_lower_bound_LP.lp_primal_solution#.copy()
             lblp_time=self.my_lower_bound_LP.lp_time
             new_lp_value=self.my_lower_bound_LP.lp_objective
             if self.incumbant_lp<new_lp_value-self.jy_opt['min_inc_2_compress']: #and iter>0:
