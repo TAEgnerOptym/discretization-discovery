@@ -5,7 +5,7 @@ import argparse
 #default_input='data/jy_C104.txt'
 
 
-default_input='data/jy_C103.txt'
+default_input='data/jy_C104.txt'
 default_option_path='my_params_C.json'
 #default_input='data/jy_R107.txt'
 #default_option_path='my_params_R200.json'

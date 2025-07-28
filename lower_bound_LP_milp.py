@@ -200,7 +200,7 @@ class lower_bound_LP_milp:
             #print(self.DEBUG_len)
             input('look here')
         #input('hih')
-        if  1>0 and self.OPT_do_ilp==0:
+        if  self.full_prob.jy_opt['use_julians_custom_lp_solver']<0.5 and self.OPT_do_ilp==0:
             self.select_low_reduced_cost_actions()
         #input('done')
 
@@ -211,7 +211,7 @@ class lower_bound_LP_milp:
         upper_bound_valid=True
         if self.full_prob.jy_opt['do_ilp']==False:
             ub_current=np.inf
-        if self.full_prob.jy_opt['do_ilp']==False and 'ub_lp' in self.full_prob.history_dict:
+        if self.full_prob.jy_opt['do_ilp']==False and 'ub_lp' in self.full_prob.history_dict and len(self.full_prob.history_dict['ub_lp'])>0 :
             ub_current=self.full_prob.history_dict['ub_lp'][-1]
         
         eta=(ub_current-self.lp_objective)+0.001
@@ -1373,7 +1373,7 @@ class lower_bound_LP_milp:
             self.lp_time=time_lp_1
             self.new_actions_ignore=list(GUR_CLASS_lp_prob.forbidden_var_names)
             #input('hi im here')
-            if len(self.full_prob.history_dict['lp_time_compress'])<1:
+            if len(self.full_prob.history_dict['lp_time_LB'])<1:
                 print('GUR_CLASS_lp_prob.hist')
                 print(GUR_CLASS_lp_prob.hist)
                 #print('self.actions_ignore')

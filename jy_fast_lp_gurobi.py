@@ -20,7 +20,7 @@ class jy_fast_lp_gurobi:
         #input('hihi')
         set_remove=set(vars_to_remove)
         vars_to_remove = list(set_remove - self.current_forbidden_vars)
-        print('adding to forbidden '+str(len(vars_to_remove)))
+        #print('adding to forbidden '+str(len(vars_to_remove)))
         #input('---')
         for var in vars_to_remove:
             var.ub = 0
@@ -62,7 +62,7 @@ class jy_fast_lp_gurobi:
                  dict_con_name_2_eq,
                  all_possible_forbidden_names,
                  init_forbidden_names,my_lower_bound_object,
-                 K=100, verbose=True, remove_choice=3, alg_use=1, debug_on=False,
+                 K=200, verbose=False, remove_choice=2, alg_use=1, debug_on=False,
                  min_improvement_dump=0.1, epsilon=1e-4,pos_red_cut=0.01,min_dual_slack_add_poss=1,):
         self.pos_red_cut=pos_red_cut
         self.min_dual_slack_add_poss=min_dual_slack_add_poss
@@ -73,18 +73,20 @@ class jy_fast_lp_gurobi:
             "LICENSEID": 2690165
         }
         self.my_lower_bound_object=my_lower_bound_object
+        my_lower_bound_object
         self.verbose = verbose
         self.remove_choice = remove_choice
         self.alg_use = alg_use
         self.min_improvement_dump = min_improvement_dump
         self.epsilon = epsilon
         self.debug_on = debug_on
-        self.hist = {'sum_red_cost':[],'lp': [],'numCurStart': [], 'numCurMid': [], 'numCurEnd': [], 'time_iter': []}
+        self.hist = {'sum_red_cost':[],'lp': [],'numCurStart': [], 'numCurMid': [], 'numCurEnd': [], 'time_iter': [],'sum_neg':[],'count_neg_orig':[],'count_neg_after':[]}
         self.max_terms_add_per_round = K
-        self.all_possible_forbidden_names = all_possible_forbidden_names
-        self.min_forbidden_apply=len(self.my_lower_bound_object.action_2_cost)*0.095#len(self.my_lower_bound_object.action_2_cost)-9*np.sqrt(len(self.my_lower_bound_object.action_2_cost))
-        print('min_forbidden_apply')
-        print(self.min_forbidden_apply)
+        self.all_possible_forbidden_names=self.my_lower_bound_object.all_actions
+#        self.all_possible_forbidden_names = all_possible_forbidden_names
+        self.min_forbidden_apply=0#len(self.my_lower_bound_object.action_2_cost)*0.095#len(self.my_lower_bound_object.action_2_cost)-9*np.sqrt(len(self.my_lower_bound_object.action_2_cost))
+        #print('min_forbidden_apply')
+        #print(self.min_forbidden_apply)
         #init_forbidden_names=[]
         self.BIG_M=20000
         self.init_forbidden_names = init_forbidden_names
@@ -120,7 +122,7 @@ class jy_fast_lp_gurobi:
         
         self.prepare_for_additions_novel()
         self.prepare_for_clean_novel()
-        baseline_check_debug=False
+        baseline_check_debug=True
         baseline_valu=np.inf
         baseline_time_lp=np.inf
         if baseline_check_debug==True:
@@ -130,15 +132,28 @@ class jy_fast_lp_gurobi:
             self.call_solver_baseline()#_clean_each
             baseline_valu=self.hist['lp'][-1]
             baseline_time_lp=self.hist['time_iter'][0]
-            self.hist = {'sum_red_cost':[],'lp': [],'numCurStart': [], 'numCurMid': [], 'numCurEnd': [], 'time_iter': []}
+            self.hist = {'sum_red_cost':[],'lp': [],'numCurStart': [], 'numCurMid': [], 'numCurEnd': [], 'time_iter': [],'sum_neg':[],'count_neg_orig':[],'count_neg_after':[]}
             
             
             #input('done running baseline')
             self.init_forbidden_names=init_forbidden_names
-        self.call_solver_warm_no_remove()
+        #self.call_solver_warm_no_remove()
+        
+        actions_ignore=set(self.my_lower_bound_object.full_prob.all_non_null_action)-self.my_lower_bound_object.full_prob.all_actions_inclumbent
+        actions_ignore=actions_ignore-set(['null_action'])
+        self.init_forbidden_names=actions_ignore
+
+        #print('self.init_forbidden_names')
+        #print(self.init_forbidden_names)
+        #input('--')
         #self.call_solver_warm_just_use_bounds()
+        self.call_solver_warm_SIMP()
         if baseline_check_debug==True and abs(baseline_valu-self.hist['lp'][-1])>0.001:
             print('disagreement')
+            print('baseline_valu')
+            print(baseline_valu)
+            print('self.hist[lp][-1]')
+            print(self.hist['lp'][-1])
             print((baseline_valu-self.hist['lp'][-1]))
             input('ERROR')
         #
@@ -280,7 +295,7 @@ class jy_fast_lp_gurobi:
         options=self.options
         with gp.Env(params=options) as env:
             with gp.Model("converted_LP", env=env) as model:
-                model.setParam("OutputFlag", 1)
+                model.setParam("OutputFlag", 0)
                 self.formulate_mapping(model)
                 model.update()
                 self.add_expressions(model)
@@ -305,6 +320,7 @@ class jy_fast_lp_gurobi:
                 self.add_expressions(model)
                 self.init_key_info(model)
                
+                model.setParam("OutputFlag", 0)
 
                 model.update()
                 incubent_bound=np.inf
@@ -315,6 +331,9 @@ class jy_fast_lp_gurobi:
                     for var in model.getVars():
                         if var.ub<self.epsilon:
                             vars_current_zero.append(var)
+                            #print('var.ub<')
+                            #print(var.ub)
+                            #input('hi')
                     vars_current_zero=set(vars_current_zero)  
                     vars_names_need_zero=[]
                     for var in self.current_forbidden_vars:
@@ -331,10 +350,10 @@ class jy_fast_lp_gurobi:
                     vars_need_zero=set(vars_need_zero)
                     vars_to_set_inf=vars_current_zero-vars_need_zero
                     vars_to_set_zero=vars_need_zero-vars_current_zero
-                    print('vars_to_set_inf')
-                    print(len(vars_to_set_inf))
-                    print('vars_to_set_zero')
-                    print(len(vars_to_set_zero))
+                    #print('vars_to_set_inf')
+                    #print(len(vars_to_set_inf))
+                    #print('vars_to_set_zero')
+                    #print(len(vars_to_set_zero))
                     if len(vars_to_set_inf)<1 and counter>0:
                         break
                     model.update()
@@ -365,6 +384,8 @@ class jy_fast_lp_gurobi:
                     self.lp_obj_val=cur_bound
                     self.grab_key_info_from_solution(model)
 
+                    
+
                     if cur_bound>incubent_bound+0.001:
                         print('cur_bound')
                         print(cur_bound)
@@ -376,7 +397,8 @@ class jy_fast_lp_gurobi:
                         incubent_bound=cur_bound
                     self.hist['numCurMid'].append(self.countCurP())
 
-                    self.remove_from_forbidden(self.var_add_novel)
+                    #self.remove_from_forbidden(self.var_add_novel)
+                    self.remove_from_forbidden(self.acts_selected_v2)
                     self.hist['numCurEnd'].append(self.countCurP())
 
                     #print('cur_bound')
@@ -389,6 +411,55 @@ class jy_fast_lp_gurobi:
                     counter=counter+1
                 self.apply_compression()
                 #input('done call')
+
+    def call_solver_warm_SIMP(self):
+        options=self.options
+        self.time_accel=[]
+        with gp.Env(params=options) as env:
+            with gp.Model("converted_LP", env=env) as model:
+                self.formulate_mapping(model)
+                model.update()
+                self.add_expressions(model)
+                self.init_key_info(model)
+               
+                model.setParam("OutputFlag", 0)
+
+                model.update()
+                incubent_bound=np.inf
+                self.tot_lp_time=0
+                counter=0
+                while(True):
+                    
+                    model.update()
+                    model.reset()
+                    t1=time.time()
+                    model.optimize()
+                    t1=time.time()-t1
+                    self.hist['time_iter'].append(t1)
+                    self.hist['lp'].append(model.ObjVal)
+                    self.tot_lp_time+=t1
+                    self.hist['numCurStart'].append(self.countCurP())
+                    cur_bound=model.ObjVal
+                    self.lp_obj_val=cur_bound
+                    self.grab_key_info_from_solution(model)
+
+                    if cur_bound>incubent_bound+0.001:
+                        print('cur_bound')
+                        print(cur_bound)
+                        print('incubent_bound')
+                        print(incubent_bound)
+                        input('error here')
+                    if cur_bound<incubent_bound-0.001:
+                        self.apply_compression()
+                        incubent_bound=cur_bound
+                    self.hist['numCurMid'].append(self.countCurP())
+                
+                    self.remove_from_forbidden(self.acts_selected_v2)
+                    self.hist['numCurEnd'].append(self.countCurP())
+                    counter=counter+1
+                    if len(self.acts_selected_v2)<1:
+                        break
+                self.apply_compression()
 
     def call_solver_warm_no_remove(self):
         options=self.options
@@ -562,6 +633,102 @@ class jy_fast_lp_gurobi:
             v for v in self.all_removable_vars
             if self.reduced_costs_dict.get(self.var_name_rev_map[v.VarName], 0.0) > self.pos_red_cut
         ]
+        self.act_to_better_dual=dict()
+        self.act_to_orig_dual=dict()
+        if not hasattr(self.my_lower_bound_object.full_prob, 'forbidden_forever'):            
+            self.my_lower_bound_object.full_prob.forbidden_forever=set([])
+        cur_ub_opt_lp_projector=np.inf
+        cur_lb_master=0
+        if len(self.my_lower_bound_object.full_prob.history_dict['ub_lp'])>0:
+            cur_ub_opt_lp_projector=(0.1+self.my_lower_bound_object.full_prob.history_dict['ub_lp'][-1])
+            cur_lb_master=self.my_lower_bound_object.full_prob.history_dict['lblp_lower'][-1]
+        for act in set(self.all_possible_forbidden_names):#-set(self.my_lower_bound_object.full_prob.forbidden_forever):
+            red_val_sum=self.reduced_costs_dict[act]
+            red_val_orig=red_val_sum
+            self.act_to_orig_dual[act]=red_val_orig
+            #print('red_val_sum')
+            #print(red_val_sum)
+            #input('hihi')
+            #if red_val_sum<-0.001:
+                #print('red_val_sum')
+                #print(red_val_sum)
+                #input('got one')
+            for h in self.my_lower_bound_object.graph_names:
+                red_val=np.inf
+                for v_name in self.my_lower_bound_object.mapping_h_p_to_vars_use[h][act]:
+                    #print('v_name')
+                    #print(v_name)
+                    red_val=min([red_val,self.reduced_costs_dict[v_name]])
+                red_val_edge=np.inf
+                for v_name_2 in self.my_lower_bound_object.mapping_h_p_to_fg_vars_use[h][act]:
+                    red_val_edge=min([red_val_edge,self.reduced_costs_dict[v_name_2]])
+                red_val_sum=red_val_sum+red_val+red_val_edge
+                #tmp_val[h]=[red_val,red_val_edge]
+
+            #if red_val_orig<-0.00001 and red_val_sum>0.001:
+            #    print('red_val_orig')
+            #    print(red_val_orig)
+            #    print('red_val_sum')
+            #    print(red_val_sum)
+             #   input('got a big one')
+
+            self.act_to_better_dual[act]=red_val_sum
+            if red_val_sum+cur_lb_master>cur_ub_opt_lp_projector:
+           #     print('adding')
+           ##     print('red_val_sum+cur_lb_master')
+            #    print(red_val_sum+cur_lb_master)
+            #    print('cur_ub_opt_lp_projector')
+            #    print(cur_ub_opt_lp_projector)
+            #    print('act')
+            #    print(act)
+                #input('--')
+                self.my_lower_bound_object.full_prob.forbidden_forever.add(act)
+        count = sum(
+            1 for act, new_val in self.act_to_better_dual.items()
+            if new_val >= self.epsilon and self.act_to_orig_dual.get(act, 0.0) < -self.epsilon
+        )
+
+        count_orig = sum(
+            1 for val in self.act_to_orig_dual.values()
+            if val < -self.epsilon
+        )
+        #print('count_orig')
+        #print(count_orig)
+        #p#rint('count')
+        #print(count)
+        min_val_use=-self.epsilon
+        forbidden_set = self.my_lower_bound_object.full_prob.forbidden_forever
+        valid_entries = [
+            (val, act) for act, val in self.act_to_better_dual.items()
+            if val < min_val_use
+        ]
+        sum_non_positive = sum(
+            val for val in self.act_to_better_dual.values() if val <= 0.0)
+        
+        # Get up to K smallest values by value
+        preferred_entries = [(val, act) for val, act in valid_entries if act not in forbidden_set]
+        fallback_entries  = [(val, act) for val, act in valid_entries if act in forbidden_set]
+
+# Step 3: Take up to K from preferred; if needed, take extras from fallback
+        if len(preferred_entries) >= self.K:
+            smallest_k = heapq.nsmallest(self.K, preferred_entries)
+        else:
+            needed = self.K - len(preferred_entries)
+            fallback_k = heapq.nsmallest(needed, fallback_entries)
+            smallest_k = heapq.nsmallest(self.K, preferred_entries + fallback_k) 
+        # Extract just the action keys
+        self.acts_selected_v2 = [self.var_dict[self.var_name_map[act]] for _, act in smallest_k]
+        #print('self.acts_selected_v2')
+        #print(self.acts_selected_v2)
+        #print('len(self.acts_selected_v2)')
+        #print(len(self.acts_selected_v2))
+        #print('sum_non_positive')
+        #print(sum_non_positive)
+        self.hist['sum_neg'].append(sum_non_positive)
+        self.hist['count_neg_orig'].append(count_orig)
+        self.hist['count_neg_after'].append(count_orig-count)
+        #input('look at me')
+        #print('')
         #print('set(self.pos_red_cost_removable)')
         #print(set(self.pos_red_cost_removable))
         #print('set(self.pos_red_cost_removable)')

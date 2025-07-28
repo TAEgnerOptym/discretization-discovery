@@ -634,10 +634,10 @@ class projector_on_lb:
             num_thesh_use=self.MF.jy_opt['num_thresh_split_projector']
             all_keys_h=set()
             num_constrs_add=min([len(do_split_f),self.MF.jy_opt['max_nodes_split']])
-            print('h')
-            print(h)
-            print('len(do_split_f)')
-            print(len(do_split_f))
+            #p#rint('h')
+            #p#rint(h)
+            #print('len(do_split_f)')
+            #print(len(do_split_f))
             do_split_f = heapq.nlargest(
                 num_constrs_add,
                 do_split_f,

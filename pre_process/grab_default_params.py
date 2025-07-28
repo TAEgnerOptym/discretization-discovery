@@ -60,4 +60,5 @@ def grab_default_params():
 	my_params['LAB_MP_ON']=False
 	my_params['LAB_MP_neigh_use_all']=8
 	my_params['LAB_MP_neigh_use_power']=4
+	my_params['do_remove_actions_from_incumbant']=True
 	return my_params

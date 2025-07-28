@@ -1,11 +1,12 @@
 {
-"num_cust_use":50,
+"num_cust_use":100,
+"do_remove_actions_from_incumbant":1,
 "num_thresh_split_projector":10,
 "weight_slack_projector":0.00001,
 "allOneBig_init":0,
 "use_classic_compress":1,
 "use_classic_compress_last":1,
-"time_step_sz":25,
+"time_step_sz":10,
 "num_NG":4,
 "dem_step_sz":1,
 "all_vars_binary":1,
@@ -32,7 +33,7 @@
 
 "threshold_split":0.01,
 
-"do_ilp":0,
+"do_ilp":1,
 "run_baseline":0,
 "save_graph_each_iter":0,
 "max_iterations_loop_compress_project":100,
