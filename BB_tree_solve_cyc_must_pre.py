@@ -591,7 +591,7 @@ class BB_tree_solve:
             print('self.lb_hist')
             print(self.lb_hist)
             #print(node.my_solver.history_dict['lblp_lower'])
-            #input('---')
+            input('---')
             if node.parent!=None:
                 print('lower Parent')
                 print(node.parent.my_solver.history_dict['lblp_lower'])

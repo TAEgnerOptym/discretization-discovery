@@ -32,24 +32,40 @@ with gp.Env(params=options) as env:
         model.setParam("DisplayInterval", 1)
         bin_set=[]
         counter=0
-        if 1>0:
+        if 1<0:
             var_to_orig_type=dict()
             for var in model.getVars():
                 var_to_orig_type[var]=var.VType
                 var.VType = GRB.CONTINUOUS
-            model.optimize()
-            obj_target=822.95
-            obj_val=model.ObjVal
-            min_rc_remove=0.001+(obj_target-model.ObjBound)
-            num_count=0
-            for var in model.getVars():
-                if min_rc_remove<var.RC:
-                    var.UB=0
-                    num_count=num_count+1
+                obj_target=822.95
+            num_added_hist=[]
+            model.setParam("OutputFlag", 0)  # Suppress solver output
+
+            while True:
+                iter=0
+                model.reset()
+                model.optimize()
+                obj_val=model.ObjVal
+                min_rc_remove=0.001+(obj_target-model.ObjBound)
+                num_count=0
+                for var in model.getVars():
+                    if min_rc_remove<var.RC and var.UB>0.001:
+                        var.UB=0
+                        num_count=num_count+1
+                iter=iter+1
+                num_added_hist.append(num_count)
+                print('iter')
+                print(iter)
+                print('num_count')
+                print(num_count)
+                print('sum(num_added_hist)')
+                print(sum(num_added_hist))
+                model.update()
+                if num_count==0:
+                    break
             for var in model.getVars():
                 var.VType = var_to_orig_type[var]
-            print('num_count')
-            print(num_count)
-            model.update()
+        model.setParam("OutputFlag", 1)  # Suppress solver output
+        model.update()
         model.optimize()
         

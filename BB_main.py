@@ -8,13 +8,13 @@ default_input='jy_nyc_4.txt'
 do_BIG_PROBLEM=True
 if do_BIG_PROBLEM==True:
     #default_input='data/jy_RC203.txt'
-   # default_input='data/jy_C104.txt'
+    default_input='data/jy_C104.txt'
     #default_input='data/jy_R112.txt'
-    default_input='data/jy_R107.txt'
+    #default_input='data/jy_R107.txt'
     #default_input='data/jy_RC101.txt'
 #default_option_path='my_params_BBB.json'
-#default_option_path='my_params_BBB_C104.json'
-default_option_path='my_params_BBB_R100.json'
+default_option_path='my_params_BBB_C104.json'
+#default_option_path='my_params_BBB_R100.json'
 #default_option_path='my_params_BBB_RC100.json'
 
 default_my_json='../ALL_JSON_BIG/sample_json_input_description.json'
