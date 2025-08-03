@@ -57,8 +57,8 @@ def grab_default_params():
 	my_params['digit_mult_use']=10#used for rounding distances
 
 	my_params['use_branch_on_g']=True
-	my_params['LAB_MP_ON']=False
-	my_params['LAB_MP_neigh_use_all']=8
-	my_params['LAB_MP_neigh_use_power']=4
+	my_params['LAB_MP_ON']=True
+	my_params['LAB_MP_neigh_use_power']=10
+	my_params['LAB_MP_num_ineq_use']=10
 	my_params['do_remove_actions_from_incumbant']=True
 	return my_params

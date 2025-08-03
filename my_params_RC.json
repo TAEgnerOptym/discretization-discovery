@@ -1,7 +1,8 @@
 {
 "num_cust_use":50,
 "LAB_MP_ON":1,
-"num_thresh_split_projector":10,
+"LAB_MP_neigh_use_power":10,
+"num_thresh_split_projector":100,
 "allOneBig_init":0,
 "use_classic_compress":1,
 "use_classic_compress_last":1,
@@ -15,7 +16,7 @@
 "use_dem_graph":0,
 "use_time_graph":1,
 "use_ng":1,
-"num_terms_per_bin_init_construct":3000,
+"num_terms_per_bin_init_construct":300,
 "use_julians_custom_lp_solver":0,
 "threshold_split":0.01,
 "roundingDiscretization_num_digits_keep":3,
@@ -23,7 +24,7 @@
 "use_delta_in_milp":1,
 "use_delta_in_lp":1,
 "turn_off_non_active_fg_project":0,
-"max_iterations_loop_compress_project":1000,
+"max_iterations_loop_compress_project":50,
 "use_new_valid_ineq":0,
 
 

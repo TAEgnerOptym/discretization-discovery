@@ -1,5 +1,5 @@
 import xpress as xp
-
+import pickle
 from collections import defaultdict
 #from src.common.route import route
 from typing import Dict, DefaultDict, Set, List
@@ -99,10 +99,16 @@ class lower_bound_LP_milp:
             self.remove_remove_delta_and_delta_con()
         t1=time.time()
         if self.OPT_do_ilp!=0 and self.full_prob.jy_opt['LAB_MP_ON']>0.5:
-            self.apply_LA_branching()
             #input('about to start')
-            #self.iterative_ilp_la()
-            #input('done iterative')
+            DEBUG_ON=True
+            if DEBUG_ON==True:
+                print('DEBUG_ON')
+                with open("solver_checkpoint_BEF_.pkl", "wb") as f:
+                    pickle.dump(self, f)
+            print('done writing ')
+            self.iterative_ilp_la()
+            #self.apply_LA_branching()
+
 
         self.filter_constraints()
         self.times_lp_times['filetering']=time.time()-t1
@@ -209,14 +215,17 @@ class lower_bound_LP_milp:
 
     def select_low_reduced_cost_actions(self):
         ub_current=np.inf
-        #ub_current=358.1#822.95
+        ub_current=358.1#822.95
         ub_current=822.95
+        #ub_current=711
         upper_bound_valid=True
         if self.full_prob.jy_opt['do_ilp']==False:
             ub_current=np.inf
         if self.full_prob.jy_opt['do_ilp']==False and 'ub_lp' in self.full_prob.history_dict and len(self.full_prob.history_dict['ub_lp'])>0 :
             ub_current=self.full_prob.history_dict['ub_lp'][-1]
-        
+        #print('ub_current')
+        #print(ub_current)
+        #input('---')
         eta=(ub_current-self.lp_objective)+0.001
         print('eta')
         print(eta)
@@ -1729,6 +1738,8 @@ class lower_bound_LP_milp:
         print(my_VRP)
         Nc=my_VRP.num_cust
         self.dict_pred_gain=dict()
+        num_Keep=self.full_prob.jy_opt['LAB_MP_num_ineq_use']
+
         [ng_neigh_by_cust_power,junk]=naive_get_LA_neigh(my_VRP,self.full_prob.jy_opt['LAB_MP_neigh_use_power'])
         #[ng_neigh_by_cust_all,junk]=naive_get_LA_neigh(my_VRP,self.full_prob.jy_opt['LAB_MP_neigh_use_all'])
         G=set()
@@ -1783,11 +1794,19 @@ class lower_bound_LP_milp:
             g: (sum(primal_sol_lp[act] for act in self.Z_by_group[g]))
             for g in G
         }
+        if min(amount_inside.values())<.999:
+            print('min(amount_inside.values<.9999)')
+            print(min(amount_inside.values))
+            input('error here')
 
         frac_amount = {
-            g: min(
-                amount_inside[g] - int(amount_inside[g]),
-                np.ceil(amount_inside[g]) - amount_inside[g]
+            g: (
+                min(
+                    amount_inside[g] - np.floor(amount_inside[g]),
+                    np.ceil(amount_inside[g]) - amount_inside[g]
+                )
+                if amount_inside[g] > 1
+                else 1 - amount_inside[g]
             )
             for g in G
         }
@@ -1799,12 +1818,11 @@ class lower_bound_LP_milp:
         G = {
             g for g in G
             if pred_val_gain[g] > 0.0
-            and amount_inside[g] < 1.999
+            #and amount_inside[g] < 1.999
             and frac_amount[g] > 0.01
             #and len(g)>=2
         }
 
-        num_Keep=20
         G = heapq.nlargest(
             num_Keep,
             G,
@@ -1818,14 +1836,15 @@ class lower_bound_LP_milp:
             print(g)
             print('---')
         #make auxiliary variables
-        print('len(G)')
-        print(len(G))
-        print('G')
-        if 1>0:
-            print('turning off binary and integer for test')
-            self.dict_var_name_2_is_integer=dict()
-            self.dict_var_name_2_is_binary=dict()
-            input('---')
+        #print('len(G)')
+        #print(len(G))
+        #print('G')
+        #input('--')
+        #if 1>0:
+        #    print('turning off binary and integer for test')
+        #    self.dict_var_name_2_is_integer=dict()
+        #    self.dict_var_name_2_is_binary=dict()
+        #    input('---')
         
         for g in G:
             con_name_eq='NEW_BOUND_Branch_eq'+str(g)
@@ -1843,116 +1862,54 @@ class lower_bound_LP_milp:
 
 
     def iterative_ilp_la(self):
-
-
+        self.num_vars_added=0
+        self.num_cons_add=0
+        OLD_dict_var_name_2_is_integer=self.dict_var_name_2_is_integer.copy()
+        OLD_dict_var_name_2_is_binary=self.dict_var_name_2_is_binary.copy()
         self.dict_var_name_2_is_integer=dict()
         self.dict_var_name_2_is_binary=dict()
-        my_VRP=self.full_prob.D['my_VRP']
-        D=self.full_prob.D
-        print(my_VRP)
-        Nc=my_VRP.num_cust
-        self.dict_pred_gain=dict()
-        [ng_neigh_by_cust_power,junk]=naive_get_LA_neigh(my_VRP,10)
-        #[ng_neigh_by_cust_all,junk]=naive_get_LA_neigh(my_VRP,self.full_prob.jy_opt['LAB_MP_neigh_use_all'])
-        G=set()
-        for u in range(0,Nc):
-            neighborhood = set(ng_neigh_by_cust_power[u]) | {u}
-            for g in power_set(neighborhood):
-                if len(g)>1:  # skip empty set and size 1 sets
-                    G.add(frozenset(g))
-        G.add(frozenset(np.arange(0,Nc)))
-        self.G=G
-
-        self.Z_by_group = defaultdict(set)  # g → set of act_u_v
-        all_actions=D['action2Cost'].keys()
-        u_in_groups = defaultdict(set)
-        v_not_in_groups = defaultdict(set)
-
-        for g in G:
-            for u in g:
-                u_in_groups[u].add(g)
-            for v in range(0,Nc+2):  # include depot if needed
-                if v not in g:
-                    v_not_in_groups[v].add(g)
-
-        # Step 2: Build Z_by_group using set intersection
-        num_add=0
-        for act in all_actions:
-            if act in self.full_prob.delta_name_2_ub and self.full_prob.delta_name_2_ub[act]<0.001:
-                #num_already_gone=num_already_gone+1
-                continue
-            num_add=num_add+1
-            _, u_str, v_str = act.split("_")
-            u, v = int(u_str), int(v_str)
-
-            relevant_groups = u_in_groups[u] & v_not_in_groups[v]
-            for g in relevant_groups:
-                self.Z_by_group[g].add(act)
-
-        #print('num_add')
-        #print(num_add)
-        #input('---')
-        costs=D['action2Cost']
+        G=self.full_prob.G
+        Z_by_group=self.full_prob.Z_by_group
+        costs=self.full_prob.D['action2Cost']
         self.cost_val = {
-            g: min(costs[act] for act in self.Z_by_group[g]) if self.Z_by_group[g] else float("inf")
+            g: min(costs[act] for act in Z_by_group[g]) if Z_by_group[g] else float("inf")
             for g in G
         }
-        Gall=set([])
+        self.Gall=set([])
         LP_HIST_INTERNAL=[]
-        while(True):
+        DEBUG_ON=False
+        for iter_step in range(0,4):
             self.filter_constraints()
+            if DEBUG_ON==True:
+                print('DEBUG_ON')
+                with open("solver_checkpoint_"+str(iter_step)+"_.pkl", "wb") as f:
+                    pickle.dump(self, f)
+                print('done writing')
+            print('iter')
+            print(iter_step)
+            print('dict_var_name_2_is_binary')
+            print(self.dict_var_name_2_is_binary)
+            print('--')
             self.call_gurobi_milp_solver()
-            #input('opt step')
-            primal_sol_lp= self.milp_solution
             LP_HIST_INTERNAL.append(self.milp_solution_objective_value)
-            amount_inside = {
-                g: (sum(primal_sol_lp[act] for act in self.Z_by_group[g]))
-                for g in G
-            }
 
-            frac_amount = {
-                g: min(
-                    amount_inside[g] - int(amount_inside[g]),
-                    np.ceil(amount_inside[g]) - amount_inside[g]
-                )
-                for g in G
-            }
-            self.pred_val_gain={
-                g: self.cost_val[g]*frac_amount[g]/(amount_inside[g])
-                for g in G
-            }
-        
-            pred_val_gain=self.pred_val_gain
-            GNew = {
-                g for g in G
-                if pred_val_gain[g] > 0.0
-                #and amount_inside[g] < 1.999
-                and frac_amount[g] > 0.01
-                #and len(g)>=2
-            }
-            #print('hi')
-            #for g in sorted(GNew, key=lambda g: self.pred_val_gain[g], reverse=False):
-            #    print('self.pred_val_gain[g]')
-            #    print(self.pred_val_gain[g])
-            #    print('[self.cost_val[g],frac_amount[g],amount_inside[g]]')
-            #    print([self.cost_val[g],frac_amount[g],amount_inside[g]])
-            #    print('g')
-            #    print(g)
-            #    print('---')
-            #print('NOW LAST')
-            num_Keep=1
-            GNew = heapq.nlargest(
-                num_Keep,
-                GNew,
-                key=lambda g: pred_val_gain[g]
-            )
-            for g in GNew:
-                print('self.cost_val[g]*frac_amount[g]/amount_inside[g]. '+str( self.cost_val[g]*frac_amount[g]/amount_inside[g]))
-                print('[self.cost_val[g],self.frac_amount[g],self.amount_inside[g]]')
-                print([self.cost_val[g],frac_amount[g],amount_inside[g]])
-                print('g')
-                print(g)
-                print('---')
+            [did_find_separ,new_exog_terms,new_action_contrib]=self.full_prob.separate_zero_val_terms(self.milp_solution)
+            if did_find_separ:
+                #input('found one ')
+                for con_name in new_exog_terms:
+                    self.dict_con_name_2_LB[con_name]=new_exog_terms[con_name]
+                for (act,con_name) in new_action_contrib:
+                    self.dict_var_con_2_lhs_exog[(act,con_name)]=new_action_contrib[(act,con_name)]
+
+
+            if DEBUG_ON==True:
+                print('DEBUG_ON')
+                with open("solver_checkpoint_AFTR_"+str(iter_step)+"_.pkl", "wb") as f:
+                    pickle.dump(self, f)
+            #input('opt step')
+            [GNew,amount_inside]=self.identify_separation(self.milp_solution)
+
+            
             print('LP_HIST_INTERNAL')
             print('LP_HIST_INTERNAL')
             print(LP_HIST_INTERNAL)
@@ -1961,21 +1918,143 @@ class lower_bound_LP_milp:
 
             #input('lloking here')
             for g in GNew:
-                if g in Gall:
-                    input('error here')
-                Gall.add(g)
-                con_name_eq='NEW_BOUND_Branch_eq'+str(g)
-                my_var_name='fancy_branching_var_'+str(g)
-                self.dict_var_name_2_obj[my_var_name]=0
-                self.dict_con_name_2_eq[con_name_eq]=0
-                self.dict_pred_gain[my_var_name]=100000+self.pred_val_gain[g]
-                self.dict_var_con_2_lhs_eq[tuple([my_var_name,con_name_eq])]=1#self.delta_con_2_contrib[v_con]
-                self.dict_var_name_2_is_integer[my_var_name]=1
-                self.full_prob.delta_name_2_lb[my_var_name]=1
-                self.full_prob.delta_name_2_ub[my_var_name]=np.inf
-                for my_act in self.Z_by_group[g]:
-                    self.dict_var_con_2_lhs_eq[tuple([my_act,con_name_eq])]=-1
+                #self.cuttingPlane_add_integer(g)
+                self.cuttingPlane_add_bound(g,amount_inside[g])
+                
+        for i in OLD_dict_var_name_2_is_integer:
+            self.dict_var_name_2_is_integer[i]=OLD_dict_var_name_2_is_integer[i]
+        for i in OLD_dict_var_name_2_is_binary:
+            self.dict_var_name_2_is_binary[i]=OLD_dict_var_name_2_is_binary[i]
 
+    def cuttingPlane_add_bound(self,g,thresh):
+        if g in self.Gall:
+            input('error here')
+        Z_by_group=self.full_prob.Z_by_group
+        low_thresh=np.floor(thresh)
+        high_thresh=np.ceil(thresh)
+
+        print('[low_thresh,high_thresh,thresh]')
+        print([low_thresh,high_thresh,thresh])
+
+        if low_thresh==0:
+            print('in low thresh')
+            con_name_ineq='NewLB_'+str(g)+'_'+str(self.num_cons_add)
+            self.dict_con_name_2_LB[con_name_ineq]=1
+
+            for act in Z_by_group[g]:
+                self.dict_var_con_2_lhs_exog[tuple([act,con_name_ineq])]=1
+            self.num_cons_add=self.num_cons_add+1
+        else:
+            print('in high thresh')
+
+            my_var_name='fancy_branching_var_'+str(g)+'_'+str(self.num_vars_added)
+            con_name_low='NEW_BOUND_Branch_eq_low'+str(g)+str(self.num_cons_add)
+            con_name_high='NEW_BOUND_Branch_eq_high'+str(g)+str(self.num_cons_add+1)
+            LG=len(g)
+            self.dict_var_name_2_obj[my_var_name]=0
+            self.dict_con_name_2_LB[con_name_low]=-LG
+            self.dict_con_name_2_LB[con_name_high]=high_thresh
+            self.dict_var_con_2_lhs_exog[tuple([my_var_name,con_name_low])]=-LG+low_thresh
+            self.dict_var_con_2_lhs_exog[tuple([my_var_name,con_name_high])]=high_thresh-1
+            self.dict_var_name_2_is_binary[my_var_name]=1
+            for act in Z_by_group[g]:
+                self.dict_var_con_2_lhs_exog[tuple([act,con_name_low])]=-1
+                self.dict_var_con_2_lhs_exog[tuple([act,con_name_high])]=1
+            self.num_cons_add=self.num_cons_add+2
+            self.num_vars_added=self.num_vars_added+1
+
+    def cuttingPlane_add_integer(self,g):
+        if g in self.Gall:
+            input('error here')
+        Z_by_group=self.full_prob.Z_by_group
+        con_name_eq='NEW_BOUND_Branch_eq'+str(g)
+        my_var_name='fancy_branching_var_'+str(g)
+        self.dict_var_name_2_obj[my_var_name]=0
+        self.dict_con_name_2_eq[con_name_eq]=0
+        self.dict_var_con_2_lhs_eq[tuple([my_var_name,con_name_eq])]=1#self.delta_con_2_contrib[v_con]
+        self.dict_var_name_2_is_integer[my_var_name]=1
+        self.full_prob.delta_name_2_lb[my_var_name]=1
+        self.full_prob.delta_name_2_ub[my_var_name]=np.inf
+        for my_act in Z_by_group[g]:
+            self.dict_var_con_2_lhs_eq[tuple([my_act,con_name_eq])]=-1
+        self.num_vars_added=self.num_vars_added+1
+
+    def identify_separation(self,primal_sol_lp):
+        Nc=self.full_prob.D['my_VRP'].num_cust
+        costs=self.full_prob.D['action2Cost']
+        Z_by_group=self.full_prob.Z_by_group
+        G=self.full_prob.G
+        for g in Z_by_group:
+            Z_by_group[g]=set(Z_by_group[g])-set(self.full_prob.delta_name_2_ub.keys())
+        self.cost_val = {
+            g: min(costs[act] for act in Z_by_group[g]) if Z_by_group[g] else float("inf")
+            for g in G
+        }
+        tol_low, tol_high = 0.999, 1.001
+        sum_by_u, sum_by_v = defaultdict(float), defaultdict(float)
+
+        if "null_action" in self.all_non_null_action:
+            input('error here')
+        # Accumulate
+        for act in self.all_non_null_action:
+            _, u, v = act.split("_")
+            u, v = int(u), int(v)
+            val = primal_sol_lp.get(act, 0.0)
+            if u < Nc: sum_by_u[u] += val
+            if v < Nc: sum_by_v[v] += val
+        for u in range(0,Nc):
+            if abs(sum_by_u[u]-1)>0.001: #or  abs(sum_by_v[u]-1)>0.001:
+                print('u')
+                print(u)
+                print('sum_by_u[u]')
+                print(sum_by_u[u])
+                #print('sum_by_v[u]')
+                #print(sum_by_v[u])
+                input('error here ')
+        print('passing this set options')
+
+
+        for act in self.action_2_cost:
+            if act in primal_sol_lp and act in self.full_prob.delta_name_2_ub and primal_sol_lp[act]>0.0001:
+                input('wrong')
+        amount_inside = {
+            g: (sum(primal_sol_lp[act] for act in Z_by_group[g]))
+            for g in G
+        }
+        
+        frac_amount = {
+            g: (
+                min(
+                    amount_inside[g] - np.floor(amount_inside[g]),
+                    np.ceil(amount_inside[g]) - amount_inside[g]
+                )
+                if amount_inside[g] > 1
+                else 1 - amount_inside[g]
+            )
+            for g in G
+        }
+
+        
+        self.pred_val_gain={
+            g: self.cost_val[g]*frac_amount[g]/(amount_inside[g])
+            for g in G
+        }
+    
+        pred_val_gain=self.pred_val_gain
+        GNew = {
+            g for g in G
+            if pred_val_gain[g] > 0.0
+            #and amount_inside[g] < 1.999
+            and frac_amount[g] > 0.01
+            #and len(g)>=2
+        }
+        num_Keep=1
+        GNew = heapq.nlargest(
+            num_Keep,
+            GNew,
+            key=lambda g: pred_val_gain[g]
+        )
+        return [GNew,amount_inside]
 def power_set(s):
     """
     Returns the power set of the input collection `s` as a list of tuples.

@@ -1,4 +1,5 @@
 import numpy as np
+import networkx as nx
 def naive_get_dem_thresh_list(my_vrp,thresh_jmp):
 	Nc=my_vrp.num_cust
 	d0=my_vrp.vehicle_capacity
@@ -53,10 +54,42 @@ def old_naive_get_time_thresh_list(my_vrp,thresh_jmp):
 		time_thresh_list.append(my_list)
 
 	return time_thresh_list
+
+
+def dag_all_pairs_shortest_paths(DM):
+    n = DM.shape[0]
+    G = nx.DiGraph()
+
+    # Build graph from adjacency matrix
+    for i in range(n):
+        for j in range(n):
+            if not np.isinf(DM[i, j]):
+                G.add_edge(i, j, weight=DM[i, j])
+
+    # Compute shortest path lengths
+    all_pairs = dict(nx.all_pairs_dijkstra_path_length(G, weight='weight'))
+
+    # Initialize result matrix
+    dist_matrix = np.full((n, n), np.inf)
+    for i in range(n):
+        for j, d in all_pairs.get(i, {}).items():
+            dist_matrix[i, j] = d
+
+    # Set diagonal to inf
+    np.fill_diagonal(dist_matrix, np.inf)
+
+    return dist_matrix
+
 def naive_get_LA_neigh(my_vrp,num_la):
 
 	Nc=my_vrp.num_cust
-	DM=my_vrp.dist_mat
+	DM1=my_vrp.dist_mat
+	DM=dag_all_pairs_shortest_paths(DM1)
+	#print('DM')
+	#print(DM)
+	#print('num_la')
+	#print(num_la)
+	#input('--')
 	#DM=my_vrp.orig_dist_mat_full[:Nc,:Nc]
 	LA_neigh_list=[[]]*Nc
 	LA_neigh_list_unsorted=[[]]*Nc
@@ -65,7 +98,7 @@ def naive_get_LA_neigh(my_vrp,num_la):
 		this_ord=np.argsort(DM[u,:])
 		#this_ord=np.argsort(DM[:,u])
 
-		this_list=[];
+		this_list=[]
 		for i in range(0,num_la):
 			if DM[u,this_ord[i]]<np.inf:
 			#if DM[this_ord[i],u]<np.inf:
@@ -73,8 +106,21 @@ def naive_get_LA_neigh(my_vrp,num_la):
 				this_list=this_list+[this_ord[i]]
 			else:
 				break
+		#print('u')
+		##print(u)
+		#print('this_list')
+		#print(this_list)
+		#input('--')
 		LA_neigh_list_unsorted[u]=this_list
 		LA_neigh_list[u]=sorted(this_list)
+		
+	#print('DM')
+	#print(DM)
+	#for u in range(0,Nc):
+	#	print('u. '+ str(u))
+	#	print(LA_neigh_list[u])
+	#input('hi')
+
 	return LA_neigh_list,LA_neigh_list_unsorted
 
 #if 1<0:

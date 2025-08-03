@@ -3,8 +3,8 @@ import os
 
 param_file_path=[]
 my_file_set=['c100','c200','r100','r200','rc100','rc200']
-my_file_set=['rc100']
-for my_sz in [50,100]:
+my_file_set=['C200']
+for my_sz in [100,50,25]:
     for file_set in my_file_set:
         all_files=[]
 
@@ -69,10 +69,10 @@ for my_sz in [50,100]:
 
             #param_file_path='my_param_fold/my_params_25_r_200.json'
             param_file_path='my_param_fold/my_params_'+str(my_sz)+'_r_200.json'
+            all_files.append("jy_r203.txt")
 
             all_files.append("jy_r201.txt")
             all_files.append("jy_r202.txt")
-            all_files.append("jy_r203.txt")
             all_files.append("jy_r204.txt")
             all_files.append("jy_r205.txt")
             all_files.append("jy_r206.txt")
@@ -100,7 +100,7 @@ for my_sz in [50,100]:
         in_fold="data/"
         #out_fold="../ALL_JSON_BIG/out_R100_50_yes_delta/"
         #out_fold="../ALL_JSON_BIG/out_R100_50_no_reset_yes_reset_each_end/"
-        out_fold="../ALL_re_run/sz_"+ str(my_sz)+"_"
+        out_fold="../ALL_re_run_NEW/sz_"+ str(my_sz)+"_"
         my_json_input_path="mid_jnk"
         for my_file in all_files:
             input_file_path=in_fold+my_file

@@ -9,13 +9,16 @@ import matplotlib.patches as mpatches
 import xpress as xp
 import networkx as nx
 import time
+import heapq
 from scipy.sparse import csr_matrix
 from lower_bound_LP_milp import lower_bound_LP_milp
+from pre_process.naive_pre import *
+
 #from exper_lower_bound_LP_MILP import lower_bound_LP_milp
 import pulp
 from compressor import compressor
 from class_new_valid import complete_separater_end_to_end 
-
+from power_set import power_set
 from baseline_solver import baseline_solver
 import json
 from New_valid_sep.check_valid_round_2 import check_valid_round_2
@@ -198,7 +201,8 @@ class full_solver:
         iter=0
         did_split=True
         self.current_LP_solution=[]
-        while iter<self.jy_opt['max_iterations_loop_compress_project'] and did_split==True:
+        did_add_ineq=True
+        while iter<self.jy_opt['max_iterations_loop_compress_project'] and (did_split==True or did_add_ineq==True):
             self.time_list_outer=dict()
             iter=iter+1
             t1=time.time()
@@ -217,8 +221,12 @@ class full_solver:
                     self.split_based_init()
 
             [did_split,proj_objective_componentLps,proj_time_component_lps]=self.apply_splitting_2()
-            
-            if did_split==False and did_compress_call==False:
+            if did_split==False:
+                did_add_ineq=self.separate_zero_val_terms(self.my_lower_bound_LP.lp_primal_solution)
+                if did_add_ineq==True:
+                    print('MAYBE;  NOT SURE YET; This really should not occur I dont think i mea')
+                    input('hih')
+            if did_split==False and did_compress_call==False and did_add_ineq==False:
                 self.graph_node_2_agg_node=self.my_lower_bound_LP.NAIVE_graph_node_2_agg_node
                 if self.jy_opt['do_split_based_init']>0.5:
                     self.split_based_init()
@@ -247,7 +255,9 @@ class full_solver:
         if self.jy_opt['do_ilp']>0.5:
 
             self.prepare_ILP_solution()
-        
+    
+    
+
     def call_ILP_solver(self):
         if self.jy_opt['do_split_based_init']>0.5:
             self.split_based_init()
@@ -290,3 +300,86 @@ class full_solver:
                 self.NEW_graph_node_2_agg_node[h][i]=new_name
         self.graph_node_2_agg_node=self.NEW_graph_node_2_agg_node
     
+
+    def separate_zero_val_terms(self,primal_sol_lp):
+        
+        if hasattr(self,'did_init_separ')==False:
+            self.call_init_separ()
+        D=self.D
+        costs=D['action2Cost']
+        G=self.G
+        self.cost_val = {
+            g: min(costs[act] for act in self.Z_by_group[g]) if self.Z_by_group[g] else float("inf")
+            for g in G
+        }
+        amount_inside = {
+            g: (sum(primal_sol_lp[act] for act in self.Z_by_group[g]))
+            for g in G
+        }
+        K=10
+        filtered = [
+            ((1 - amount_inside[g]) * self.cost_val[g], g)
+            for g in amount_inside
+            if amount_inside[g] < 0.99
+        ]
+        largest_k = heapq.nlargest(K, filtered)
+
+        result = [g for _, g in largest_k]
+        new_exog_terms=dict()
+        new_action_contrib=dict()
+        for g in result:
+            con_name_ineq='NewLB_'+str(g)
+            self.full_input_dict['exogName2Rhs'][con_name_ineq]=1
+            self.all_exog.append(con_name_ineq)
+            new_exog_terms[con_name_ineq]=1
+            for act in self.Z_by_group[g]:
+                self.D['actionCon2Contrib'][tuple([act,con_name_ineq])]=1#self.delta_con_2_contrib[v_con]
+                new_action_contrib[tuple([act,con_name_ineq])]=1
+        did_find_separ=False
+        if len(result)==True:
+            did_find_separ=True
+        return [did_find_separ,new_exog_terms,new_action_contrib]
+        
+        
+    
+    def call_init_separ(self):
+        self.did_init_separ=True
+        my_VRP=self.D['my_VRP']
+        Nc=self.my_VRP.num_cust
+
+        self.dict_pred_gain=dict()
+        [ng_neigh_by_cust_power,junk]=naive_get_LA_neigh(my_VRP,self.jy_opt['LAB_MP_neigh_use_power'])
+        #[ng_neigh_by_cust_all,junk]=naive_get_LA_neigh(my_VRP,self.full_prob.jy_opt['LAB_MP_neigh_use_all'])
+        G=set()
+        for u in range(0,Nc):
+            neighborhood = set(ng_neigh_by_cust_power[u]) | {u}
+            for g in power_set(neighborhood):
+                if len(g)>1:  # skip empty set and size 1 sets
+                    G.add(frozenset(g))
+        G.add(frozenset(np.arange(0,Nc)))
+
+        self.Z_by_group = defaultdict(set)  # g → set of act_u_v
+        all_non_null_action=set(self.D['allNonNullAction'])-set(['null_action'])
+        u_in_groups = defaultdict(set)
+        v_not_in_groups = defaultdict(set)
+
+        for g in G:
+            for u in g:
+                u_in_groups[u].add(g)
+            for v in range(0,Nc+2):  # include depot if needed
+                if v not in g:
+                    v_not_in_groups[v].add(g)
+
+        # Step 2: Build Z_by_group using set intersection
+        num_add=0
+
+        for act in all_non_null_action:
+            num_add=num_add+1
+            _, u_str, v_str = act.split("_")
+            u, v = int(u_str), int(v_str)
+
+            relevant_groups = u_in_groups[u] & v_not_in_groups[v]
+            for g in relevant_groups:
+                self.Z_by_group[g].add(act)
+        self.G=G
+        

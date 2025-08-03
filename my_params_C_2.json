@@ -1,5 +1,5 @@
 {
-"num_cust_use":100,
+"num_cust_use":50,
 "num_thresh_split_projector":20,
 "weight_slack_projector":0.00001,
 "allOneBig_init":0,

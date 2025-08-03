@@ -309,6 +309,9 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
             model.setParam("OutputFlag", 0)
             model.setParam("TimeLimit", max_ILP_time)
             model.setParam("LogFile", "../ALL_JSON_BIG/gurobi_log.txt")
+            #model.setParam("VarBranch", -1)
+            #model.setParam("Presolve", 0)
+
             # Add variables, using binary type where needed
             var_dict = {}
             for name, obj_coeff in safe_var_obj.items():
@@ -332,7 +335,7 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
 
         
 
-            if  any(not var_name_rev[v].startswith("act") for v in safe_binary_set):
+            if  any(not var_name_rev[v].startswith("act") for v in safe_binary_set | safe_integer_set):
                 #input('HERE')
                 count_1=0
                 count_2=0
@@ -358,8 +361,12 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
                 for v_name in safe_integer_set:
                     v=var_dict[v_name]
                     orig_name = var_name_rev[v_name]
+                    #print('orig_name')
+                    #print(orig_name)
+                    #3#input('look here')
                     if orig_name.startswith("fancy_branching_var"):
-                        v.BranchPriority = 100
+                        v.BranchPriority = 1000
+                        #input('----')
                         #print('v_name 3 ')
                         #print(v_name)
                         #if orig_name in pred_val_gain:
