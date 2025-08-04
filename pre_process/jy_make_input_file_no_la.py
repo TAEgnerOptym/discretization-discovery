@@ -149,6 +149,11 @@ class jy_make_input_file_no_la:
                 tup_action=str(tuple([new_action,name_cover]))
                 self.actionCon2Contrib[tup_action]=1
 
+                if self.jy_opt['use_packing_in_construction']>0.5:
+                    name_cover='exog_packing_'+str(u)
+                    tup_action=str(tuple([new_action,name_cover]))
+                    self.actionCon2Contrib[tup_action]=-1
+
                 name_flow_in_out_pos='exog_flow_pos'+str(u)
                 name_flow_in_out_neg='exog_flow_neg'+str(u)
                 tup_action_2=str(tuple([new_action,name_flow_in_out_pos]))
@@ -215,7 +220,10 @@ class jy_make_input_file_no_la:
             name_cover='exog_cover_'+str(u)
             self.allExogNames.append(name_cover)
             self.exogName2Rhs[name_cover]=1
-
+            if self.jy_opt['use_packing_in_construction']>0.5:
+                name_cover='exog_packing_'+str(u)
+                self.allExogNames.append(name_cover)
+                self.exogName2Rhs[name_cover]=-1
             name_flow_in_out_pos='exog_flow_pos'+str(u)
             name_flow_in_out_neg='exog_flow_neg'+str(u)
             self.allExogNames.append(name_flow_in_out_pos)

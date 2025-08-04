@@ -5,11 +5,13 @@ options = {
         "WLSSECRET": "8dd2c11c-cb9b-46f3-b072-4887712ea0c9",
         "LICENSEID": 2690165
     }
-model_path="RC103_model_name.mps"
-branch_file="RC103_branch_priorities.txt"
+#model_path="RC103_model_name.mps"
+#branch_file="RC103_branch_priorities.txt"
 #model_path="C104_model_name.mps"
 #branch_file="C104_branch_priorities.txt"
-mode_1=3
+model_path="C104_new_model_name.mps"
+branch_file="C104_new_branch_priorities.txt"
+mode_1=1
 with gp.Env(params=options) as env:
     with gp.read(model_path, env=env) as model:
         #model.setParam("Method", 3)

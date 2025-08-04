@@ -61,4 +61,6 @@ def grab_default_params():
 	my_params['LAB_MP_neigh_use_power']=10
 	my_params['LAB_MP_num_ineq_use']=10
 	my_params['do_remove_actions_from_incumbant']=True
+	my_params['ub_use_remove']=-1 #meaning dont use 
+	my_params['use_packing_in_construction']=False
 	return my_params

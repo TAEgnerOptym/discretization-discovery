@@ -5,12 +5,12 @@ import argparse
 #default_input='data/jy_C104.txt'
 
 
-default_input='data/jy_C104.txt'
-default_option_path='my_params_C.json'
+#default_input='data/jy_C104.txt'
+#default_option_path='my_params_C.json'
 #default_input='data/jy_RC208.txt'
-#default_option_path='my_params_RC.json'
+default_option_path='my_params_RC.json'
 #default_input='data/jy_R203.txt'
-#default_input='data/jy_RC103.txt'
+default_input='data/jy_RC103.txt'
 #default_option_path='my_params_R200.json'
 
 #default_option_path='my_params_debug_branch_RMP.json'

@@ -339,6 +339,7 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
                 #input('HERE')
                 count_1=0
                 count_2=0
+                count_3=0
                 for v_name in safe_binary_set:
                     safe_name = v_name
                     v=var_dict[v_name]
@@ -348,8 +349,13 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
                         v.BranchPriority = 50
                         count_1=count_1+1
                     else:
-                        v.BranchPriority = 1
-                        count_2=count_2+1
+                        if orig_name.startswith("fancy_branching_var"):
+                            v.BranchPriority = 1000
+                            count_3=count_3+1
+                            #input('GOOD NEWS HERE')
+                        else:
+                            v.BranchPriority = 1
+                            count_2=count_2+1
                 for v_name in safe_integer_set:
                     orig_name = var_name_rev[v_name]
                     v=var_dict[v_name]

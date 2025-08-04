@@ -209,15 +209,15 @@ class lower_bound_LP_milp:
             #print(self.DEBUG_len)
             input('look here')
         #input('hih')
-        if  self.full_prob.jy_opt['use_julians_custom_lp_solver']<0.5 and self.OPT_do_ilp==0:
-            self.select_low_reduced_cost_actions()
+        UB_USE_REMOVE=self.full_prob.jy_opt['ub_use_remove']
+        if UB_USE_REMOVE<0:
+            UB_USE_REMOVE=np.inf
+        if  UB_USE_REMOVE<np.inf and self.full_prob.jy_opt['use_julians_custom_lp_solver']<0.5 and self.OPT_do_ilp==0:
+            self.select_low_reduced_cost_actions(UB_USE_REMOVE)
         #input('done')
 
-    def select_low_reduced_cost_actions(self):
-        ub_current=np.inf
-        ub_current=358.1#822.95
-        ub_current=822.95
-        #ub_current=711
+    def select_low_reduced_cost_actions(self,ub_current):
+        
         upper_bound_valid=True
         if self.full_prob.jy_opt['do_ilp']==False:
             ub_current=np.inf
@@ -1862,6 +1862,8 @@ class lower_bound_LP_milp:
 
 
     def iterative_ilp_la(self):
+        maxVarsAdd=10
+        max_iters=30
         self.num_vars_added=0
         self.num_cons_add=0
         OLD_dict_var_name_2_is_integer=self.dict_var_name_2_is_integer.copy()
@@ -1877,29 +1879,63 @@ class lower_bound_LP_milp:
         }
         self.Gall=set([])
         LP_HIST_INTERNAL=[]
+        sizes_hist=[]
+        num_bin_hist=[]
         DEBUG_ON=False
-        for iter_step in range(0,4):
+        num_keep_round=1
+        UB_USE_REMOVE=self.full_prob.jy_opt['ub_use_remove']
+        if UB_USE_REMOVE<0:
+            UB_USE_REMOVE=np.inf
+        use_lowe_bound_objective=False
+        if use_lowe_bound_objective==True:
+            self.add_constraint_on_lb(self.full_prob.my_lower_bound_LP.lp_objective)
+
+        for iter_step in range(0,max_iters):
             self.filter_constraints()
             if DEBUG_ON==True:
                 print('DEBUG_ON')
                 with open("solver_checkpoint_"+str(iter_step)+"_.pkl", "wb") as f:
                     pickle.dump(self, f)
                 print('done writing')
-            print('iter')
-            print(iter_step)
-            print('dict_var_name_2_is_binary')
-            print(self.dict_var_name_2_is_binary)
+            #print('iter')
+            #print(iter_step)
+            #print('dict_var_name_2_is_binary')
+            #print(self.dict_var_name_2_is_binary)
+            print('LP_HIST_INTERNAL')
+            print(LP_HIST_INTERNAL)
+            print('sizes_hist')
+            print(sizes_hist)
+            print('num_bin_hist')
+            print(num_bin_hist)
             print('--')
-            self.call_gurobi_milp_solver()
-            LP_HIST_INTERNAL.append(self.milp_solution_objective_value)
+            if iter_step==0:
+                self.milp_solution=self.full_prob.my_lower_bound_LP.lp_primal_solution
+                self.milp_solution_objective_value=self.full_prob.my_lower_bound_LP.lp_objective
 
-            [did_find_separ,new_exog_terms,new_action_contrib]=self.full_prob.separate_zero_val_terms(self.milp_solution)
-            if did_find_separ:
+            else:
+                self.call_gurobi_milp_solver()
+                if use_lowe_bound_objective==True:
+                    self.dict_con_name_2_LB["constr_lb_obj"]=self.milp_solution_objective_value-0.0001
+            LP_HIST_INTERNAL.append(self.milp_solution_objective_value)
+            num_bin_hist.append(len(self.dict_var_name_2_is_binary))
+            if UB_USE_REMOVE-self.milp_solution_objective_value<0.001:
+                print('breaking due to lack of a gap')
+                break
+            fractional_acts = [
+                act for act in self.action_2_cost
+                if not (abs((val := self.milp_solution.get(act, 0.0))) <= 0.001 or abs(val - 1.0) <= 0.001)
+            ]
+            if not fractional_acts:
+                print('breaking due to integer')
+                break
+
+            #[did_find_separ,new_exog_terms,new_action_contrib]=self.full_prob.separate_zero_val_terms(self.milp_solution)
+            #if did_find_separ:
                 #input('found one ')
-                for con_name in new_exog_terms:
-                    self.dict_con_name_2_LB[con_name]=new_exog_terms[con_name]
-                for (act,con_name) in new_action_contrib:
-                    self.dict_var_con_2_lhs_exog[(act,con_name)]=new_action_contrib[(act,con_name)]
+            #    for con_name in new_exog_terms:
+            ##        self.dict_con_name_2_LB[con_name]=new_exog_terms[con_name]
+            #    for (act,con_name) in new_action_contrib:
+            #        self.dict_var_con_2_lhs_exog[(act,con_name)]=new_action_contrib[(act,con_name)]
 
 
             if DEBUG_ON==True:
@@ -1907,24 +1943,59 @@ class lower_bound_LP_milp:
                 with open("solver_checkpoint_AFTR_"+str(iter_step)+"_.pkl", "wb") as f:
                     pickle.dump(self, f)
             #input('opt step')
-            [GNew,amount_inside]=self.identify_separation(self.milp_solution)
-
             
-            print('LP_HIST_INTERNAL')
-            print('LP_HIST_INTERNAL')
-            print(LP_HIST_INTERNAL)
-            print('LP_HIST_INTERNAL')
-            print('LP_HIST_INTERNAL')
+            [GNew,GLowerNeeded,G,pred_val_gain,frac_amount,amount_inside]=self.identify_separation(self.milp_solution,num_keep_round)
+            if iter_step==0 and len(GLowerNeeded)>0.5:
+                input('this means taht something was not added properly')
+            sizes_hist.append([len(GNew),len(GLowerNeeded)])
+            did_add=False
+            if len(GLowerNeeded)>0:
+                #input('found one')
+                for g in GLowerNeeded:
+                    print('g LOWER')
+                    print(g)
+                    print('[pred_val_gain[g],frac_amount[g],amount_inside[g]]')
+                    print([pred_val_gain[g],frac_amount[g],amount_inside[g]])
+                    print('----')
+                    self.cuttingPlane_add_bound(g,amount_inside[g])
+                did_add=True
+            else:
+                if self.num_vars_added<maxVarsAdd:
+                    for g in GNew:
+                        #self.cuttingPlane_add_integer(g)
+                        print('g UPPER')
+                        print(g)
+                        print('[pred_val_gain[g],frac_amount[g],amount_inside[g]]')
+                        print([pred_val_gain[g],frac_amount[g],amount_inside[g]])
+                        print('----')
 
-            #input('lloking here')
-            for g in GNew:
-                #self.cuttingPlane_add_integer(g)
-                self.cuttingPlane_add_bound(g,amount_inside[g])
-                
+                        self.cuttingPlane_add_bound(g,amount_inside[g])
+
+                        did_add=True
+            if did_add==False:
+                print('breaking due to lack of addition')
+                break
+        #self.add_constraint_on_lb(self.milp_solution_objective_value)
+        print('FINAL LP_HIST_INTERNAL')
+        print(LP_HIST_INTERNAL)
+        print('sizes_hist')
+        print(sizes_hist)
+        print('num_bin_hist')
+        print(num_bin_hist)
+        print('--')
         for i in OLD_dict_var_name_2_is_integer:
             self.dict_var_name_2_is_integer[i]=OLD_dict_var_name_2_is_integer[i]
         for i in OLD_dict_var_name_2_is_binary:
             self.dict_var_name_2_is_binary[i]=OLD_dict_var_name_2_is_binary[i]
+
+
+    def add_constraint_on_lb(self,val_lb):
+
+        con_name="constr_lb_obj"
+        self.dict_con_name_2_LB[con_name]=val_lb-0.0001
+        my_acts=set(self.action_2_cost.keys())-set(self.full_prob.delta_name_2_ub.keys())
+        for act in my_acts:
+            self.dict_var_con_2_lhs_exog[tuple([act,con_name])]=self.action_2_cost[act]
 
     def cuttingPlane_add_bound(self,g,thresh):
         if g in self.Gall:
@@ -1946,7 +2017,7 @@ class lower_bound_LP_milp:
             self.num_cons_add=self.num_cons_add+1
         else:
             print('in high thresh')
-
+            
             my_var_name='fancy_branching_var_'+str(g)+'_'+str(self.num_vars_added)
             con_name_low='NEW_BOUND_Branch_eq_low'+str(g)+str(self.num_cons_add)
             con_name_high='NEW_BOUND_Branch_eq_high'+str(g)+str(self.num_cons_add+1)
@@ -1979,15 +2050,19 @@ class lower_bound_LP_milp:
             self.dict_var_con_2_lhs_eq[tuple([my_act,con_name_eq])]=-1
         self.num_vars_added=self.num_vars_added+1
 
-    def identify_separation(self,primal_sol_lp):
+    def identify_separation(self,primal_sol_lp,num_keep):
         Nc=self.full_prob.D['my_VRP'].num_cust
         costs=self.full_prob.D['action2Cost']
         Z_by_group=self.full_prob.Z_by_group
         G=self.full_prob.G
         for g in Z_by_group:
             Z_by_group[g]=set(Z_by_group[g])-set(self.full_prob.delta_name_2_ub.keys())
+        #self.cost_val = {
+        #    g: min(costs[act] for act in Z_by_group[g]) if Z_by_group[g] else float("inf")
+        #    for g in G
+        #}
         self.cost_val = {
-            g: min(costs[act] for act in Z_by_group[g]) if Z_by_group[g] else float("inf")
+            g: min(costs[act] for act in Z_by_group[g])
             for g in G
         }
         tol_low, tol_high = 0.999, 1.001
@@ -2010,6 +2085,19 @@ class lower_bound_LP_milp:
                 print(sum_by_u[u])
                 #print('sum_by_v[u]')
                 #print(sum_by_v[u])
+                print('BIG ERROR')
+                for act2 in self.all_non_null_action:
+                    _, u1, v1 = act.split("_")
+                    u1, v1 = int(u), int(v)
+                    val1 = primal_sol_lp.get(act, 0.0)
+                    if val1>0.0001:
+                        print('act')
+                        print(act)
+                        print('val1')
+                        print(val1)
+                        self.primal_sol_lp=primal_sol_lp
+                        with open("BADEROR.pkl", "wb") as f:
+                            pickle.dump(self, f)
                 input('error here ')
         print('passing this set options')
 
@@ -2041,20 +2129,30 @@ class lower_bound_LP_milp:
         }
     
         pred_val_gain=self.pred_val_gain
-        GNew = {
+        GNewOrig = {
+            g for g in G
+            if pred_val_gain[g] > 0.0 and amount_inside[g] > 1.001 and frac_amount[g] > 0.01
+        }
+        GlowerOrig = {
             g for g in G
             if pred_val_gain[g] > 0.0
-            #and amount_inside[g] < 1.999
+            and amount_inside[g] < .999
             and frac_amount[g] > 0.01
-            #and len(g)>=2
         }
-        num_Keep=1
         GNew = heapq.nlargest(
-            num_Keep,
-            GNew,
+            num_keep,
+            GNewOrig,
             key=lambda g: pred_val_gain[g]
         )
-        return [GNew,amount_inside]
+        GLower = heapq.nlargest(
+            num_keep,
+            GlowerOrig,
+            key=lambda g: pred_val_gain[g]
+        )
+        
+
+        
+        return [GNew,GLower,G,pred_val_gain,frac_amount,amount_inside]
 def power_set(s):
     """
     Returns the power set of the input collection `s` as a list of tuples.

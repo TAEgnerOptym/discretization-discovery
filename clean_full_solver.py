@@ -222,10 +222,10 @@ class full_solver:
 
             [did_split,proj_objective_componentLps,proj_time_component_lps]=self.apply_splitting_2()
             if did_split==False:
-                did_add_ineq=self.separate_zero_val_terms(self.my_lower_bound_LP.lp_primal_solution)
-                if did_add_ineq==True:
-                    print('MAYBE;  NOT SURE YET; This really should not occur I dont think i mea')
-                    input('hih')
+                [did_add_ineq,new_exog_terms,new_action_contrib]=self.separate_zero_val_terms(self.my_lower_bound_LP.lp_primal_solution)
+                #if did_add_ineq==True:
+                #    print('MAYBE;  NOT SURE YET; This really should not occur I dont think i mea')
+                #    input('hih')
             if did_split==False and did_compress_call==False and did_add_ineq==False:
                 self.graph_node_2_agg_node=self.my_lower_bound_LP.NAIVE_graph_node_2_agg_node
                 if self.jy_opt['do_split_based_init']>0.5:
@@ -302,12 +302,15 @@ class full_solver:
     
 
     def separate_zero_val_terms(self,primal_sol_lp):
-        
+        #input('IN HERE')
         if hasattr(self,'did_init_separ')==False:
             self.call_init_separ()
         D=self.D
         costs=D['action2Cost']
         G=self.G
+        for g in self.Z_by_group:
+            self.Z_by_group[g]=set(self.Z_by_group[g])-set(self.delta_name_2_ub.keys())
+        
         self.cost_val = {
             g: min(costs[act] for act in self.Z_by_group[g]) if self.Z_by_group[g] else float("inf")
             for g in G
@@ -322,6 +325,9 @@ class full_solver:
             for g in amount_inside
             if amount_inside[g] < 0.99
         ]
+        #print('len(filtered)')
+        #print(len(filtered))
+        #input('--')
         largest_k = heapq.nlargest(K, filtered)
 
         result = [g for _, g in largest_k]
@@ -330,15 +336,32 @@ class full_solver:
         for g in result:
             con_name_ineq='NewLB_'+str(g)
             self.full_input_dict['exogName2Rhs'][con_name_ineq]=1
-            self.all_exog.append(con_name_ineq)
+            self.full_input_dict['allExogNames'].append(con_name_ineq)
             new_exog_terms[con_name_ineq]=1
+            print('adding ')
+            print('con_name_ineq')
+            print(con_name_ineq)
             for act in self.Z_by_group[g]:
-                self.D['actionCon2Contrib'][tuple([act,con_name_ineq])]=1#self.delta_con_2_contrib[v_con]
+                self.full_input_dict['actionCon2Contrib'][tuple([act,con_name_ineq])]=1#self.delta_con_2_contrib[v_con]
                 new_action_contrib[tuple([act,con_name_ineq])]=1
-        did_find_separ=False
-        if len(result)==True:
-            did_find_separ=True
-        return [did_find_separ,new_exog_terms,new_action_contrib]
+                print('tuple([act,con_name_ineq])')
+                print(tuple([act,con_name_ineq]))
+        did_add_ineq=False
+        if len(result)>0.5:
+            did_add_ineq=True
+            print('did_find_separ')
+            print(did_add_ineq)
+            input('did_find_separ')
+
+
+       # if did_find_separ:
+        #    for con_name in new_exog_terms:
+        #        self.full_input_dict['exogName2Rhs'][con_name]=new_exog_terms[]
+        #        self.full_input_dict['allExogNames'].append(con_name)
+            #    for (act,con_name) in new_action_contrib:
+            #        self.dict_var_con_2_lhs_exog[(act,con_name)]=new_action_contrib[(act,con_name)]
+
+        return [did_add_ineq,new_exog_terms,new_action_contrib]
         
         
     
