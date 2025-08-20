@@ -2,6 +2,7 @@
 "num_cust_use":50,
 "LAB_MP_ON":1,
 "ub_use_remove":710.9001,
+"maxVarsAdd_in_ITER":20,
 "use_packing_in_construction":1,
 "LAB_MP_neigh_use_power":9,
 "num_thresh_split_projector":100,

@@ -38,6 +38,7 @@ class lower_bound_LP_milp:
 
     def __init__(self,full_prob,graph_node_2_agg_node,OPT_do_ILP,OPT_use_psi):
         t1=time.time()
+        self.extra_var_name_priority=dict()
 
         self.times_lp_times=dict()
         self.full_prob=full_prob
@@ -1888,7 +1889,6 @@ class lower_bound_LP_milp:
         }
         self.Gall=set([])
         LP_HIST_INTERNAL=[]
-        self.extra_var_name_priority=dict()
         sizes_hist=[]
         num_bin_hist=[]
         DEBUG_ON=False

@@ -8,18 +8,18 @@ import argparse
 
 #
 
-default_input='data/jy_C104.txt'
-default_option_path='my_params_C.json'
-out_name='C104_100_cust.json'
+#default_input='data/jy_C104.txt'
+#default_option_path='my_params_C.json'
+#out_name='C104_100_cust.json'
 
 
 #default_input='data/jy_R111.txt'
 #default_option_path='my_params_R200.json'
 #out_name='R104_100_cust.json'
 
-#default_input='data/jy_RC103.txt'
-#default_option_path='my_params_RC.json'
-#out_name='RC208_50_cust.json'
+default_input='data/jy_RC103.txt'
+default_option_path='my_params_RC.json'
+out_name='RC208_50_cust.json'
 #default_input='data/jy_RC208.txt'
 #default_option_path='my_params_RC.json'
 #default_input='data/jy_RC102.txt'

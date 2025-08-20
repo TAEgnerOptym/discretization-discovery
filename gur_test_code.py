@@ -42,17 +42,25 @@ with gp.Env(params=options) as env:
                     var.vType=gp.GRB.CONTINUOUS
                 else:
                     var.BranchPriority=int(bp)
+                #if int(bp)==1000:
+                #    var.UB=0
+                #if int(bp)==999:
+                #    var.UB=0
+                #if int(bp)==998:
+                #    var.UB=0
             model.update()
             model.optimize()
 
+            if 1<0:
+                solution_values = {var.VarName: var.X for var in model.getVars()}
 
-            solution_values = {var.VarName: var.X for var in model.getVars()}
+                model.reset()
+                for var in model.getVars():
+                    if var.BranchPriority>90:
+                        #var.Start=solution_values[var.VarName]
+                        var.LB=solution_values[var.VarName]
+                        var.UB=solution_values[var.VarName]
+                print('resetting ')
+                model.update()
 
-            model.reset()
-            for var in model.getVars():
-                if var.BranchPriority>40:
-                    var.Start=solution_values[var.VarName]
-            print('resetting ')
-            model.update()
-
-            model.optimize()
+                model.optimize()
