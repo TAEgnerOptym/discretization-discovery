@@ -25,7 +25,7 @@ from New_valid_sep.check_valid_round_2 import check_valid_round_2
 from projector_on_lb import projector_on_lb
 class full_solver:
 
-    def __init__(self,full_input_dict,jy_opt,output_file_path,all_actions_inclumbent=None,actions_ignore=None):
+    def __init__(self,full_input_dict,jy_opt,output_file_path,all_actions_inclumbent=None,actions_ignore=None,hist_terms_phase_one=None):
         print('type(full_input_dict)')
         print(type(full_input_dict))
         self.all_actions_inclumbent=None
@@ -107,6 +107,7 @@ class full_solver:
         self.history_dict['lp_time_project']=[]
         self.history_dict['lp_time_LB']=[]
         self.history_dict['ilp_time']=[]
+        self.hist_terms_phase_one=hist_terms_phase_one
 
         self.history_dict['history_of_graphs_by_iter']=[]
 

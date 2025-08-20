@@ -100,7 +100,7 @@ class lower_bound_LP_milp:
         t1=time.time()
         if self.OPT_do_ilp!=0 and self.full_prob.jy_opt['LAB_MP_ON']>0.5:
             #input('about to start')
-            DEBUG_ON=True
+            DEBUG_ON=False
             if DEBUG_ON==True:
                 print('DEBUG_ON')
                 with open("solver_checkpoint_BEF_.pkl", "wb") as f:
@@ -1869,7 +1869,8 @@ class lower_bound_LP_milp:
 
     def iterative_ilp_la(self):
         self.full_prob.history_dict['iter_2_act_list']=[]
-        maxVarsAdd=10 
+        maxVarsAdd=self.full_prob.jy_opt['maxVarsAdd_in_ITER'] 
+
         max_iters=200
         self.num_vars_added=0
         self.num_cons_add=0
@@ -2013,6 +2014,11 @@ class lower_bound_LP_milp:
         print(num_bin_hist)
         print('time_internal_list')
         print(time_internal_list)
+
+        self.full_prob.history_dict['ITER_ILP_LA_TIME']=time_internal_list
+        self.full_prob.history_dict['ITER_ILP_LA_sizes_hist']=sizes_hist
+        self.full_prob.history_dict['ITER_ILP_LA_num_bin_hist']=num_bin_hist
+        self.full_prob.history_dict['ITER_ILP_LA_LP_HIST_INTERNAL']=LP_HIST_INTERNAL
         print('--')
         for i in OLD_dict_var_name_2_is_integer:
             self.dict_var_name_2_is_integer[i]=OLD_dict_var_name_2_is_integer[i]

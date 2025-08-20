@@ -3,6 +3,7 @@
 "do_remove_actions_from_incumbant":1,
 "use_packing_in_construction":1,
 "ub_use_remove":822.9001,
+"maxVarsAdd_in_ITER":1,
 "LAB_MP_ON":1,
 "num_thresh_split_projector":10,
 "weight_slack_projector":0.00001,

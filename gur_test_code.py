@@ -1,7 +1,7 @@
 import gurobipy as gp
 import numpy as np
-model_path="GUR_TEST_model_name.mps"
-branch_file="GUR_TEST_branch_priorities_2.txt"
+model_path="model_name.mps"
+branch_file="branch_priorities.txt"
 
 options = {
         "WLSACCESSID": "b7836a23-3df1-40ac-be4d-310282e2178e",
@@ -27,7 +27,7 @@ options = {
 #993:  822.9 ;8 integer (all binary)
 #40:  822.9 ;1340 integer (all binary)
 #-infty; 822.9;   43824 integer (41664 binary)
-min_priority_keep_integer=998
+min_priority_keep_integer=0
 
 
 with gp.Env(params=options) as env:
@@ -43,4 +43,16 @@ with gp.Env(params=options) as env:
                 else:
                     var.BranchPriority=int(bp)
             model.update()
+            model.optimize()
+
+
+            solution_values = {var.VarName: var.X for var in model.getVars()}
+
+            model.reset()
+            for var in model.getVars():
+                if var.BranchPriority>40:
+                    var.Start=solution_values[var.VarName]
+            print('resetting ')
+            model.update()
+
             model.optimize()

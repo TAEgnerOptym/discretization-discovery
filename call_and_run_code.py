@@ -9,6 +9,8 @@ from grab_default_params import grab_default_params
 from grab_params import grab_params
 import json
 import ast
+import copy
+
 
 
 def call_and_run_code(input_file_path,my_params_path,my_json_file_path,my_output_path):
@@ -34,4 +36,17 @@ def call_and_run_code(input_file_path,my_params_path,my_json_file_path,my_output
 
     D['my_VRP']=my_instance
 
-    my_solver=full_solver(D,my_params,my_output_path)
+    if 1<0:
+        my_solver=full_solver(D,my_params,my_output_path)
+    else:
+        D1 = copy.deepcopy(D)
+
+        my_params['do_ilp']=False
+        my_solver=full_solver(D,my_params,my_output_path)
+        #input('----')
+        my_params['do_ilp']=True
+
+        OUT_all_actions_inclumbent=my_solver.all_actions_inclumbent
+        D1['initGraphNode2AggNode']=my_solver.graph_node_2_agg_node
+        OUT_hist_terms_phase_one=my_solver.history_dict
+        my_solver=full_solver(D1,my_params,my_output_path,all_actions_inclumbent=OUT_all_actions_inclumbent,hist_terms_phase_one=OUT_hist_terms_phase_one)

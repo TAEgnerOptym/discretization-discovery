@@ -63,4 +63,5 @@ def grab_default_params():
 	my_params['do_remove_actions_from_incumbant']=True
 	my_params['ub_use_remove']=-1 #meaning dont use 
 	my_params['use_packing_in_construction']=False
+	my_params['maxVarsAdd_in_ITER']=10
 	return my_params
