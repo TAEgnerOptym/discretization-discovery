@@ -1,0 +1,46 @@
+import gurobipy as gp
+import numpy as np
+model_path="GUR_TEST_model_name.mps"
+branch_file="GUR_TEST_branch_priorities_2.txt"
+
+options = {
+        "WLSACCESSID": "b7836a23-3df1-40ac-be4d-310282e2178e",
+        "WLSSECRET": "8dd2c11c-cb9b-46f3-b072-4887712ea0c9",
+        "LICENSEID": 2690165
+    }
+
+#observe this parameter min_priority_keep_integer.  
+#
+# I made the following table to show how following my proposed branching order performs.  We will only keep ineger varaibles as integer if their priority is above this value
+# note  that Binary varaibles are set to have upper bound 1 if they are relaxed to be non-binary.  The aim here is to show the value of this branching order.  However I think that if it is used convergence should be a lot faster.  
+
+# 
+# #min_priority_keep_integer;  OBJECTIVE; Number of integer variables
+# 1001: 8.184388879e+02 ; 0 integer 
+# 1000:  821.387 ; 1 integer (all binary)
+# 999: 821.857  ; 2 integer (all binary)
+# 998: 822.029   ; 3 integer (all binary)
+# 997:  822.379   ; 4 integer (all binary)
+# 996:  822.412  ; 5 integer (all binary)
+# 995:  822.4999200  ; 6 integer  (all binary)
+# 994:  822.7  ; 7 integer  (all binary)
+#993:  822.9 ;8 integer (all binary)
+#40:  822.9 ;1340 integer (all binary)
+#-infty; 822.9;   43824 integer (41664 binary)
+min_priority_keep_integer=998
+
+
+with gp.Env(params=options) as env:
+    with gp.read(model_path, env=env) as model:
+        with open(branch_file, "r") as f:
+            for line in f:
+                name, bp = line.strip().split()
+                var = model.getVarByName(name)
+                if int(bp) < min_priority_keep_integer:#<min_priority_keep_integer or int(bp)>max_priority_keep_integer:
+                    if var.vType==gp.GRB.BINARY:
+                        var.Ub=1
+                    var.vType=gp.GRB.CONTINUOUS
+                else:
+                    var.BranchPriority=int(bp)
+            model.update()
+            model.optimize()

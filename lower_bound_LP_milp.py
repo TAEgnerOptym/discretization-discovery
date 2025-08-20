@@ -238,6 +238,7 @@ class lower_bound_LP_milp:
         num_found_low=0
         num_used=0
         num_already_gone=0
+        num_in_solution_ignore=0
         terms_remove=[]
         for act in primal_solution:
             #if act in usedTerms:
@@ -245,6 +246,9 @@ class lower_bound_LP_milp:
             #    continue
             if act in self.full_prob.delta_name_2_ub and self.full_prob.delta_name_2_ub[act]<0.001:
                 num_already_gone=num_already_gone+1
+                continue
+            if act in self.full_prob.all_actions_inclumbent:
+                num_in_solution_ignore+=1
                 continue
             match = pattern.fullmatch(act)
             if not match:
@@ -302,6 +306,8 @@ class lower_bound_LP_milp:
         print(num_used)
         print('num_already_gone')
         print(num_already_gone)
+        print('num_in_solution_ignore')
+        print(num_in_solution_ignore)
         print('---')
         #print(result)
         #print('result')
@@ -1407,7 +1413,7 @@ class lower_bound_LP_milp:
         #print('len(self.actions_ignore)')
         #print(len(self.actions_ignore))
         #input('---')
-    def call_gurobi_milp_solver(self):
+    def call_gurobi_milp_solver(self,use_interior=False):
         out_solution=[]
 
         delta_name_2_lb=dict()
@@ -1420,7 +1426,7 @@ class lower_bound_LP_milp:
             self.CLEAN_dict_con_name_2_LB,
             self.CLEAN_dict_var_con_2_lhs_eq,
             self.CLEAN_dict_con_name_2_eq,delta_name_2_lb,delta_name_2_ub,
-            self.dict_var_name_2_is_binary,self.dict_var_name_2_is_integer,self.full_prob.jy_opt['max_ILP_time'],self.dict_pred_gain)
+            self.dict_var_name_2_is_binary,self.dict_var_name_2_is_integer,self.full_prob.jy_opt['max_ILP_time'],use_interior=use_interior,extra_var_name_priority=self.extra_var_name_priority)
 
 
         self.gurobi_MILP_str=out_solution['gurobi_log_string']
@@ -1862,10 +1868,12 @@ class lower_bound_LP_milp:
 
 
     def iterative_ilp_la(self):
-        maxVarsAdd=10
-        max_iters=30
+        self.full_prob.history_dict['iter_2_act_list']=[]
+        maxVarsAdd=10 
+        max_iters=200
         self.num_vars_added=0
         self.num_cons_add=0
+        time_internal_list=[]
         OLD_dict_var_name_2_is_integer=self.dict_var_name_2_is_integer.copy()
         OLD_dict_var_name_2_is_binary=self.dict_var_name_2_is_binary.copy()
         self.dict_var_name_2_is_integer=dict()
@@ -1879,6 +1887,7 @@ class lower_bound_LP_milp:
         }
         self.Gall=set([])
         LP_HIST_INTERNAL=[]
+        self.extra_var_name_priority=dict()
         sizes_hist=[]
         num_bin_hist=[]
         DEBUG_ON=False
@@ -1896,7 +1905,7 @@ class lower_bound_LP_milp:
                 print('DEBUG_ON')
                 with open("solver_checkpoint_"+str(iter_step)+"_.pkl", "wb") as f:
                     pickle.dump(self, f)
-                print('done writing')
+                print('done writing internal')
             #print('iter')
             #print(iter_step)
             #print('dict_var_name_2_is_binary')
@@ -1907,18 +1916,33 @@ class lower_bound_LP_milp:
             print(sizes_hist)
             print('num_bin_hist')
             print(num_bin_hist)
+            print('time_internal_list')
+            print(time_internal_list)
             print('--')
             if iter_step==0:
                 self.milp_solution=self.full_prob.my_lower_bound_LP.lp_primal_solution
                 self.milp_solution_objective_value=self.full_prob.my_lower_bound_LP.lp_objective
-
+                time_internal_list.append(0)
             else:
-                self.call_gurobi_milp_solver()
+                #self.call_gurobi_milp_solver()
+                self.call_gurobi_milp_solver(True)
                 if use_lowe_bound_objective==True:
                     self.dict_con_name_2_LB["constr_lb_obj"]=self.milp_solution_objective_value-0.0001
+                time_internal_list.append(self.milp_time)
+            if 1>0:
+                act_vars = {
+                    varname: value
+                    for varname, value in self.milp_solution.items()
+                    if varname.startswith("act") and value != 0
+                }
+                self.full_prob.history_dict['iter_2_act_list'].append(act_vars)
+            
             LP_HIST_INTERNAL.append(self.milp_solution_objective_value)
             num_bin_hist.append(len(self.dict_var_name_2_is_binary))
-            if UB_USE_REMOVE-self.milp_solution_objective_value<0.001:
+            print('UB_USE_REMOVE-self.milp_solution_objective_value')
+            print(UB_USE_REMOVE-self.milp_solution_objective_value)
+            print('UB_USE_REMOVE-self.milp_solution_objective_value')
+            if UB_USE_REMOVE-self.milp_solution_objective_value<0.05:
                 print('breaking due to lack of a gap')
                 break
             fractional_acts = [
@@ -1944,7 +1968,7 @@ class lower_bound_LP_milp:
                     pickle.dump(self, f)
             #input('opt step')
             
-            [GNew,GLowerNeeded,G,pred_val_gain,frac_amount,amount_inside]=self.identify_separation(self.milp_solution,num_keep_round)
+            [GNew,GLowerNeeded,G,pred_val_gain,frac_amount,amount_inside,amount_inside_internal]=self.identify_separation(self.milp_solution,num_keep_round)
             if iter_step==0 and len(GLowerNeeded)>0.5:
                 input('this means taht something was not added properly')
             sizes_hist.append([len(GNew),len(GLowerNeeded)])
@@ -1957,7 +1981,9 @@ class lower_bound_LP_milp:
                     print('[pred_val_gain[g],frac_amount[g],amount_inside[g]]')
                     print([pred_val_gain[g],frac_amount[g],amount_inside[g]])
                     print('----')
-                    self.cuttingPlane_add_bound(g,amount_inside[g])
+                    #self.cuttingPlane_add_bound(g,amount_inside[g])
+                    self.cuttingPlane_add_bound_internal(g,amount_inside_internal[g])
+                    #cuttingPlane_add_bound_internal
                 did_add=True
             else:
                 if self.num_vars_added<maxVarsAdd:
@@ -1969,7 +1995,10 @@ class lower_bound_LP_milp:
                         print([pred_val_gain[g],frac_amount[g],amount_inside[g]])
                         print('----')
 
-                        self.cuttingPlane_add_bound(g,amount_inside[g])
+                        #self.cuttingPlane_add_bound(g,amount_inside[g])
+                        #self.cuttingPlane_add_integer(g)
+                        #self.cuttingPlane_add_integer_internal(g)
+                        self.cuttingPlane_add_bound_internal(g,amount_inside_internal[g])
 
                         did_add=True
             if did_add==False:
@@ -1982,6 +2011,8 @@ class lower_bound_LP_milp:
         print(sizes_hist)
         print('num_bin_hist')
         print(num_bin_hist)
+        print('time_internal_list')
+        print(time_internal_list)
         print('--')
         for i in OLD_dict_var_name_2_is_integer:
             self.dict_var_name_2_is_integer[i]=OLD_dict_var_name_2_is_integer[i]
@@ -2034,6 +2065,59 @@ class lower_bound_LP_milp:
             self.num_cons_add=self.num_cons_add+2
             self.num_vars_added=self.num_vars_added+1
 
+    def cuttingPlane_add_bound_internal(self,g,thresh):
+        if g in self.Gall:
+            input('error here')
+        Z_by_group_inside=self.full_prob.Z_by_group_inside
+        low_thresh=np.floor(thresh)
+        high_thresh=np.ceil(thresh)
+
+        print('[low_thresh,high_thresh,thresh]')
+        print([low_thresh,high_thresh,thresh])
+        print('g')
+        print(g)
+        if high_thresh==len(g):
+            print('in low thresh')
+            con_name_ineq='NewLB_'+str(g)+'_'+str(self.num_cons_add)
+            self.dict_con_name_2_LB[con_name_ineq]=-len(g)+0.9999
+            #print('g')
+            #print(g)
+            #print('con_name_ineq')
+            #print(con_name_ineq)
+            #p#rint('self.dict_con_name_2_LB[con_name_ineq]')
+            #p#rint(self.dict_con_name_2_LB[con_name_ineq])
+            for act in Z_by_group_inside[g]:
+                self.dict_var_con_2_lhs_exog[tuple([act,con_name_ineq])]=-1
+            #    print('act '+act)
+            self.num_cons_add=self.num_cons_add+1
+        else:
+            print('in high thresh')
+            
+            
+            #input('this is not wrong but I dont think I want to be here')
+            my_var_name='fancy_branching_var_'+str(g)+'_'+str(self.num_vars_added)
+            con_name_low='NEW_BOUND_Branch_eq_low'+str(g)+str(self.num_cons_add)
+            con_name_high='NEW_BOUND_Branch_eq_high'+str(g)+str(self.num_cons_add+1)
+            LG=len(g)
+            self.dict_var_name_2_obj[my_var_name]=0
+            self.dict_con_name_2_LB[con_name_low]=-LG
+            self.dict_con_name_2_LB[con_name_high]=high_thresh
+            self.dict_var_con_2_lhs_exog[tuple([my_var_name,con_name_low])]=-LG+low_thresh
+            self.dict_var_con_2_lhs_exog[tuple([my_var_name,con_name_high])]=high_thresh
+            self.dict_var_name_2_is_binary[my_var_name]=1
+            self.extra_var_name_priority[my_var_name]=1000-len(self.extra_var_name_priority)
+            #print('self.dict_var_con_2_lhs_exog[tuple([my_var_name,con_name_low])]')
+            #print(self.dict_var_con_2_lhs_exog[tuple([my_var_name,con_name_low])])
+            #print('self.dict_var_con_2_lhs_exog[tuple([my_var_name,con_name_high])]')
+            #print(self.dict_var_con_2_lhs_exog[tuple([my_var_name,con_name_high])])
+            for act in Z_by_group_inside[g]:
+                self.dict_var_con_2_lhs_exog[tuple([act,con_name_low])]=-1
+                self.dict_var_con_2_lhs_exog[tuple([act,con_name_high])]=1
+                #print('act '+act)
+            self.num_cons_add=self.num_cons_add+2
+            self.num_vars_added=self.num_vars_added+1
+
+
     def cuttingPlane_add_integer(self,g):
         if g in self.Gall:
             input('error here')
@@ -2050,13 +2134,35 @@ class lower_bound_LP_milp:
             self.dict_var_con_2_lhs_eq[tuple([my_act,con_name_eq])]=-1
         self.num_vars_added=self.num_vars_added+1
 
+    def cuttingPlane_add_integer_internal(self,g):
+        if g in self.Gall:
+            input('error here')
+        Z_by_group=self.full_prob.Z_by_group_inside
+        con_name_eq='NEW_BOUND_Branch_eq'+str(g)
+        my_var_name='fancy_branching_var_'+str(g)
+        self.dict_var_name_2_obj[my_var_name]=0
+        self.dict_con_name_2_eq[con_name_eq]=0
+        self.dict_var_con_2_lhs_eq[tuple([my_var_name,con_name_eq])]=1#self.delta_con_2_contrib[v_con]
+        self.dict_var_name_2_is_integer[my_var_name]=1
+        self.full_prob.delta_name_2_lb[my_var_name]=0
+        self.full_prob.delta_name_2_ub[my_var_name]=len(g)-1
+        self.extra_var_name_priority[my_var_name]=1000-len(self.extra_var_name_priority)
+
+        for my_act in Z_by_group[g]:
+            self.dict_var_con_2_lhs_eq[tuple([my_act,con_name_eq])]=-1
+        self.num_vars_added=self.num_vars_added+1
+
     def identify_separation(self,primal_sol_lp,num_keep):
         Nc=self.full_prob.D['my_VRP'].num_cust
         costs=self.full_prob.D['action2Cost']
         Z_by_group=self.full_prob.Z_by_group
+        Z_by_group_internal=self.full_prob.Z_by_group_inside
         G=self.full_prob.G
+        delta_keys = set(self.full_prob.delta_name_2_ub.keys())
+
         for g in Z_by_group:
-            Z_by_group[g]=set(Z_by_group[g])-set(self.full_prob.delta_name_2_ub.keys())
+            Z_by_group[g] = Z_by_group[g] - delta_keys
+            Z_by_group_internal[g] = Z_by_group_internal[g] - delta_keys
         #self.cost_val = {
         #    g: min(costs[act] for act in Z_by_group[g]) if Z_by_group[g] else float("inf")
         #    for g in G
@@ -2109,6 +2215,11 @@ class lower_bound_LP_milp:
             g: (sum(primal_sol_lp[act] for act in Z_by_group[g]))
             for g in G
         }
+
+        amount_inside_internal = {
+            g: (sum(primal_sol_lp[act] for act in Z_by_group_internal[g]))
+            for g in G
+        }
         
         frac_amount = {
             g: (
@@ -2122,9 +2233,23 @@ class lower_bound_LP_milp:
             for g in G
         }
 
+        #frac_amount = {
+        #    g: (
+        #        min(
+        #            np.inf,
+        #            np.ceil(amount_inside[g]) - amount_inside[g]
+        #        )
+        #        if amount_inside[g] > 1
+        #        else 1 - amount_inside[g]
+        #    )
+        #    for g in G
+        #}
+
+
         
         self.pred_val_gain={
             g: self.cost_val[g]*frac_amount[g]/(amount_inside[g])
+            #g: self.cost_val[g]*frac_amount[g]/(len(g))
             for g in G
         }
     
@@ -2152,7 +2277,7 @@ class lower_bound_LP_milp:
         
 
         
-        return [GNew,GLower,G,pred_val_gain,frac_amount,amount_inside]
+        return [GNew,GLower,G,pred_val_gain,frac_amount,amount_inside,amount_inside_internal]
 def power_set(s):
     """
     Returns the power set of the input collection `s` as a list of tuples.

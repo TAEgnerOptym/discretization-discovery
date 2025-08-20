@@ -266,7 +266,12 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
                       dict_var_con_2_lhs_eq,
                       dict_con_name_2_eq,
                       dict_var_name_2_LB,dict_var_name_2_UB,
-                      dict_binary_vars,dict_var_name_2_is_integer,max_ILP_time=1000,pred_val_gain=None):
+                      dict_binary_vars,dict_var_name_2_is_integer,max_ILP_time=1000,use_interior=False,extra_var_name_priority=dict()):
+    #print('use_interior')
+    #print(use_interior)
+    #print('use_interior')
+    #input('--')
+    
     time_pre = time.time()
 
     # Step 0: Name remapping for Gurobi safety
@@ -277,7 +282,7 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
 
     #var_name_map = {v: f"v{i}" for i, v in enumerate(var_names)}
     var_name_map = {
-        v: v if len(v) < 10 else f"v{i}"
+        v: v if len(v) < 40 else f"v{i}"
         for i, v in enumerate(var_names)}
     con_name_map = {c: f"c{i}" for i, c in enumerate(all_con_names)}
     var_name_rev = {v_alias: v for v, v_alias in var_name_map.items()}
@@ -306,7 +311,14 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
 
     with gp.Env(params=options) as env:
         with gp.Model("converted_MILP", env=env) as model:
-            model.setParam("OutputFlag", 0)
+            model.setParam("OutputFlag", 1)
+            if use_interior==True:
+                model.setParam("Method", 2)
+                model.setParam("OutputFlag", 0)
+                #model.setParam("Presolve", 0)
+                #model.setParam("Cuts", 0)
+                print('using interior')
+
             model.setParam("TimeLimit", max_ILP_time)
             model.setParam("LogFile", "../ALL_JSON_BIG/gurobi_log.txt")
             #model.setParam("VarBranch", -1)
@@ -350,8 +362,14 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
                         count_1=count_1+1
                     else:
                         if orig_name.startswith("fancy_branching_var"):
-                            v.BranchPriority = 1000
-                            count_3=count_3+1
+                            v.BranchPriority = 1000#-count_3
+                            if orig_name in extra_var_name_priority:
+                                v.BranchPriority=extra_var_name_priority[orig_name]
+                            #print('orig_name')
+                            #print(orig_name)
+                            #print('1000-count_3')
+                            #print(1000-count_3)
+                            #count_3=count_3+1
                             #input('GOOD NEWS HERE')
                         else:
                             v.BranchPriority = 1
@@ -372,6 +390,8 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
                     #3#input('look here')
                     if orig_name.startswith("fancy_branching_var"):
                         v.BranchPriority = 1000
+                        if orig_name in extra_var_name_priority:
+                            v.BranchPriority=extra_var_name_priority[orig_name]
                         #input('----')
                         #print('v_name 3 ')
                         #print(v_name)
@@ -427,7 +447,7 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
             model.ModelSense = GRB.MINIMIZE
 
             time_pre = time.time() - time_pre
-            model.setParam("OutputFlag", 1)
+            #model.setParam("OutputFlag", 1)
             log_buffer = io.StringIO()
             print('writing ')
             model.write("model_name.mps")
@@ -457,11 +477,13 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
             model.optimize()
             time_opt = time.time() - time_opt
             sys.stdout = sys.__stdout__
-
             # Extract the log from memory
             gurobi_log_string = log_buffer.getvalue()
             log_buffer.close()
             time_post = time.time()
+            print('done solving')
+            print('solve time. '+str(time_opt))
+
             MIP_lower_bound=model.ObjBound
             #if model.status != GRB.OPTIMAL:
             #    raise RuntimeError("Gurobi did not find an optimal MILP solution.")

@@ -5,13 +5,27 @@ import argparse
 #default_input='data/jy_C104.txt'
 
 
-#default_input='data/jy_C104.txt'
-#default_option_path='my_params_C.json'
-#default_input='data/jy_RC208.txt'
-default_option_path='my_params_RC.json'
-#default_input='data/jy_R203.txt'
-default_input='data/jy_RC103.txt'
+
+#
+
+default_input='data/jy_C104.txt'
+default_option_path='my_params_C.json'
+out_name='C104_100_cust.json'
+
+
+#default_input='data/jy_R111.txt'
 #default_option_path='my_params_R200.json'
+#out_name='R104_100_cust.json'
+
+default_input='data/jy_RC103.txt'
+default_option_path='my_params_RC.json'
+out_name='RC208_50_cust.json'
+#default_input='data/jy_RC208.txt'
+#default_option_path='my_params_RC.json'
+#default_input='data/jy_RC102.txt'
+
+#default_input='data/jy_RC206.txt'
+#default_option_path='my_params_RC.json'
 
 #default_option_path='my_params_debug_branch_RMP.json'
 #default_option_path='my_params_debug_branch_RMP.json'
@@ -23,7 +37,7 @@ default_input='data/jy_RC103.txt'
 #speed up the projector LPs
 
 default_my_json='../ALL_JSON_BIG/sample_json_input_description.json'
-default_out_file_path='../ALL_JSON_BIG/sample_json_output.json'
+default_out_file_path='../ALL_JSON_BIG/'+out_name
 parser = argparse.ArgumentParser(description="Description of your program")
 parser.add_argument("input_file_path", type=str,nargs="?", help="input_file_path",default=default_input)
 parser.add_argument("my_json_input_path", type=str,nargs="?", help="my_json_input_path",default=default_my_json)

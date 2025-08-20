@@ -116,29 +116,32 @@ class full_solver:
 
     def apply_splitting_2(self):
         incumbent_lp=np.inf
+        tinyPos=0.0000001
         if len(self.history_dict['ub_lp'])>0:
             incumbent_lp=self.history_dict['ub_lp'][-1]
         for p in self.action_2_cost:
-            if self.my_lower_bound_LP.lp_primal_solution[p]>0.001:
+            if self.my_lower_bound_LP.lp_primal_solution[p]>tinyPos:#0.0001:
                 self.all_actions_inclumbent.add(p)
         actions_ignore=set(self.all_non_null_action)-self.all_actions_inclumbent
         if 'null_action' in actions_ignore:
             actions_ignore.remove('null_action')
         my_proj=projector_on_lb(self,actions_ignore)
         duality_gap=my_proj.lp_objective-self.my_lower_bound_LP.lp_objective
+        self.incumbant_solution=defaultdict(float)
         if my_proj.lp_objective<incumbent_lp-duality_gap/100:
             if self.jy_opt['do_remove_actions_from_incumbant']==True:
                 self.all_actions_inclumbent=set([])
             for p in self.action_2_cost:
-                if p in my_proj.lp_primal_solution and my_proj.lp_primal_solution[p]>0.0001:
+                if p in my_proj.lp_primal_solution and my_proj.lp_primal_solution[p]>tinyPos:#0.00001:
                     self.all_actions_inclumbent.add(p)
-           
+                    self.incumbant_solution[p]=my_proj.lp_primal_solution[p]
         objective_gain=my_proj.lp_objective-self.my_lower_bound_LP.lp_objective
         #print('objective_gain')
         #print(objective_gain)
         #print('my_proj.num_do_split')
         #print(my_proj.num_do_split)
         #input('---')
+        self.my_proj=my_proj
         self.history_dict['ub_lp'].append(my_proj.lp_objective)
  
         my_Lp_time=my_proj.lp_time
@@ -177,7 +180,8 @@ class full_solver:
 
             for my_prim in self.all_primitive_vars:
                 if my_prim in my_ilp_sol:
-                    out_sol[my_prim]=my_ilp_sol[my_prim]
+                    if my_ilp_sol[my_prim]>0.01:
+                        out_sol[my_prim]=my_ilp_sol[my_prim]
             self.history_dict['jy_opt']=self.jy_opt
             self.history_dict['output_ilp_solution']=out_sol
         
@@ -202,6 +206,8 @@ class full_solver:
         did_split=True
         self.current_LP_solution=[]
         did_add_ineq=True
+        self.call_init_separ()
+        #input('--')
         while iter<self.jy_opt['max_iterations_loop_compress_project'] and (did_split==True or did_add_ineq==True):
             self.time_list_outer=dict()
             iter=iter+1
@@ -222,7 +228,8 @@ class full_solver:
 
             [did_split,proj_objective_componentLps,proj_time_component_lps]=self.apply_splitting_2()
             if did_split==False:
-                [did_add_ineq,new_exog_terms,new_action_contrib]=self.separate_zero_val_terms(self.my_lower_bound_LP.lp_primal_solution)
+                #[did_add_ineq,new_exog_terms,new_action_contrib]=self.separate_zero_val_terms(self.my_lower_bound_LP.lp_primal_solution)
+                [did_add_ineq,new_exog_terms,new_action_contrib]=self.separate_zero_val_terms_internal(self.my_lower_bound_LP.lp_primal_solution)
                 #if did_add_ineq==True:
                 #    print('MAYBE;  NOT SURE YET; This really should not occur I dont think i mea')
                 #    input('hih')
@@ -308,9 +315,13 @@ class full_solver:
         D=self.D
         costs=D['action2Cost']
         G=self.G
-        for g in self.Z_by_group:
-            self.Z_by_group[g]=set(self.Z_by_group[g])-set(self.delta_name_2_ub.keys())
-        
+        ub_keys = set(self.delta_name_2_ub)
+
+        for g, zs in self.Z_by_group.items():
+            self.Z_by_group[g] = zs - ub_keys
+        for g, zs in self.Z_by_group_inside.items():
+            self.Z_by_group_inside[g] = zs - ub_keys
+
         self.cost_val = {
             g: min(costs[act] for act in self.Z_by_group[g]) if self.Z_by_group[g] else float("inf")
             for g in G
@@ -349,9 +360,9 @@ class full_solver:
         did_add_ineq=False
         if len(result)>0.5:
             did_add_ineq=True
-            print('did_find_separ')
-            print(did_add_ineq)
-            input('did_find_separ')
+           # print('did_find_separ')
+           # print(did_add_ineq)
+           # input('did_find_separ')
 
 
        # if did_find_separ:
@@ -363,7 +374,65 @@ class full_solver:
 
         return [did_add_ineq,new_exog_terms,new_action_contrib]
         
+    
+    def separate_zero_val_terms_internal(self,primal_sol_lp):
+        #input('IN HERE')
+        if hasattr(self,'did_init_separ')==False:
+            self.call_init_separ()
+        D=self.D
+        costs=D['action2Cost']
+        G=self.G
+        ub_keys = set(self.delta_name_2_ub)
+
+        for g, zs in self.Z_by_group.items():
+            self.Z_by_group[g] = zs - ub_keys
+        for g, zs in self.Z_by_group_inside.items():
+            self.Z_by_group_inside[g] = zs - ub_keys
+
+        self.cost_val = {
+            g: min(costs[act] for act in self.Z_by_group[g]) if self.Z_by_group[g] else float("inf")
+            for g in G
+        }
+        amount_inside = {
+            g: (sum(primal_sol_lp[act] for act in self.Z_by_group_inside[g]))
+            for g in G
+        }
+        K=10
+        filtered = [
+            ((amount_inside[g]+0.99999-len(g)) * self.cost_val[g], g)
+            for g in amount_inside
+            if (amount_inside[g]+0.99999-len(g))>0.01
+        ]
+        #print('len(filtered)')
+        #print(len(filtered))
+        #input('--')
+        largest_k = heapq.nlargest(K, filtered)
+
+        result = [g for _, g in largest_k]
+        new_exog_terms=dict()
+        new_action_contrib=dict()
+        for g in result:
+            con_name_ineq='NewLB_'+str(g)
+            self.full_input_dict['exogName2Rhs'][con_name_ineq]=-len(g)+.999
+            self.full_input_dict['allExogNames'].append(con_name_ineq)
+            new_exog_terms[con_name_ineq]=-len(g)+.999
+            print('adding ')
+            print('con_name_ineq')
+            print(con_name_ineq)
+            print('new con val')
+            print(self.full_input_dict['exogName2Rhs'][con_name_ineq])
+            for act in self.Z_by_group_inside[g]:
+                self.full_input_dict['actionCon2Contrib'][tuple([act,con_name_ineq])]=-1#self.delta_con_2_contrib[v_con]
+                new_action_contrib[tuple([act,con_name_ineq])]=-1
+                print('tuple([act,con_name_ineq])')
+                print(tuple([act,con_name_ineq]))
+        did_add_ineq=False
+        if len(result)>0.5:
+            did_add_ineq=True
+            #input('ADDING HRE LOOK.  IS THIS SYSTEM OPERATIONAL CHECK')
+        return [did_add_ineq,new_exog_terms,new_action_contrib]
         
+
     
     def call_init_separ(self):
         self.did_init_separ=True
@@ -372,16 +441,67 @@ class full_solver:
 
         self.dict_pred_gain=dict()
         [ng_neigh_by_cust_power,junk]=naive_get_LA_neigh(my_VRP,self.jy_opt['LAB_MP_neigh_use_power'])
-        #[ng_neigh_by_cust_all,junk]=naive_get_LA_neigh(my_VRP,self.full_prob.jy_opt['LAB_MP_neigh_use_all'])
+        [ng_neigh_by_cust_all,junk]=naive_get_LA_neigh(my_VRP,Nc)
         G=set()
         for u in range(0,Nc):
+            #QZ=38
+            #print('ng_neigh_by_cust_power[QZ]')
+            #print(ng_neigh_by_cust_power[QZ])
+            #print('len(ng_neigh_by_cust_power[QZ])')
+            #print(len(ng_neigh_by_cust_power[QZ]))
             neighborhood = set(ng_neigh_by_cust_power[u]) | {u}
             for g in power_set(neighborhood):
                 if len(g)>1:  # skip empty set and size 1 sets
                     G.add(frozenset(g))
+            #print('neighborhood[u]')
+            #print(neighborhood)
+            #print('u')
+            #print(u)
+            #if u==QZ:
+            #    print('neighborhood[u]-1')
+            #    print({v + 1 for v in neighborhood})
+            #    print('u+1')
+            #    print(u+1)
+            #    input('---')
+            for k in range(1,Nc):
+                my_terms=ng_neigh_by_cust_all[u][0:k]
+                G.add(frozenset(my_terms))
+            
         G.add(frozenset(np.arange(0,Nc)))
 
+        if 1<0:
+            G=set()
+            C1 = frozenset({0,1,2,3,4,5,6,7})
+            C2 = frozenset({8,9,10,11,12,13,14,15,16})
+            C3 = frozenset({17,18,19,20,21,22,23,24})
+            C12=frozenset(set(C1).union(set(C2)))
+            C13=frozenset(set(C1).union(set(C3)))
+            C23=frozenset(set(C2).union(set(C3)))
+            C123=frozenset(np.arange(0,25))
+            G.add(C1)
+            G.add(C2)
+            G.add(C3)
+            G.add(C12)
+            G.add(C13)
+            G.add(C23)
+            G.add(C123)
+            #G=set()
+            #TL = frozenset({4, 2, 0, 44, 7, 45, 3, 6, 5, 1})
+            #G.add(TL)
+            #TC = frozenset({42, 39, 35, 34, 43, 36, 41, 38, 37, 40})
+            #G.add(TC)
+
+            #BL = frozenset({16, 46, 13, 11, 15, 14, 10, 9, 12, 8})
+            #G.add(BL)
+
+            #BC = frozenset({23, 21, 19, 48, 18, 24, 22, 20, 47, 17})
+            #G.add(BC)
+
+            #BR = frozenset({49, 33, 30, 28, 26, 31, 29, 27, 25, 32})
+            #G.add(BR)
+
         self.Z_by_group = defaultdict(set)  # g → set of act_u_v
+        self.Z_by_group_inside = defaultdict(set)  # g → set of act_u_v
         all_non_null_action=set(self.D['allNonNullAction'])-set(['null_action'])
         u_in_groups = defaultdict(set)
         v_not_in_groups = defaultdict(set)
@@ -402,7 +522,10 @@ class full_solver:
             u, v = int(u_str), int(v_str)
 
             relevant_groups = u_in_groups[u] & v_not_in_groups[v]
+            relevant_groups_inside = u_in_groups[u] & u_in_groups[v]
             for g in relevant_groups:
                 self.Z_by_group[g].add(act)
+            for g in relevant_groups_inside:
+                self.Z_by_group_inside[g].add(act)
         self.G=G
         
