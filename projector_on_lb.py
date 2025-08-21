@@ -539,8 +539,8 @@ class projector_on_lb:
         }
 
     def make_new_splits(self):
-        self.MF.jy_opt['threshold_split']=0.1#0.01
-        self.MF.jy_opt['max_nodes_split']=1000
+        #self.MF.jy_opt['threshold_split']=1#0.01
+        self.MF.jy_opt['max_nodes_split']=np.inf
 
         #get max value
         self.NAIVE_graph_node_2_agg_node=dict()#self.graph_node_2_agg_node.copy()

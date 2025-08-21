@@ -25,7 +25,7 @@ from New_valid_sep.check_valid_round_2 import check_valid_round_2
 from projector_on_lb import projector_on_lb
 class full_solver:
 
-    def __init__(self,full_input_dict,jy_opt,output_file_path,all_actions_inclumbent=None,actions_ignore=None,hist_terms_phase_one=None):
+    def __init__(self,full_input_dict,jy_opt,output_file_path,all_actions_inclumbent=None,actions_ignore=None,hist_terms_phase_one=None,init_disc=None):
         print('type(full_input_dict)')
         print(type(full_input_dict))
         self.all_actions_inclumbent=None
@@ -82,6 +82,8 @@ class full_solver:
             self.orig_init_graph_node_2_agg_node[h]=dict()
             for i in self.graph_node_2_agg_node[h]:
                 self.orig_init_graph_node_2_agg_node[h][i]=str(self.graph_node_2_agg_node[h][i])
+        if init_disc!=None:
+            self.graph_node_2_agg_node=init_disc
         if all_actions_inclumbent==None:
             self.all_actions_inclumbent=set(self.all_actions)-set(self.all_actions_not_source_sink_connected)
         else:
@@ -226,6 +228,9 @@ class full_solver:
                 self.incumbant_lp=new_lp_value
                 if self.jy_opt['restore_after_each_step']>0.5:
                     self.split_based_init()
+                    print('splitting up after')
+                else:
+                    print('NOG SPLITTING up after')
 
             [did_split,proj_objective_componentLps,proj_time_component_lps]=self.apply_splitting_2()
             if did_split==False:
@@ -238,6 +243,11 @@ class full_solver:
                 self.graph_node_2_agg_node=self.my_lower_bound_LP.NAIVE_graph_node_2_agg_node
                 if self.jy_opt['do_split_based_init']>0.5:
                     self.split_based_init()
+                    print('AT TERM splitting up after')
+
+                else:
+                    print('AT TERM NOT splitting up after')
+
             t1=time.time()
 
             self.history_dict['lblp_lower'].append(new_lp_value)

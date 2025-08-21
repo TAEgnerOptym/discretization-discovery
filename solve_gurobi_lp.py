@@ -313,8 +313,8 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
         with gp.Model("converted_MILP", env=env) as model:
             model.setParam("OutputFlag", 1)
             if use_interior==True:
-                model.setParam("Method", 2)
-                model.setParam("OutputFlag", 0)
+                #model.setParam("Method", 2)
+                #model.setParam("OutputFlag", 0)
                 #model.setParam("Presolve", 0)
                 #model.setParam("Cuts", 0)
                 print('using interior')

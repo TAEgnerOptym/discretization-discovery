@@ -42,11 +42,14 @@ def call_and_run_code(input_file_path,my_params_path,my_json_file_path,my_output
         D1 = copy.deepcopy(D)
 
         my_params['do_ilp']=False
+        #my_params['do_split_based_init']=True
+        #my_params['restore_after_each_step']=True
         my_solver=full_solver(D,my_params,my_output_path)
         #input('----')
         my_params['do_ilp']=True
-
+        #my_params['do_split_based_init']=False
+        #my_params['restore_after_each_step']=False
         OUT_all_actions_inclumbent=my_solver.all_actions_inclumbent
-        D1['initGraphNode2AggNode']=my_solver.graph_node_2_agg_node
+        #D1['initGraphNode2AggNode']=my_solver.graph_node_2_agg_node
         OUT_hist_terms_phase_one=my_solver.history_dict
-        my_solver=full_solver(D1,my_params,my_output_path,all_actions_inclumbent=OUT_all_actions_inclumbent,hist_terms_phase_one=OUT_hist_terms_phase_one)
+        my_solver=full_solver(D1,my_params,my_output_path,all_actions_inclumbent=OUT_all_actions_inclumbent,hist_terms_phase_one=OUT_hist_terms_phase_one,init_disc=my_solver.graph_node_2_agg_node)

@@ -1925,8 +1925,8 @@ class lower_bound_LP_milp:
                 self.milp_solution_objective_value=self.full_prob.my_lower_bound_LP.lp_objective
                 time_internal_list.append(0)
             else:
-                #self.call_gurobi_milp_solver()
-                self.call_gurobi_milp_solver(True)
+                self.call_gurobi_milp_solver()
+                #self.call_gurobi_milp_solver(True)
                 if use_lowe_bound_objective==True:
                     self.dict_con_name_2_LB["constr_lb_obj"]=self.milp_solution_objective_value-0.0001
                 time_internal_list.append(self.milp_time)

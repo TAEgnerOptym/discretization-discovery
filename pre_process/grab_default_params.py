@@ -64,4 +64,5 @@ def grab_default_params():
 	my_params['ub_use_remove']=-1 #meaning dont use 
 	my_params['use_packing_in_construction']=False
 	my_params['maxVarsAdd_in_ITER']=10
+	my_params['use_ng_size_init']=0
 	return my_params
