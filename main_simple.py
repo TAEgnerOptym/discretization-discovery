@@ -17,7 +17,7 @@ out_name='C104_100_cust.json'
 #default_option_path='my_params_R200.json'
 #out_name='R104_100_cust.json'
 
-#default_input='data/jy_RC103.txt'
+#default_input='data/jy_RC102.txt'
 #default_option_path='my_params_RC.json'
 #out_name='RC208_50_cust.json'
 

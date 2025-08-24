@@ -65,4 +65,6 @@ def grab_default_params():
 	my_params['use_packing_in_construction']=False
 	my_params['maxVarsAdd_in_ITER']=10
 	my_params['use_ng_size_init']=0
+	my_params['do_presolve']=0
+	my_params['use_diving_ineq']=0
 	return my_params

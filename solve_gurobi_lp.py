@@ -271,7 +271,32 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
     #print(use_interior)
     #print('use_interior')
     #input('--')
-    
+    #print('HOLD')
+    #lb = dict_con_name_2_LB
+
+    # Map constraint name -> LB, filtered to those starting with "side_ineq_use"
+    #side_ineq_use_constraints = {
+    #    c: lb[c]
+    #    for c in lb
+    #    if isinstance(c, str) and c.startswith("side_ineq_use")
+    #}
+
+    # Get (var, con) pairs (works if function returns a dict or an iterable of tuples)
+    #var_con_pairs = dict_var_con_2_lhs_exog
+    #iter_pairs = var_con_pairs.keys() if isinstance(var_con_pairs, dict) else var_con_pairs
+
+    # Map (var, con) -> 1 for constraints with names starting with "side_ineq_use"
+    #side_ineq_use_constraints_2 = {
+    #    (v, c): 1
+    ##    for (v, c) in iter_pairs
+    #    if isinstance(c, str) and c.startswith("side_ineq_use")
+    #}
+
+    #print('side_ineq_use_constraints_2')
+    #print(side_ineq_use_constraints_2)
+    #print('side_ineq_use_constraints')
+    #print(side_ineq_use_constraints)
+    #input('- looking here--')
     time_pre = time.time()
 
     # Step 0: Name remapping for Gurobi safety
@@ -284,7 +309,19 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
     var_name_map = {
         v: v if len(v) < 40 else f"v{i}"
         for i, v in enumerate(var_names)}
-    con_name_map = {c: f"c{i}" for i, c in enumerate(all_con_names)}
+    con_name_map = {
+        c: c if len(c) < 60 else f"c{i}"
+        for i, c in enumerate(all_con_names)
+    }
+
+    #side_ineq_use_constraints_3 = {
+    #    c: con_name_map[c]
+    #    for c in lb
+    #    if isinstance(c, str) and c.startswith("side_ineq_use")
+    #}
+    #print('side_ineq_use_constraints_3')
+    #print(side_ineq_use_constraints_3)
+    #input('---')
     var_name_rev = {v_alias: v for v, v_alias in var_name_map.items()}
     con_name_rev = {c_alias: c for c, c_alias in con_name_map.items()}
 
@@ -308,6 +345,22 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
         "WLSSECRET": "8dd2c11c-cb9b-46f3-b072-4887712ea0c9",
         "LICENSEID": 2690165
     }
+
+
+    fancy_fixed_keys_SIMP = [
+        k for k in dict_var_name_2_LB
+        if k.startswith("fancy")
+    ]
+    print('fancy_fixed_keys SIMP')
+    print(fancy_fixed_keys_SIMP)
+    fancy_fixed_keys = [
+        k for k in dict_var_name_2_LB
+        if k.startswith("fancy")
+        and dict_var_name_2_LB[k] ==dict_var_name_2_UB.get(k)
+    ]
+    #print('fancy_fixed_keys HEREE')
+    #print(fancy_fixed_keys)
+    #input("---")
 
     with gp.Env(params=options) as env:
         with gp.Model("converted_MILP", env=env) as model:
@@ -345,7 +398,6 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
                     #input('--')
                 var_dict[name] = model.addVar(lb=lb, ub=ub, obj=obj_coeff, vtype=vtype, name=name)
 
-        
 
             if  any(not var_name_rev[v].startswith("act") for v in safe_binary_set | safe_integer_set):
                 #input('HERE')
@@ -471,6 +523,21 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
                 model.update()
 
             # Set up Tee to write to both stdout and buffer
+
+            side_ineq_use_constraints = {
+                constr.ConstrName: constr
+                for constr in model.getConstrs()
+                if constr.ConstrName.startswith("side_ineq_use")
+            }
+            print('side_ineq_use_constraints')
+            print(side_ineq_use_constraints)
+            print('len(side_ineq_use_constraints)')
+            print(len(side_ineq_use_constraints))
+
+            #print('writingSCOND')
+            #model.write("model_name2.mps")
+
+            #input('look here')
             tee = Tee(sys.__stdout__, log_buffer)
             sys.stdout = tee
             time_opt = time.time()

@@ -36,4 +36,4 @@ from solve_gurobi_lp import solve_gurobi_milp_bounds
 loaded_solver=[]
 with open("solver_checkpoint_BEF_.pkl", "rb") as f:
     loaded_solver = pickle.load(f)
-    loaded_solver.iterative_ilp_la()
+    loaded_solver.iterative_ilp_la_DIVE()

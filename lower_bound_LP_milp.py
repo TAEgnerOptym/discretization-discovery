@@ -1,5 +1,6 @@
 import xpress as xp
 import pickle
+import copy
 from collections import defaultdict
 #from src.common.route import route
 from typing import Dict, DefaultDict, Set, List
@@ -101,13 +102,14 @@ class lower_bound_LP_milp:
         t1=time.time()
         if self.OPT_do_ilp!=0 and self.full_prob.jy_opt['LAB_MP_ON']>0.5:
             #input('about to start')
-            DEBUG_ON=False
+            DEBUG_ON=True
             if DEBUG_ON==True:
                 print('DEBUG_ON')
                 with open("solver_checkpoint_BEF_.pkl", "wb") as f:
                     pickle.dump(self, f)
             print('done writing ')
-            self.iterative_ilp_la()
+            #self.iterative_ilp_la()
+            self.iterative_ilp_la_DIVE()
             #self.apply_LA_branching()
 
 
@@ -172,6 +174,20 @@ class lower_bound_LP_milp:
 
             
             if self.full_prob.jy_opt['use_gurobi']>0.5:
+
+                #lb = self.CLEAN_dict_con_name_2_LB
+
+                # Map constraint name -> LB, filtered to those starting with "side_ineq_use"
+                #side_ineq_use_constraints = {
+                #    c: lb[c]
+                #    for c in lb
+                #    if isinstance(c, str) and c.startswith("side_ineq_use")
+                #}
+                #print('PRIOR')
+                #print(side_ineq_use_constraints)
+                #input('--')
+
+
                 self.call_gurobi_milp_solver()
             if self.full_prob.jy_opt['use_gurobi']<0.5 and self.full_prob.jy_opt['use_Xpress']==True:
                  self.solve_xpress_milp()
@@ -220,10 +236,13 @@ class lower_bound_LP_milp:
     def select_low_reduced_cost_actions(self,ub_current):
         
         upper_bound_valid=True
-        if self.full_prob.jy_opt['do_ilp']==False:
-            ub_current=np.inf
+        print('ub_current')
+        print(ub_current)
+        #input('---')
+        #if self.full_prob.jy_opt['do_ilp']==False and :
+        #    ub_current=np.inf
         if self.full_prob.jy_opt['do_ilp']==False and 'ub_lp' in self.full_prob.history_dict and len(self.full_prob.history_dict['ub_lp'])>0 :
-            ub_current=self.full_prob.history_dict['ub_lp'][-1]
+            ub_current=min([ub_current,self.full_prob.history_dict['ub_lp'][-1]])
         #print('ub_current')
         #print(ub_current)
         #input('---')
@@ -1419,9 +1438,47 @@ class lower_bound_LP_milp:
 
         delta_name_2_lb=dict()
         delta_name_2_ub=dict()
-        if self.full_prob.jy_opt['use_delta_in_milp']==True:
-            delta_name_2_lb=self.full_prob.delta_name_2_lb
-            delta_name_2_ub=self.full_prob.delta_name_2_ub
+        #print('self.full_prob.jy_opt[use_delta_in_milp]')
+        #print(self.full_prob.jy_opt['use_delta_in_milp'])
+        #input('-***--')
+        #if self.full_prob.jy_opt['use_delta_in_milp']>0.5:
+        delta_name_2_lb=self.full_prob.delta_name_2_lb
+        delta_name_2_ub=self.full_prob.delta_name_2_ub
+        #else:
+        #    print('self.full_prob.jy_opt[use_delta_in_milp]')
+        #    print(self.full_prob.jy_opt['use_delta_in_milp'])
+        #    input('why')
+        #fancy_fixed_keys = [
+        #    k for k in self.full_prob.delta_name_2_lb
+        #    if k.startswith("fancy")
+        #    and self.full_prob.delta_name_2_lb[k] == self.full_prob.delta_name_2_ub.get(k)
+        #]
+
+        #fancy_fixed_keysAGAIN = [
+        #    k for k in delta_name_2_lb
+        #    if k.startswith("fancy")
+        #    and delta_name_2_lb[k] == delta_name_2_ub.get(k)
+        #]
+        #print('fancy_fixed_keysAGAIN')
+        #print(fancy_fixed_keysAGAIN)
+        #print('fancy_fixed_keys')
+        #print(fancy_fixed_keys)
+        #print('use_delta_in_milp')
+        #print(self.full_prob.jy_opt['use_delta_in_milp'])
+        #input('new')
+
+        #lb = self.CLEAN_dict_con_name_2_LB
+
+        # Map constraint name -> LB, filtered to those starting with "side_ineq_use"
+        #side_ineq_use_constraints = {
+        #    c: lb[c]
+        #    for c in lb
+        #    if isinstance(c, str) and c.startswith("side_ineq_use")
+        #}
+#        print('side_ineq_use_constraints')
+#        print(side_ineq_use_constraints)
+#
+        #input('JUST PRIOR')
         out_solution=solve_gurobi_milp_bounds(self.dict_var_name_2_obj,
             self.CLEAN_dict_var_con_2_lhs_exog,
             self.CLEAN_dict_con_name_2_LB,
@@ -1938,6 +1995,13 @@ class lower_bound_LP_milp:
                 }
                 self.full_prob.history_dict['iter_2_act_list'].append(act_vars)
             
+            fancy_dict = {
+                k: v for k, v in self.milp_solution.items()
+                if k.startswith("fancy")
+            }
+            print('fancy_dict')
+            print(fancy_dict)
+            input('--')
             LP_HIST_INTERNAL.append(self.milp_solution_objective_value)
             num_bin_hist.append(len(self.dict_var_name_2_is_binary))
             print('UB_USE_REMOVE-self.milp_solution_objective_value')
@@ -2085,17 +2149,28 @@ class lower_bound_LP_milp:
         if high_thresh==len(g):
             print('in low thresh')
             con_name_ineq='NewLB_'+str(g)+'_'+str(self.num_cons_add)
+           # if con_name_ineq in  self.dict_con_name_2_LB:
+           #     print('already here')
+           #     input('ok this no sense')
             self.dict_con_name_2_LB[con_name_ineq]=-len(g)+0.9999
             #print('g')
             #print(g)
             #print('con_name_ineq')
             #print(con_name_ineq)
-            #p#rint('self.dict_con_name_2_LB[con_name_ineq]')
-            #p#rint(self.dict_con_name_2_LB[con_name_ineq])
+            #print('self.dict_con_name_2_LB[con_name_ineq]')
+            #print(self.dict_con_name_2_LB[con_name_ineq])
+            cur_val=0
             for act in Z_by_group_inside[g]:
                 self.dict_var_con_2_lhs_exog[tuple([act,con_name_ineq])]=-1
-            #    print('act '+act)
+                cur_val-=self.milp_solution[act]
+             #   print('act '+act)
+             #   print(self.milp_solution[act])
+            #print('cur_val')
+            #print(cur_val)
+            if cur_val>=self.dict_con_name_2_LB[con_name_ineq]:
+                input('VERY WRONG')
             self.num_cons_add=self.num_cons_add+1
+            #input('LOOK HERE')
         else:
             print('in high thresh')
             
@@ -2284,6 +2359,347 @@ class lower_bound_LP_milp:
 
         
         return [GNew,GLower,G,pred_val_gain,frac_amount,amount_inside,amount_inside_internal]
+
+
+
+    def iterative_ilp_la_DIVE(self):
+        self.full_prob.history_dict['iter_2_act_list']=[]
+        maxVarsAdd=self.full_prob.jy_opt['maxVarsAdd_in_ITER'] 
+
+        max_iters=200
+        UB_USE_REMOVE=self.full_prob.jy_opt['ub_use_remove']
+
+        self.num_vars_added=0
+        self.num_cons_add=0
+        time_internal_list=[]
+        OLD_dict_var_name_2_is_integer=self.dict_var_name_2_is_integer.copy()
+        OLD_dict_var_name_2_is_binary=self.dict_var_name_2_is_binary.copy()
+        self.dict_var_name_2_is_integer=dict()
+        self.dict_var_name_2_is_binary=dict()
+        G=self.full_prob.G
+        Z_by_group=self.full_prob.Z_by_group
+        costs=self.full_prob.D['action2Cost']
+        self.cost_val = {
+            g: min(costs[act] for act in Z_by_group[g]) if Z_by_group[g] else float("inf")
+            for g in G
+        }
+        self.Gall=set([])
+        LP_HIST_INTERNAL=[]
+        sizes_hist=[]
+        num_bin_hist=[]
+        num_keep_round=1
+        use_lowe_bound_objective=False
+        thus_far_always_one_branch=True
+        terms_no_change=set()
+        break_time=np.inf
+        #if use_lowe_bound_objective==True:
+        #    self.add_constraint_on_lb(self.full_prob.my_lower_bound_LP.lp_objective)
+        for iter_step in range(0,max_iters):
+            self.filter_constraints()
+           
+            print('LP_HIST_INTERNAL')
+            print(LP_HIST_INTERNAL)
+            print('sizes_hist')
+            print(sizes_hist)
+            print('num_bin_hist')
+            print(num_bin_hist)
+            print('time_internal_list')
+            print(time_internal_list)
+            print('--')
+            self.milp_solution=None
+            if iter_step==0:
+                self.milp_solution=self.full_prob.my_lower_bound_LP.lp_primal_solution
+                self.milp_solution_objective_value=self.full_prob.my_lower_bound_LP.lp_objective
+                time_internal_list.append(0)
+            else:
+                self.milp_solution=None
+                my_var_flip = set(self.extra_var_name_priority.keys()) & set(self.dict_var_name_2_is_binary.keys())
+                if len(my_var_flip)>1:
+                    input('error here')
+                
+                if len(my_var_flip)==1:
+                    my_var_flip=list(my_var_flip)
+                    my_var_flip=my_var_flip[0]
+                    del self.dict_var_name_2_is_binary[my_var_flip]
+                    #print('my_var_flip')
+                    #print(my_var_flip)
+                    #input('in here')
+                    t_lp_over=time.time()
+
+                    try:
+                        self.full_prob.delta_name_2_lb[my_var_flip]=0
+                        self.full_prob.delta_name_2_ub[my_var_flip]=0
+                        self.call_gurobi_solver()
+                        sol1 = copy.deepcopy(self.lp_primal_solution)
+                        obj_1=self.lp_objective
+                        time_1=0
+                    except Exception as e:
+                        print(f"Error while solving with Gurobi: {e}")
+                        obj_1 = np.inf
+                        sol1 = None
+                        time_1=0
+
+                    try:
+                        print('my_var_flip')
+                        print(my_var_flip)
+                        self.full_prob.delta_name_2_lb[my_var_flip]=1
+                        self.full_prob.delta_name_2_ub[my_var_flip]=1
+                        self.call_gurobi_solver()
+                        obj_2 = self.lp_objective
+                        sol2 = copy.deepcopy(self.lp_primal_solution)
+                        time_2=0
+                    except Exception as e:
+                        print(f"Error while solving with Gurobi: {e}")
+                        obj_2 = np.inf
+                        sol2 = None
+                        time_2=0
+                    print('obj_1,obj_2')
+                    print(obj_1,obj_2)
+                    print('obj_1,obj_2')
+                    #input('---')
+                    if obj_1<obj_2:
+                        self.milp_solution=sol1
+                        self.milp_solution_objective_value=obj_1
+                        self.full_prob.delta_name_2_lb[my_var_flip]=0
+                        self.full_prob.delta_name_2_ub[my_var_flip]=0
+                        #self.milp_time=time_1+time_2
+                        if obj_2>UB_USE_REMOVE and thus_far_always_one_branch==True:
+                            terms_no_change.add(my_var_flip)
+                        else:
+                            thus_far_always_one_branch=False
+                            print('turning off')
+                            break_time=min([break_time,iter_step])
+                    else:
+                        self.milp_solution=sol2
+                        self.milp_solution_objective_value=obj_2
+                        if obj_1>UB_USE_REMOVE and thus_far_always_one_branch==True:
+                            terms_no_change.add(my_var_flip)
+                        else:
+                            thus_far_always_one_branch=False
+                            print('turning off 2')
+                            break_time=min([break_time,iter_step])
+                    t_lp_over=time.time()-t_lp_over
+
+                    if 0.5<self.full_prob.jy_opt['use_diving_ineq']:
+                        if obj_1>UB_USE_REMOVE and obj_2<=UB_USE_REMOVE:
+                            self.make_dive_ineq(0,my_var_flip)
+
+
+                        if obj_2>UB_USE_REMOVE and obj_1<=UB_USE_REMOVE:
+                            self.make_dive_ineq(1,my_var_flip)
+
+                        if obj_1>UB_USE_REMOVE and obj_2>UB_USE_REMOVE:
+                            self.make_dive_ineq(2,my_var_flip)
+                        #input('making dive ineq')
+                    time_internal_list.append(t_lp_over)
+
+                else:
+                    #input('in the place after a cutting added ')
+                    self.call_gurobi_solver()
+                    self.milp_solution=self.lp_primal_solution
+                    self.milp_solution_objective_value=self.lp_objective
+                    
+                    time_internal_list.append(self.lp_time)
+           
+            LP_HIST_INTERNAL.append(self.milp_solution_objective_value)
+            num_bin_hist.append(len(self.dict_var_name_2_is_binary))
+            print('UB_USE_REMOVE-self.milp_solution_objective_value')
+            print(UB_USE_REMOVE-self.milp_solution_objective_value)
+            print('UB_USE_REMOVE-self.milp_solution_objective_value')
+            if UB_USE_REMOVE-self.milp_solution_objective_value<0.05:
+                print('breaking due to lack of a gap')
+                break
+            fractional_acts = [
+                act for act in self.action_2_cost
+                if not (abs((val := self.milp_solution.get(act, 0.0))) <= 0.001 or abs(val - 1.0) <= 0.001)
+            ]
+            if not fractional_acts:
+                print('breaking due to integer')
+                break
+
+
+            #input('opt step')
+            
+            [GNew,GLowerNeeded,G,pred_val_gain,frac_amount,amount_inside,amount_inside_internal]=self.identify_separation(self.milp_solution,num_keep_round)
+            if iter_step==0 and len(GLowerNeeded)>0.5:
+                input('this means taht something was not added properly')
+            sizes_hist.append([len(GNew),len(GLowerNeeded)])
+            did_add=False
+            if len(GLowerNeeded)>0:
+                #input('found one')
+                for g in GLowerNeeded:
+                    print('g LOWER')
+                    print(g)
+                    print('[pred_val_gain[g],frac_amount[g],amount_inside[g]]')
+                    print([pred_val_gain[g],frac_amount[g],amount_inside[g]])
+                    print('----')
+                    #self.cuttingPlane_add_bound(g,amount_inside[g])
+                    self.cuttingPlane_add_bound_internal(g,amount_inside_internal[g])
+                    #cuttingPlane_add_bound_internal
+                    #input('this is maybe the issue paues to look')
+
+                did_add=True
+            else:
+                if self.num_vars_added<maxVarsAdd:
+                    for g in GNew:
+                        #self.cuttingPlane_add_integer(g)
+                        print('g UPPER')
+                        print(g)
+                        print('[pred_val_gain[g],frac_amount[g],amount_inside[g]]')
+                        print([pred_val_gain[g],frac_amount[g],amount_inside[g]])
+                        print('----')
+
+                        #self.cuttingPlane_add_bound(g,amount_inside[g])
+                        #self.cuttingPlane_add_integer(g)
+                        #self.cuttingPlane_add_integer_internal(g)
+                        self.cuttingPlane_add_bound_internal(g,amount_inside_internal[g])
+                        did_add=True
+            
+
+            
+
+            if did_add==False:
+                print('breaking due to lack of addition')
+                break
+        #self.add_constraint_on_lb(self.milp_solution_objective_value)
+        print('FINAL LP_HIST_INTERNAL')
+        print(LP_HIST_INTERNAL)
+        print('sizes_hist')
+        print(sizes_hist)
+        print('num_bin_hist')
+        print(num_bin_hist)
+        print('time_internal_list')
+        print(time_internal_list)
+
+        self.full_prob.history_dict['ITER_ILP_LA_TIME']=time_internal_list
+        self.full_prob.history_dict['ITER_ILP_LA_sizes_hist']=sizes_hist
+        self.full_prob.history_dict['ITER_ILP_LA_num_bin_hist']=num_bin_hist
+        self.full_prob.history_dict['ITER_ILP_LA_LP_HIST_INTERNAL']=LP_HIST_INTERNAL
+        print('--')
+        print('self.extra_var_name_priority')
+        print(self.extra_var_name_priority)
+        print('terms_no_change')
+        print(terms_no_change)
+        print('break_time')
+        print(break_time)
+        print('----')
+        for i in self.extra_var_name_priority:
+            if i not in terms_no_change:
+                self.dict_var_name_2_is_binary[i]=1
+                self.full_prob.delta_name_2_lb[i]=0
+                self.full_prob.delta_name_2_ub[i]=1
+            else:
+                print('LOOK LOOOK')
+                print('LOOK LOOOK')
+                print('LOOK LOOOK')
+                print('LOOK LOOOK')
+                print('LOOK LOOOK')
+                print('i')
+                print(i)
+                print('self.full_prob.delta_name_2_lb[i]')
+                print(self.full_prob.delta_name_2_lb[i])
+                print('self.full_prob.delta_name_2_ub[i]')
+                print(self.full_prob.delta_name_2_ub[i])
+                print('------')
+        for i in OLD_dict_var_name_2_is_integer:
+            self.dict_var_name_2_is_integer[i]=OLD_dict_var_name_2_is_integer[i]
+        for i in OLD_dict_var_name_2_is_binary:
+            self.dict_var_name_2_is_binary[i]=OLD_dict_var_name_2_is_binary[i]
+
+        #fancy_fixed_keys = [
+        #    k for k in self.full_prob.delta_name_2_lb
+        #    if k.startswith("fancy")
+        #    and self.full_prob.delta_name_2_lb[k] == self.full_prob.delta_name_2_ub.get(k)
+        #]
+        #print(fancy_fixed_keys)
+        #input('fancy_fixed_keys IN DIVE')
+
+        #print('HOLD')
+        #b = self.dict_con_name_2_LB
+
+        # Map constraint name -> LB, filtered to those starting with "side_ineq_use"
+        #side_ineq_use_constraints = {
+        #    c: lb[c]
+        #    for c in lb
+        #    if isinstance(c, str) and c.startswith("side_ineq_use")
+        #}
+
+        # Get (var, con) pairs (works if function returns a dict or an iterable of tuples)
+        #var_con_pairs = self.dict_var_con_2_lhs_exog
+        #iter_pairs = self.dict_var_con_2_lhs_exog#var_con_pairs.keys() if isinstance(var_con_pairs, dict) else var_con_pairs
+
+        # Map (var, con) -> 1 for constraints with names starting with "side_ineq_use"
+        #side_ineq_use_constraints_2 = {
+        #    (v, c): iter_pairs[(v,c)]
+        #    for (v, c) in iter_pairs
+        #    if isinstance(c, str) and c.startswith("side_ineq_use")
+        #}
+
+        #print('side_ineq_use_constraints_2')
+        #print(side_ineq_use_constraints_2)
+        #print('side_ineq_use_constraints')
+        #print(side_ineq_use_constraints)
+        #input('-INSDIE OF THE DIVING--')
+
+    def make_dive_ineq(self,side_invalid,var_new):
+        my_constr_name='side_ineq_use'+str(len(self.extra_var_name_priority))+'_'+str(np.ceil(np.random.rand()*10000))+'_'+str(side_invalid)
+        
+        my_rhs=0
+        ext_vars=set(self.extra_var_name_priority)-set([var_new])
+        print('ext_vars')
+        print(ext_vars)
+        print('var_new')
+        print(var_new)
+        print('--')
+        for var_name in ext_vars:
+            is_ub=1
+            my_tup=tuple([var_name,my_constr_name])
+            contrib_val=1
+            if self.full_prob.delta_name_2_lb[var_name]==1:
+                is_ub=0
+                my_rhs=my_rhs-1
+                contrib_val=-1
+            self.full_prob.action_con_2_contrib[my_tup]=contrib_val
+            self.dict_var_con_2_lhs_exog[my_tup]=contrib_val
+        my_tup_2=tuple([var_new,my_constr_name])
+        #print('----')
+        print('my_rhs orig ')
+        print(my_rhs)
+        #print('side_invalid')
+        #print(side_invalid)
+        #print('--')
+        if side_invalid==0: #this means taht this must be 1
+            #-(1-x_k)+\sum_{i<k}[ub=0](x_i)+\sum_{i<K}[lb=1](1-x_i) >=0
+            #x_k+\sum_{i<k}[ub=0]x_i+\sum_{i<k}[lb=1](-x_i)>=1-\sum_{i<k}[lb=1]
+            my_rhs=my_rhs+1
+            self.full_prob.action_con_2_contrib[my_tup_2]=1
+            self.dict_var_con_2_lhs_exog[my_tup_2]=1
+            print('side 0')
+        if side_invalid==1: #must be zero
+            #-x_k+\sum_{i<k}[ub=0](x_i)+\sum_{i<K}[lb=1](1-x_i) >=0
+            #-x_k+\sum_{i<k}[ub=0]x_i+\sum_{i<k}[lb=1](-x_i)>=-\sum_{i<k}[lb=1]
+            self.full_prob.action_con_2_contrib[my_tup_2]=-1
+            
+            self.dict_var_con_2_lhs_exog[my_tup_2]=-1
+            print('my_tup_2')
+            print(my_tup_2)
+            print('self.dict_var_con_2_lhs_exog[my_tup_2]')
+            print(self.dict_var_con_2_lhs_exog[my_tup_2])
+            print('side 1')
+
+        if side_invalid==2:
+            #\sum_{i<k}[ub=0](x_i)+\sum_{i<K}[lb=1](1-x_i) >=1
+            #\sum_{i<k}[ub=0]x_i+\sum_{i<k}[lb=1](-x_i)>=1-\sum_{i<k}[lb=1]
+            my_rhs=my_rhs+1
+            print('side 2')
+        
+        self.full_prob.exog_name_2_rhs[my_constr_name]=my_rhs
+        self.dict_con_name_2_LB[my_constr_name]=my_rhs
+
+        #print('*****')
+        #print('my_rhs')
+        #print(my_rhs)
+        #input('----')
 def power_set(s):
     """
     Returns the power set of the input collection `s` as a list of tuples.
@@ -2296,3 +2712,4 @@ def power_set(s):
     return list(itertools.chain.from_iterable(
         itertools.combinations(s_list, r) for r in range(len(s_list) + 1)
     ))
+

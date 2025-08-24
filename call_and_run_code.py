@@ -36,7 +36,7 @@ def call_and_run_code(input_file_path,my_params_path,my_json_file_path,my_output
 
     D['my_VRP']=my_instance
 
-    if 1<0:
+    if my_params['do_presolve']<0.5:
         my_solver=full_solver(D,my_params,my_output_path)
     else:
         D1 = copy.deepcopy(D)
