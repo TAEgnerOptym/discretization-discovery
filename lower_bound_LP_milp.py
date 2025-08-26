@@ -89,7 +89,8 @@ class lower_bound_LP_milp:
         self.hij_2_P=full_input_dict['hij2P']
         #maps the names of the graphs to the id for the source
         self.h_2_source_id=full_input_dict['h2SourceId']
-        
+        self.graphNameNode_2_cust=full_input_dict['graphNameNode_2_cust']
+
         #maps the names of the graphs to the id for the sink
         self.h_2_sink_id=full_input_dict['h2sinkid']
         self.graph_names=full_input_dict['allGraphNames']
@@ -237,15 +238,14 @@ class lower_bound_LP_milp:
     def select_low_reduced_cost_actions(self,ub_current):
         
         upper_bound_valid=True
-        print('ub_current')
-        print(ub_current)
+        
         #input('---')
         #if self.full_prob.jy_opt['do_ilp']==False and :
         #    ub_current=np.inf
         if self.full_prob.jy_opt['do_ilp']==False and 'ub_lp' in self.full_prob.history_dict and len(self.full_prob.history_dict['ub_lp'])>0 :
             ub_current=min([ub_current,self.full_prob.history_dict['ub_lp'][-1]])
-        #print('ub_current')
-        #print(ub_current)
+        print('ub_current')
+        print(ub_current)
         #input('---')
         eta=(ub_current-self.lp_objective)+0.001
         print('eta')
@@ -273,7 +273,7 @@ class lower_bound_LP_milp:
             if act in self.full_prob.delta_name_2_ub and self.full_prob.delta_name_2_ub[act]<0.001:
                 num_already_gone=num_already_gone+1
                 continue
-            if act in self.full_prob.all_actions_inclumbent:
+            if act in self.full_prob.all_actions_inclumbent or primal_solution[act]>0.00001:
                 num_in_solution_ignore+=1
                 continue
             match = pattern.fullmatch(act)
@@ -2266,6 +2266,24 @@ class lower_bound_LP_milp:
         #    g: min(costs[act] for act in Z_by_group[g]) if Z_by_group[g] else float("inf")
         #    for g in G
         #}
+        
+        empty_groups = [g for g in G if not Z_by_group.get(g)]
+
+        if len(empty_groups)>0:
+            print('Z_by_group')
+            print(Z_by_group)
+            print('empty_groups')
+            print(empty_groups)
+            for g in G:
+                if len(empty_groups)<0.5:
+                    input('wrong')
+            print('hihih')
+            for g in empty_groups:
+                print('g')
+                print(g)
+                print('len(g)')
+                print(len(g))
+            input('---')
         self.cost_val = {
             g: min(costs[act] for act in Z_by_group[g])
             for g in G
@@ -2309,6 +2327,12 @@ class lower_bound_LP_milp:
 
         for act in self.action_2_cost:
             if act in primal_sol_lp and act in self.full_prob.delta_name_2_ub and primal_sol_lp[act]>0.0001:
+                print('act')
+                print(act)
+                print('self.full_prob.delta_name_2_ub[act]')
+                print(self.full_prob.delta_name_2_ub[act])
+                print('primal_sol_lp[act]')
+                print(primal_sol_lp[act])
                 input('wrong')
         amount_inside = {
             g: (sum(primal_sol_lp[act] for act in Z_by_group[g]))
@@ -2539,7 +2563,7 @@ class lower_bound_LP_milp:
             #input('opt step')
             
             [GNew,GLowerNeeded,G,pred_val_gain,frac_amount,amount_inside,amount_inside_internal]=self.identify_separation(self.milp_solution,num_keep_round)
-            if iter_step==0 and len(GLowerNeeded)>0.5:
+            if iter_step==0 and len(GLowerNeeded)>0.5 and self.full_prob.jy_opt['use_ineq']>0.5:
                 input('this means taht something was not added properly')
             sizes_hist.append([len(GNew),len(GLowerNeeded)])
             did_add=False

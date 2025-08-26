@@ -21,6 +21,7 @@ def grab_default_params():
 	my_params['min_inc_2_compress']=.01
 	my_params['save_graph_each_iter']=0
 	my_params['use_Xpress']=False
+	my_params['use_ineq']=0 #use the inequalities
 	#my_params['xpress_file_loc']='/Users/julian/Documents/FICO\ Xpress\ Config/xpauth.xpr'
 	my_params['xpress_file_loc']='/Users/julian/Documents/FICO_Xpress_Config/xpauth.xpr'
 	my_params['run_baseline']=True #running hte baseline solver
@@ -30,11 +31,11 @@ def grab_default_params():
 	my_params['in_demo_mode']=0
 	my_params['threshold_split']=0.01
 	my_params['offset_cost_edge_project']=0#-.00001
-	my_params['use_classic_compress']=0
-	my_params['use_classic_compress_last']=0
+	my_params['use_classic_compress']=1
+	my_params['use_classic_compress_last']=1
 	my_params['num_thresh_split_projector']=10#number of split points in projector 
 	my_params['lplb_solver']=1 #default solver 
-	my_params['compresss_solver']=1 #default solver 
+	my_params['compresss_solver']=0 #default solver 
 	my_params['proj_solver']=1 #default solver 
 	my_params['use_julians_custom_lp_solver']=0
 	my_params['do_ilp']=1# do ilp 

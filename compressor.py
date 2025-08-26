@@ -24,6 +24,11 @@ class compressor:
         self.jy_opt=self.MF.jy_opt
         self.graph_node_2_agg_node=self.MF.graph_node_2_agg_node
         self.myLBObj=self.MF.my_lower_bound_LP
+        self.graphNameNode_2_cust=self.MF.graphNameNode_2_cust#=full_input_dict['graphNameNode_2_cust']
+
+    
+        
+
         self.graph_names=self.MF.graph_names
         self.time_compressor=dict()
         self.time_compressor['prior']=time.time()-t1
@@ -117,8 +122,130 @@ class compressor:
             for n in nodes_use:
                 con_name='flow_in_out_h='+h+"_n="+n
                 h_node_2_dual_val[h][n]=dual_sol[con_name]
+            if self.jy_opt['allOneBig_init']>0.5:
+                self.get_agglomerative_dictionary(h_node_2_dual_val[h],h)
+            else:
+                self.get_agglomerative_dictionary_by_cust(h_node_2_dual_val[h],h)
 
-            self.get_agglomerative_dictionary(h_node_2_dual_val[h],h)
+    def get_agglomerative_dictionary_by_cust(self,X_all,h):
+        
+        num_cust = 1+max(int(v) if str(v).strip().lstrip('+-').isdigit() else float(v) for v in self.graphNameNode_2_cust[h].values()) - 2
+        #out_member_2_cluster_id=dict()
+        #print('num_cust')
+        #print(num_cust)
+        #input('--')
+        #out_cluster_id_2_member=dict()
+        out_member_2_cluster_id_all=dict()
+        out_cluster_id_2_member_all=dict()
+        Y=self.graphNameNode_2_cust[h]
+        #print('Y')
+        #print(Y)
+        cluster_count=0
+        myMAP=self.myLBObj.agg_node_2_nodes[h]
+        
+        for u in range(0,num_cust):
+            X = {k: v for k, v in X_all.items() if Y[list(myMAP[k])[0]] == str(u)}
+            #print('X_all')
+            #print(X_all)
+            #print('X')
+            #print(X)
+            #print('u')
+            #print(u)
+            #print('--')
+            keys = list(X.keys())
+            n = len(keys)
+
+            # Create a 2-D array of scalar values (each value is a 1-D point).
+            data = np.array([X[k] for k in keys]).reshape(-1, 1)
+
+            if n == 1:
+                # Create the single node clustering information.
+                
+                
+                # The output dictionaries use tuples (h, cluster_id)
+                #out_cluster_id_2_member[u] = { (h, cluster_count): [keys[cluster_count]] }
+                #out_member_2_cluster_id[u] = { keys[cluster_count]: [(h, cluster_count)] }
+                
+                TMP_out_cluster_id_2_member = { cluster_count: [keys[0]] }
+                TMP_out_member_2_cluster_id = { keys[0]: [cluster_count] }
+                out_cluster_id_2_member_all.update(TMP_out_cluster_id_2_member)
+                out_member_2_cluster_id_all.update(TMP_out_member_2_cluster_id)
+                # Save to the corresponding attributes and exit.
+               
+                
+                continue
+
+            # Compute the linkage matrix using SciPy's hierarchical clustering.
+            Z = linkage(data, method="ward")
+            
+            cluster_id_2_member = {}
+            for i in range(n):
+                cluster_id_2_member[i] = [keys[i]]
+                
+        
+            # Process each merge from the linkage matrix.
+            # Each row in Z is of the form: [idx1, idx2, distance, sample_count]
+            # New cluster ids are assigned as n, n+1, ... (as is standard in SciPy)
+            for i, row in enumerate(Z):
+                idx1, idx2, distance, count = row
+                idx1, idx2 = int(idx1), int(idx2)
+                #print('i')
+               # print(i)
+               # print('n')
+               # print(n)
+               # print('cluster_count')
+               # print(cluster_count)
+                new_cluster_id = n + i  # new cluster id for this merge
+                # The new cluster contains all leaves from the clusters idx1 and idx2.
+                cluster_id_2_member[new_cluster_id] = cluster_id_2_member[idx1] + cluster_id_2_member[idx2]
+            
+            
+            member_2_cluster_id=dict()
+            for my_node in X:
+                member_2_cluster_id[my_node]=[]
+            for cluster_id in cluster_id_2_member:
+                for q in cluster_id_2_member[cluster_id]:
+                    member_2_cluster_id[q].append(cluster_id)
+            
+            out_cluster_id_2_member=dict()
+            for i in cluster_id_2_member:
+                #print('-----')
+                #print('i')
+                #print(i)
+                #print('cluster_count')
+                #print(cluster_count)
+
+                i_out=i+cluster_count
+                #print('cluster_id_2_member[i]')
+                #print(cluster_id_2_member[i])
+                #print('i_out')
+                #print(i_out)
+                out_cluster_id_2_member_all[i_out]=cluster_id_2_member[i]
+            
+            #out_member_2_cluster_id[u][h]=dict()
+            for i in member_2_cluster_id:
+                #out_member_2_cluster_id[u][h][i]=[]
+                out_member_2_cluster_id_all[i]=[]
+                for j in member_2_cluster_id[i]:
+                    #out_member_2_cluster_id[u][h][i].append(tuple([h,j]))
+                    #print('i')
+                    #print(i)
+                    #print('j')
+                    #print(j)
+                    out_member_2_cluster_id_all[i].append(j+cluster_count)
+            cluster_count=cluster_count+len(cluster_id_2_member.keys())
+
+        
+
+        self.H_ell_2_list_leaf[h]=out_cluster_id_2_member_all
+        self.H_leaf_2_list_ell[h]=out_member_2_cluster_id_all
+        #print('unique(out_member_2_cluster_id_all.values)')
+        #print(out_member_2_cluster_id_all.values())
+        #print('out_cluster_id_2_member_all.keys()')
+        #print(out_cluster_id_2_member_all.keys())
+        #print('out_cluster_id_2_member_all.keys()')
+        #input()
+
     def get_agglomerative_dictionary(self,X,h):
         
         keys = list(X.keys())
@@ -188,8 +315,14 @@ class compressor:
                 out_member_2_cluster_id[i].append(tuple([h,j]))
 
 
-        self.H_ell_2_list_leaf[h]=out_cluster_id_2_member
-        self.H_leaf_2_list_ell[h]=out_member_2_cluster_id
+        out_cluster_id_2_member_all_2 = { (h, j): v for j, v in out_cluster_id_2_member_all.items() }
+
+        out_member_2_cluster_id_2=dict()
+        for k, vals in out_member_2_cluster_id.items():
+            out_member_2_cluster_id_2[k] = [(h, j) for j in vals]
+
+        self.H_ell_2_list_leaf[h]=out_cluster_id_2_member_all_2
+        self.H_leaf_2_list_ell[h]=out_member_2_cluster_id_2
 
 
     def copy_lp_terms(self):
@@ -818,6 +951,12 @@ class compressor:
                 
                 if f not in self.H_f_2_new_f[h]:
                     print('not fuond')
+                    print('H_f_2_new_f')
+                    print(self.H_f_2_new_f)
+                    print('f')
+                    print(f)
+                    print('i')
+                    print(i)
                     input('error here ')
                 #print('f')
                 #print(f)

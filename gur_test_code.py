@@ -1,7 +1,14 @@
 import gurobipy as gp
 import numpy as np
-model_path="model_name.mps"
-branch_file="branch_priorities.txt"
+model_path="C104_100_dive_treat_model_name.mps"
+branch_file="C104_100_dive_treat_branch_priorities.txt"
+
+#model_path="RC_102_50_treat_model_name.mps"
+#branch_file="RC_102_50_treat_branch_priorities.txt"
+
+model_path="R_104_treat_model_name.mps"
+branch_file="R_104_treat_branch_priorities.txt"
+
 
 #model_path="CONTROL_RC_102_model_name.mps"
 #branch_file="CONTROL_RC_102_branch_priorities.txt"
@@ -17,8 +24,8 @@ branch_file="branch_priorities.txt"
 #branch_file="CONTROL_C_104_50_branch_priorities.txt"
 #model_path="CONTROL_C_104_50_model_name.mps"
 
-#branch_file="TREAT_C104_100_branch_priorities.txt"
-#model_path="TREAT_C104_100_model_name.mps"
+branch_file="branch_priorities.txt"
+model_path="model_name.mps"
 options = {
         "WLSACCESSID": "b7836a23-3df1-40ac-be4d-310282e2178e",
         "WLSSECRET": "8dd2c11c-cb9b-46f3-b072-4887712ea0c9",
@@ -43,7 +50,7 @@ options = {
 #993:  822.9 ;8 integer (all binary)
 #40:  822.9 ;1340 integer (all binary)
 #-infty; 822.9;   43824 integer (41664 binary)
-min_priority_keep_integer=0
+min_priority_keep_integer=4
 
 
 with gp.Env(params=options) as env:
@@ -58,56 +65,19 @@ with gp.Env(params=options) as env:
                     var.vType=gp.GRB.CONTINUOUS
                 else:
                     var.BranchPriority=int(bp)
-                #if  int (bp)>990 and int(bp)<997:
-                #    var.vType=gp.GRB.CONTINUOUS
-            #tmp1=model.getVarByName('v58501')
-            #tmp2=model.getVarByName('v58501')
-            #print('[tmp1.LB,tmp1.UB]')
-            #print([tmp1.LB,tmp1.UB])
-            #print('[tmp2.LB,tmp2.UB]')
-            #print([tmp2.LB,tmp2.UB])
-            #print('---')
-                #if int(bp)==1000:
-                #    var.UB=0
-                #if int(bp)==999:
-                #    var.UB=0
-                #if int(bp)==998:
-                #    var.UB=0
-            #model.setParam("Cuts", 0)                # Disable all cutting planes
-            ##model.setParam("Presolve", 0)                # Disable all cutting planes
-            #model.setParam("CutPasses", 0)           # No passes even beyond root
-            #model.setParam("MIPFocus", 3)
-            side_ineq_use_constraints = {
-                constr.ConstrName: constr
-                for constr in model.getConstrs()
-                if constr.ConstrName.startswith("side_ineq_use")
-            }
-            for con in model.getConstrs():
-                print(con.ConstrName)
-            print('side_ineq_use_constraints')
-            print(side_ineq_use_constraints)
-            print("Complete constraints (side_ineq_use*)")
-            for name, constr in side_ineq_use_constraints.items():
-                lhs = model.getRow(constr)   # linear expression
-                sense = constr.Sense
-                rhs = constr.RHS
-                print(f"{name}: {lhs} {sense} {rhs}")
-            print('side_ineq_use_constraints')
-            input('---')
-            print(side_ineq_use_constraints)
+             
             model.update()
             model.optimize()
+            solution_values = {var.VarName: var.X for var in model.getVars()}
 
-            if 1<0:
-                solution_values = {var.VarName: var.X for var in model.getVars()}
+            model.reset()
+            for var in model.getVars():
+                if var.BranchPriority>20:
+                    var.Start=solution_values[var.VarName]
+                    #var.LB=solution_values[var.VarName]
+                    #var.UB=solution_values[var.VarName]
+            print('resetting ')
+            model.update()
 
-                model.reset()
-                for var in model.getVars():
-                    if var.BranchPriority>90:
-                        #var.Start=solution_values[var.VarName]
-                        var.LB=solution_values[var.VarName]
-                        var.UB=solution_values[var.VarName]
-                print('resetting ')
-                model.update()
-
-                model.optimize()
+            model.optimize()
+            print('doen reset ver ')

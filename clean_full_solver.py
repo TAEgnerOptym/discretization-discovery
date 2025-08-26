@@ -44,6 +44,11 @@ class full_solver:
         self.all_graph_names=full_input_dict['allGraphNames']
         #graph_name_2_nodes:  given a graph_name gives  you the nodes  names
         self.graph_name_2_nodes=full_input_dict['graphName2Nodes']
+        self.graph_name_2_nodes=full_input_dict['graphName2Nodes']
+        self.graphNameNode_2_cust=full_input_dict['graphNameNode_2_cust']
+        #print('graphNameNode_2_cust')
+        #print(self.graphNameNode_2_cust['timeGraph'])
+        #input('---')
         #self.all_actions:  list of the names of all actions
         self.all_actions=full_input_dict['allActions']
         #self.null_action:  name of the null action
@@ -102,9 +107,11 @@ class full_solver:
 
         self.history_dict=dict()
         self.history_dict['lblp_lower']=[]
+        self.history_dict['time_compress']=[]
         self.history_dict['ub_lp']=[]
         self.history_dict['prob_sizes_at_start']=[]
-        self.history_dict['prob_sizes_mid']=[]
+        self.history_dict['prob_sizes_after_compress']=[]
+        self.history_dict['prob_sizes_after_split']=[]
         self.history_dict['did_compress']=[]
         self.history_dict['lp_time_project']=[]
         self.history_dict['lp_time_LB']=[]
@@ -203,12 +210,14 @@ class full_solver:
 
         self.history_dict['history_of_graphs_by_iter'].append(new_hist)
 
+
+
     def apply_complete_algorithm(self):
         self.incumbant_lp=-np.inf
         iter=0
         did_split=True
         self.current_LP_solution=[]
-        did_add_ineq=True
+        did_add_ineq=False
         self.call_init_separ()
         #input('--')
         while iter<self.jy_opt['max_iterations_loop_compress_project'] and (did_split==True or did_add_ineq==True):
@@ -223,7 +232,18 @@ class full_solver:
             lblp_time=self.my_lower_bound_LP.lp_time
             new_lp_value=self.my_lower_bound_LP.lp_objective
             if self.incumbant_lp<new_lp_value-self.jy_opt['min_inc_2_compress']: #and iter>0:
-                self.graph_node_2_agg_node=self.my_lower_bound_LP.NAIVE_graph_node_2_agg_node
+                if self.jy_opt['use_classic_compress']>0.5:
+                    self.graph_node_2_agg_node=self.my_lower_bound_LP.NAIVE_graph_node_2_agg_node
+                    self.history_dict['time_compress'].append(0)
+                else:
+                    print('starting comrpession fancy')
+                    self.my_compressor=compressor(self) 
+
+                    print('done  comrpession fancy')
+                    
+                    self.history_dict['time_compress'].append(self.my_compressor.lp_time)
+                    self.graph_node_2_agg_node=self.my_compressor.NEW_graph_node_2_agg_node
+                prob_sizes_after_compress=self.count_size()
                 did_compress_call=True
                 self.incumbant_lp=new_lp_value
                 if self.jy_opt['restore_after_each_step']>0.5:
@@ -233,12 +253,14 @@ class full_solver:
                     print('NOG SPLITTING up after')
 
             [did_split,proj_objective_componentLps,proj_time_component_lps]=self.apply_splitting_2()
-            if did_split==False:
+            if did_split==False and self.jy_opt['ub_use_remove']-new_lp_value>0.001 and self.jy_opt['use_ineq']>0.5:
                 #[did_add_ineq,new_exog_terms,new_action_contrib]=self.separate_zero_val_terms(self.my_lower_bound_LP.lp_primal_solution)
                 [did_add_ineq,new_exog_terms,new_action_contrib]=self.separate_zero_val_terms_internal(self.my_lower_bound_LP.lp_primal_solution)
                 #if did_add_ineq==True:
                 #    print('MAYBE;  NOT SURE YET; This really should not occur I dont think i mea')
                 #    input('hih')
+            prob_sizes_after_split=self.count_size()
+
             if did_split==False and did_compress_call==False and did_add_ineq==False:
                 self.graph_node_2_agg_node=self.my_lower_bound_LP.NAIVE_graph_node_2_agg_node
                 if self.jy_opt['do_split_based_init']>0.5:
@@ -252,6 +274,8 @@ class full_solver:
 
             self.history_dict['lblp_lower'].append(new_lp_value)
             self.history_dict['prob_sizes_at_start'].append(prob_sizes_at_start)
+            self.history_dict['prob_sizes_after_compress'].append(prob_sizes_after_compress)
+            self.history_dict['prob_sizes_after_split'].append(prob_sizes_after_split)
             self.history_dict['did_compress'].append(did_compress_call)
             self.history_dict['lp_time_project'].append(proj_time_component_lps)
             self.history_dict['lp_time_LB'].append(lblp_time)
@@ -262,9 +286,17 @@ class full_solver:
             print('new_lp_value=  '+str(new_lp_value))
             print('did_compress_call:  '+str(did_compress_call))
             print('lp project time '+str(self.history_dict['lp_time_project'][-1]))
+            print('lp compress time '+str(self.history_dict['time_compress'][-1]))
             print('lplb time '+str(self.history_dict['lp_time_LB'][-1]))
             print('prob_sizes_at_start')
             print(prob_sizes_at_start)
+            print('prob_sizes_after_compress')
+            print(prob_sizes_after_compress)
+            print('prob_sizes_after_split')
+            print(prob_sizes_after_split)
+            print('[did_add_ineq,did_split]')
+            print([did_add_ineq,did_split])
+            
 
         if self.jy_opt['do_ilp']>0.5:
             self.call_ILP_solver()
@@ -321,8 +353,8 @@ class full_solver:
 
     def separate_zero_val_terms(self,primal_sol_lp):
         #input('IN HERE')
-        if hasattr(self,'did_init_separ')==False:
-            self.call_init_separ()
+        #if hasattr(self,'did_init_separ')==False:
+        #    self.call_init_separ()
         D=self.D
         costs=D['action2Cost']
         G=self.G
@@ -454,12 +486,18 @@ class full_solver:
         [ng_neigh_by_cust_power,junk]=naive_get_LA_neigh(my_VRP,self.jy_opt['LAB_MP_neigh_use_power'])
         [ng_neigh_by_cust_all,junk]=naive_get_LA_neigh(my_VRP,Nc)
         G=set()
+        #for g in G:
+        #    if len(g)<0.5:
+        #        print(g)
+         #       input('hiw000')
         for u in range(0,Nc):
             #QZ=38
             #print('ng_neigh_by_cust_power[QZ]')
             #print(ng_neigh_by_cust_power[QZ])
             #print('len(ng_neigh_by_cust_power[QZ])')
             #print(len(ng_neigh_by_cust_power[QZ]))
+            if len(ng_neigh_by_cust_power[u])<0.5:
+                continue
             neighborhood = set(ng_neigh_by_cust_power[u]) | {u}
             for g in power_set(neighborhood):
                 if len(g)>1:  # skip empty set and size 1 sets
@@ -474,12 +512,33 @@ class full_solver:
             #    print('u+1')
             #    print(u+1)
             #    input('---')
+            #for g in G:
+            #    if len(g)<0.5:
+            #        print(g)
+            #        print('u')
+            #        print(u)
+            #        input('hiw22')
             for k in range(1,Nc):
                 my_terms=ng_neigh_by_cust_all[u][0:k]
                 G.add(frozenset(my_terms))
-            
-        G.add(frozenset(np.arange(0,Nc)))
+            for g in G:
+                if len(g)<0.5:
+                    print(g)
+                    print('u')
+                    print(u)
+                    print('ng_neigh_by_cust_all[u]')
+                    print(ng_neigh_by_cust_all[u])
+                    input('hiw11')
 
+        #for g in G:
+        #    if len(g)<0.5:
+        #        print(g)
+        #        input('hiw233') 
+        G.add(frozenset(np.arange(0,Nc)))
+        for g in G:
+            if len(g)<0.5:
+                print(g)
+                input('hiw344')
         if 1<0:
             G=set()
             C1 = frozenset({0,1,2,3,4,5,6,7})
@@ -523,7 +582,7 @@ class full_solver:
             for v in range(0,Nc+2):  # include depot if needed
                 if v not in g:
                     v_not_in_groups[v].add(g)
-
+            
         # Step 2: Build Z_by_group using set intersection
         num_add=0
 
@@ -540,3 +599,5 @@ class full_solver:
                 self.Z_by_group_inside[g].add(act)
         self.G=G
         
+
+

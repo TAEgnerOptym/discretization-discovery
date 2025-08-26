@@ -361,22 +361,30 @@ class jy_make_input_file_no_la:
         self.graphName2Nodes=dict()
         self.graphName2Nodes['capGraph']=[self.h2SourceId['capGraph'],self.h2SinkId['capGraph']]
         self.graphName2Nodes['timeGraph']=[self.h2SourceId['timeGraph'],self.h2SinkId['timeGraph']]
-
+        self.graphNameNode_2_cust=dict()
+        self.graphNameNode_2_cust['capGraph']=dict()
+        self.graphNameNode_2_cust['timeGraph']=dict()
         self.initGraphNode2AggNode=dict()
         self.initGraphNode2AggNode['capGraph']=dict()
         self.initGraphNode2AggNode['timeGraph']=dict()
         self.initGraphNode2AggNode['capGraph'][self.h2SourceId['capGraph']]='cap_-1'
         self.initGraphNode2AggNode['capGraph'][self.h2SinkId['capGraph']]='cap_-2'
 
+        self.graphNameNode_2_cust['capGraph'][self.h2SourceId['capGraph']]=str(self.my_instance.num_cust)
+        self.graphNameNode_2_cust['capGraph'][self.h2SinkId['capGraph']]=str(self.my_instance.num_cust+1)
+        self.graphNameNode_2_cust['timeGraph'][self.h2SourceId['timeGraph']]=str(self.my_instance.num_cust)
+        self.graphNameNode_2_cust['timeGraph'][self.h2SinkId['timeGraph']]=str(self.my_instance.num_cust+1)
+
         self.initGraphNode2AggNode['timeGraph'][self.h2SourceId['timeGraph']]='time_-1'
         self.initGraphNode2AggNode['timeGraph'][self.h2SinkId['timeGraph']]='time_-2'
         if self.jy_opt['use_ng']>0.5:
             self.graphName2Nodes['ngGraph']=[self.h2SourceId['ngGraph'],self.h2SinkId['ngGraph']]
-
+            self.graphNameNode_2_cust['ngGraph']=dict()
             self.initGraphNode2AggNode['ngGraph']=dict()
             self.initGraphNode2AggNode['ngGraph'][self.h2SourceId['ngGraph']]='ng_-1'#str(self.ngGraph.node_list[source_cust][0])
             self.initGraphNode2AggNode['ngGraph'][self.h2SinkId['ngGraph']]='ng_-2'#str(self.ngGraph.node_list[sink_cust][0])
-            
+            self.graphNameNode_2_cust['ngGraph'][self.h2SourceId['ngGraph']]=str(self.my_instance.num_cust)
+            self.graphNameNode_2_cust['ngGraph'][self.h2SinkId['ngGraph']]=str(self.my_instance.num_cust+1)
         for u in range(0,self.my_instance.num_cust):
             my_count=0
             u_use=u
@@ -389,6 +397,8 @@ class jy_make_input_file_no_la:
                     bin_num=50
                     #input('--')
                 self.initGraphNode2AggNode['capGraph'][str(i)]='cap_'+str(u_use)+'_'+str(bin_num)
+                self.graphNameNode_2_cust['capGraph'][str(i)]=str(u_use)
+
                 my_count=my_count+1
             my_count=0
             for i in self.my_time_graph.node_list[u]:
@@ -399,6 +409,8 @@ class jy_make_input_file_no_la:
                     #input('--')
                 self.initGraphNode2AggNode['timeGraph'][str(i)]='time'+str(u_use)+'_'+str(bin_num)
                 my_count=my_count+1
+                self.graphNameNode_2_cust['timeGraph'][str(i)]=str(u_use)
+
             if self.jy_opt['use_ng']>0.5:
                 my_count=0
                 for i in self.ngGraph.node_list[u]:
@@ -413,10 +425,12 @@ class jy_make_input_file_no_la:
                         bin_num=50
                         #input('--')
                     self.initGraphNode2AggNode['ngGraph'][str(i)]='ng_'+str(u_use)+'_'+str(num_ng_forbidden)
+                    self.graphNameNode_2_cust['ngGraph'][str(i)]=str(u_use)
                     my_count=my_count+1
 
 
 
         self.out_dict['graphName2Nodes']=self.graphName2Nodes
+        self.out_dict['graphNameNode_2_cust']=self.graphNameNode_2_cust
         self.out_dict['initGraphNode2AggNode']=self.initGraphNode2AggNode
     
