@@ -50,7 +50,7 @@ options = {
 #993:  822.9 ;8 integer (all binary)
 #40:  822.9 ;1340 integer (all binary)
 #-infty; 822.9;   43824 integer (41664 binary)
-min_priority_keep_integer=4
+min_priority_keep_integer=10
 
 
 with gp.Env(params=options) as env:

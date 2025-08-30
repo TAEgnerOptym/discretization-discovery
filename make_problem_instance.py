@@ -27,7 +27,12 @@ def make_problem_instance(input_file_path,my_params,my_json_file_path):
         print('gettign navie neigh')
         [ng_neigh_by_cust,junk]=naive_get_LA_neigh(my_instance,(my_params['num_NG']))
         #print('staritng ng making ')
-        #print(ng_neigh_by_cust)
+        #for i in range(0,50):
+        #    print('cust neigh.  '+ str(i))
+        #    print(ng_neigh_by_cust[i])
+        #    print('my_params[num_NG]')
+        #    print(my_params['num_NG'])
+        #    input('--')
         #input('--')
         if my_params['use_fancy_ng_graph']<0.5:
             

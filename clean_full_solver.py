@@ -100,7 +100,8 @@ class full_solver:
 
         self.graph_names=full_input_dict['allGraphNames']
 
-        
+        self.all_source_sink_actions=set(self.all_actions)-set(self.all_actions_not_source_sink_connected)
+
         self.delta_name_2_ub=full_input_dict['delta_name_2_ub']
         self.delta_name_2_lb=full_input_dict['delta_name_2_lb']
         self.ineq_replaced_by_lb_ub=full_input_dict['ineq_replaced_by_lb_ub']
@@ -251,11 +252,38 @@ class full_solver:
                     print('splitting up after')
                 else:
                     print('NOG SPLITTING up after')
-
+            
             [did_split,proj_objective_componentLps,proj_time_component_lps]=self.apply_splitting_2()
+            
+
             if did_split==False and self.jy_opt['ub_use_remove']-new_lp_value>0.001 and self.jy_opt['use_ineq']>0.5:
                 #[did_add_ineq,new_exog_terms,new_action_contrib]=self.separate_zero_val_terms(self.my_lower_bound_LP.lp_primal_solution)
                 [did_add_ineq,new_exog_terms,new_action_contrib]=self.separate_zero_val_terms_internal(self.my_lower_bound_LP.lp_primal_solution)
+                if did_add_ineq==True:
+                    #self.all_source_sink_actions=set(self.all_actions)-set(self.all_actions_not_source_sink_connected)
+                    self.all_actions_inclumbent=self.all_actions_inclumbent.union(self.all_source_sink_actions)
+                #input('HERE')
+                #print('new_action_contrib')
+                #print(new_action_contrib)
+                #print('new_exog_terms')
+                #print(new_exog_terms)
+
+                #if 1>0:
+                #    newlb_safe_exog = {
+                #        (v, c): coeff
+                #        for (v, c), coeff in self.full_input_dict['actionCon2Contrib'].items()
+                #        if isinstance(c, str) and c.startswith("NewLB_")
+                 #   }
+                #    if len(newlb_safe_exog)>0.5:
+                #        print('114 IN THIS SPOT IN ALg Self LP')
+                 #       print(newlb_safe_exog)
+                  #      input('---')
+                  #  else:
+                #        print('empty ')
+                #p#rint('newlb_safe_exog')
+                #p#rint(newlb_safe_exog)
+                #input('-CHECKING HRE--')
+                #input('---')
                 #if did_add_ineq==True:
                 #    print('MAYBE;  NOT SURE YET; This really should not occur I dont think i mea')
                 #    input('hih')
@@ -373,7 +401,7 @@ class full_solver:
             g: (sum(primal_sol_lp[act] for act in self.Z_by_group[g]))
             for g in G
         }
-        K=10
+        K=1
         filtered = [
             ((1 - amount_inside[g]) * self.cost_val[g], g)
             for g in amount_inside
@@ -389,17 +417,24 @@ class full_solver:
         new_action_contrib=dict()
         for g in result:
             con_name_ineq='NewLB_'+str(g)
+            con_name_ineq='NewLB_'+str(len(self.full_input_dict['exogName2Rhs']))
+
             self.full_input_dict['exogName2Rhs'][con_name_ineq]=1
             self.full_input_dict['allExogNames'].append(con_name_ineq)
             new_exog_terms[con_name_ineq]=1
             print('adding ')
+            print('amount_inside[g]')
+            print(amount_inside[g])
             print('con_name_ineq')
             print(con_name_ineq)
+            all_acts=[]
             for act in self.Z_by_group[g]:
                 self.full_input_dict['actionCon2Contrib'][tuple([act,con_name_ineq])]=1#self.delta_con_2_contrib[v_con]
                 new_action_contrib[tuple([act,con_name_ineq])]=1
-                print('tuple([act,con_name_ineq])')
-                print(tuple([act,con_name_ineq]))
+                all_acts.append(act)
+            print('all_acts')
+            print(all_acts)
+            print('all_acts')
         did_add_ineq=False
         if len(result)>0.5:
             did_add_ineq=True
@@ -407,6 +442,17 @@ class full_solver:
            # print(did_add_ineq)
            # input('did_find_separ')
 
+        #print('---')
+        #newlb_safe_exog = {
+        #    (v, c): coeff
+        #    for (v, c), coeff in self.full_input_dict['actionCon2Contrib'].items()
+        #    if isinstance(c, str) and c.startswith("NewLB_")
+        #}
+        #print('newlb_safe_exog')
+        #print(newlb_safe_exog)
+        #print('newlb_safe_exog')
+
+        #input('--')
 
        # if did_find_separ:
         #    for con_name in new_exog_terms:
@@ -485,7 +531,10 @@ class full_solver:
         self.dict_pred_gain=dict()
         [ng_neigh_by_cust_power,junk]=naive_get_LA_neigh(my_VRP,self.jy_opt['LAB_MP_neigh_use_power'])
         [ng_neigh_by_cust_all,junk]=naive_get_LA_neigh(my_VRP,Nc)
+        self.ng_neigh_by_cust_power=ng_neigh_by_cust_power
         G=set()
+        self.G_power=set()
+        self.G_radius=set()
         #for g in G:
         #    if len(g)<0.5:
         #        print(g)
@@ -502,43 +551,17 @@ class full_solver:
             for g in power_set(neighborhood):
                 if len(g)>1:  # skip empty set and size 1 sets
                     G.add(frozenset(g))
-            #print('neighborhood[u]')
-            #print(neighborhood)
-            #print('u')
-            #print(u)
-            #if u==QZ:
-            #    print('neighborhood[u]-1')
-            #    print({v + 1 for v in neighborhood})
-            #    print('u+1')
-            #    print(u+1)
-            #    input('---')
-            #for g in G:
-            #    if len(g)<0.5:
-            #        print(g)
-            #        print('u')
-            #        print(u)
-            #        input('hiw22')
+                    self.G_power.add(frozenset(g))
             for k in range(1,Nc):
                 my_terms=ng_neigh_by_cust_all[u][0:k]
                 G.add(frozenset(my_terms))
-            for g in G:
-                if len(g)<0.5:
-                    print(g)
-                    print('u')
-                    print(u)
-                    print('ng_neigh_by_cust_all[u]')
-                    print(ng_neigh_by_cust_all[u])
-                    input('hiw11')
+                self.G_radius.add(frozenset(my_terms))
 
         #for g in G:
         #    if len(g)<0.5:
         #        print(g)
         #        input('hiw233') 
         G.add(frozenset(np.arange(0,Nc)))
-        for g in G:
-            if len(g)<0.5:
-                print(g)
-                input('hiw344')
         if 1<0:
             G=set()
             C1 = frozenset({0,1,2,3,4,5,6,7})

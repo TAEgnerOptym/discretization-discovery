@@ -5,7 +5,9 @@ import gurobipy as gp
 from gurobipy import GRB
 from collections import defaultdict
 import time
-
+import pickle,gzip
+from pathlib import Path
+from datetime import datetime
 import io
 import sys
 import os
@@ -609,6 +611,18 @@ def solve_gurobi_lp_bounds(dict_var_name_2_obj,
 
     safe_var_LB = {var_name_map[k]: v for k, v in dict_var_name_2_LB.items()}
     safe_var_UB = {var_name_map[k]: v for k, v in dict_var_name_2_UB.items()}
+    #if 1>0: 
+        #newlb_safe_exog = {
+        #    (v, c): coeff
+        #    for (v, c), coeff in dict_var_con_2_lhs_exog.items()
+        #    if isinstance(c, str) and c.startswith("NewLB_")
+        #}
+        #if len(newlb_safe_exog)>0.5:
+        #    print('IN THIS SPOT IN GUR LP')
+        #    print(newlb_safe_exog)
+        #    input('---')
+        #else:
+        #    print('empty 333')
 
     options = {
         "WLSACCESSID": "b7836a23-3df1-40ac-be4d-310282e2178e",
@@ -649,18 +663,6 @@ def solve_gurobi_lp_bounds(dict_var_name_2_obj,
                 expr = gp.LinExpr()
                 for var, coeff in terms:
                     expr.addTerms(coeff, var)
-
-                #print('con_name_rev[con_name]')
-                #print(con_name_rev[con_name])
-                #input('---')
-                #if "NEW_BOUND_Branch" in con_name_rev[con_name]:#.startswith(""):
-                #    print('con_name_rev[con_name]')
-                #    print(con_name_rev[con_name])
-                #    print('expr')
-                #    print(expr)
-                #    print('safe_LB[con_name]')
-                #    print(safe_LB[con_name])
-                #    input('FOUND IT ')
                 model.addConstr(expr >= safe_LB[con_name], name=con_name)
 
             for con_name, terms in group_eq.items():
@@ -684,6 +686,30 @@ def solve_gurobi_lp_bounds(dict_var_name_2_obj,
 
                 print('model.status')
                 print(model.status)
+                model.write('ERROR_MODEL.mps')
+                _ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+                _snap = Path(f"debug_snapshot_{_ts}.pkl.gz")
+
+                _locals = locals().copy()
+
+                def _can_pickle(x):
+                    try:
+                        pickle.dumps(x)
+                        return True
+                    except Exception:
+                        return False
+
+                _safe = {k: v for k, v in _locals.items() if _can_pickle(v)}
+
+                # also capture a shallow, pickle-safe view of self (if present)
+                if "self" in _locals:
+                    _safe["self_shallow"] = {
+                        k: v for k, v in vars(_locals["self"]).items() if _can_pickle(v)
+                    }
+
+                with gzip.open(_snap, "wb") as f:
+                    pickle.dump(_safe, f, protocol=pickle.HIGHEST_PROTOCOL)
+
                 raise RuntimeError("Gurobi did not find an optimal solution.")
 
             # Step 3: Recover solutions and remap names

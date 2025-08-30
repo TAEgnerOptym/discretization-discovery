@@ -36,4 +36,16 @@ from solve_gurobi_lp import solve_gurobi_milp_bounds
 loaded_solver=[]
 with open("solver_checkpoint_BEF_.pkl", "rb") as f:
     loaded_solver = pickle.load(f)
+    #for i in range(0,50):
+    #    q=loaded_solver.full_prob.ng_neigh_by_cust_power[i]
+    #    print(i)
+    #    print(q)
+    #    input('---')
+    loaded_solver.full_prob.jy_opt['maxVarsAdd_in_ITER']=10
+    #loaded_solver.full_prob.G= {g for g in loaded_solver.full_prob.G_power if len(g) >= 10}
     loaded_solver.iterative_ilp_la_DIVE()
+    loaded_solver
+    #loaded_solver.iterative_ilp_la()
+    loaded_solver.filter_constraints()
+    loaded_solver.call_gurobi_milp_solver()
+

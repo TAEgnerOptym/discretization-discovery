@@ -102,6 +102,10 @@ class lower_bound_LP_milp:
         if ( self.OPT_do_ilp==0 and self.full_prob.jy_opt['use_delta_in_lp']==False) or (self.OPT_do_ilp!=0 and self.full_prob.jy_opt['use_delta_in_milp']==False):
             self.remove_remove_delta_and_delta_con()
         t1=time.time()
+        #if self.OPT_do_ilp!=0:
+        #    input('about to call')
+        #    print(self.full_prob.jy_opt['LAB_MP_ON']>0.5)
+        #    input('--')
         if self.OPT_do_ilp!=0 and self.full_prob.jy_opt['LAB_MP_ON']>0.5:
             #input('about to start')
             DEBUG_ON=True
@@ -259,6 +263,7 @@ class lower_bound_LP_milp:
         num_found_low=0
         num_used=0
         num_already_gone=0
+        num_active=0
         num_in_solution_ignore=0
         terms_remove=[]
         use_path_based_RC=1
@@ -266,18 +271,23 @@ class lower_bound_LP_milp:
             #if hasattr(self, "path_rc_pre_done")==False:
             #    self.setup_pre_path_based_rc()
             self.compute_path_based_rc()
-        for act in primal_solution:
+        for act in self.all_non_null_action:
             #if act in usedTerms:
             #    num_used=num_used+1
             #    continue
             if act in self.full_prob.delta_name_2_ub and self.full_prob.delta_name_2_ub[act]<0.001:
                 num_already_gone=num_already_gone+1
                 continue
-            if act in self.full_prob.all_actions_inclumbent or primal_solution[act]>0.00001:
+            if act in self.full_prob.all_actions_inclumbent:# or primal_solution[act]>0.001:
                 num_in_solution_ignore+=1
                 continue
+            if primal_solution[act]>0.001:
+                num_active+=1
+                continue
+
             match = pattern.fullmatch(act)
             if not match:
+                input('error here')
                 continue
 
             u, v = match.groups()
@@ -346,6 +356,8 @@ class lower_bound_LP_milp:
         print(num_already_gone)
         print('num_in_solution_ignore')
         print(num_in_solution_ignore)
+        print('num_active')
+        print(num_active)
         print('---')
         #print(result)
         #print('result')
@@ -2017,9 +2029,9 @@ class lower_bound_LP_milp:
                 k: v for k, v in self.milp_solution.items()
                 if k.startswith("fancy")
             }
-            print('fancy_dict')
-            print(fancy_dict)
-            input('--')
+            #print('fancy_dict')
+            #print(fancy_dict)
+            #input('--')
             LP_HIST_INTERNAL.append(self.milp_solution_objective_value)
             num_bin_hist.append(len(self.dict_var_name_2_is_binary))
             print('UB_USE_REMOVE-self.milp_solution_objective_value')
@@ -2300,28 +2312,7 @@ class lower_bound_LP_milp:
             val = primal_sol_lp.get(act, 0.0)
             if u < Nc: sum_by_u[u] += val
             if v < Nc: sum_by_v[v] += val
-        for u in range(0,Nc):
-            if abs(sum_by_u[u]-1)>0.001: #or  abs(sum_by_v[u]-1)>0.001:
-                print('u')
-                print(u)
-                print('sum_by_u[u]')
-                print(sum_by_u[u])
-                #print('sum_by_v[u]')
-                #print(sum_by_v[u])
-                print('BIG ERROR')
-                for act2 in self.all_non_null_action:
-                    _, u1, v1 = act.split("_")
-                    u1, v1 = int(u), int(v)
-                    val1 = primal_sol_lp.get(act, 0.0)
-                    if val1>0.0001:
-                        print('act')
-                        print(act)
-                        print('val1')
-                        print(val1)
-                        self.primal_sol_lp=primal_sol_lp
-                        with open("BADEROR.pkl", "wb") as f:
-                            pickle.dump(self, f)
-                input('error here ')
+       
         print('passing this set options')
 
 
@@ -2372,7 +2363,13 @@ class lower_bound_LP_milp:
         
         self.pred_val_gain={
             g: self.cost_val[g]*frac_amount[g]/(amount_inside[g])
-            #g: self.cost_val[g]*frac_amount[g]/(len(g))
+            for g in G
+        }
+        if 1<0:
+            self.pred_val_gain = {
+            g: self.cost_val[g] #/ amount_inside[g])
+            if (frac_amount.get(g, 0.0) > 1e-2)
+            else 0.0
             for g in G
         }
     

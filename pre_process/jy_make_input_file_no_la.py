@@ -424,6 +424,7 @@ class jy_make_input_file_no_la:
                     if self.jy_opt['allOneBig_init']>0.5:
                         bin_num=50
                         #input('--')
+                    #self.initGraphNode2AggNode['ngGraph'][str(i)]='ng_'+str(u_use)+'_'+str(num_ng_forbidden)+"_"+str(my_count)
                     self.initGraphNode2AggNode['ngGraph'][str(i)]='ng_'+str(u_use)+'_'+str(num_ng_forbidden)
                     self.graphNameNode_2_cust['ngGraph'][str(i)]=str(u_use)
                     my_count=my_count+1
