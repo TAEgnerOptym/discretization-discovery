@@ -252,6 +252,11 @@ class lower_bound_LP_milp:
         print(ub_current)
         #input('---')
         eta=(ub_current-self.lp_objective)+0.001
+        if eta<0:
+            print('eta can not be zero')
+            print('eta')
+            print(eta)
+            input('error here')
         print('eta')
         print(eta)
         primal_solution=self.out_solution_JY['primal_solution']

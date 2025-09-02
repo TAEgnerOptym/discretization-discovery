@@ -8,9 +8,9 @@ import argparse
 
 #
 
-default_input='data/jy_R209.txt'
-default_option_path='params_WW/params_r200_50_UB_given/r_209.json'
-out_name='C104_100_cust.json'
+#default_input='data/jy_R209.txt'
+#default_option_path='params_WW/params_r200_50_UB_given/r_209.json'
+#out_name='C104_100_cust.json'
 
 #default_input='data/jy_R108.txt'
 #default_option_path='my_params_R200.json'
@@ -20,8 +20,13 @@ out_name='C104_100_cust.json'
 #default_option_path='my_params_R200.json'
 #out_name='R104_100_cust.json'
 
-#default_input='data/jy_RC102.txt'
-#default_option_path='my_params_RC.json'
+default_input='data/jy_C104.txt'
+default_option_path='my_params_C.json'
+out_name='RC102_50_cust.json'
+
+
+#default_input='jy_nyc_4.txt'
+#default_option_path='nyc_params.json'
 #out_name='RC102_50_cust.json'
 
 
@@ -31,9 +36,9 @@ out_name='C104_100_cust.json'
 #out_name='RC208_50_cust.json'
 
 
-default_input='data/jy_RC202.txt'
-default_option_path='my_params_R200.json'
-out_name='RC208_50_cust.json'
+#default_input='data/jy_RC202.txt'
+#default_option_path='my_params_R200.json'
+#out_name='RC208_50_cust.json'
 #default_input='data/jy_RC208.txt'
 #default_option_path='my_params_RC.json'
 #default_input='data/jy_RC102.txt'

@@ -12,4 +12,5 @@ do a test where  I do early stopping and see what happens
 
 Lets makes two curves; on a small number of instances.  compute teh performance of MILP time as a function of number of iterations, and also do this for multiple choices of discretization.  
 
+chagpt gpt version 5 pro.
 

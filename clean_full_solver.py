@@ -23,6 +23,7 @@ from baseline_solver import baseline_solver
 import json
 from New_valid_sep.check_valid_round_2 import check_valid_round_2
 from projector_on_lb import projector_on_lb
+from benders_repo_new import benders_repo_new
 class full_solver:
 
     def __init__(self,full_input_dict,jy_opt,output_file_path,all_actions_inclumbent=None,actions_ignore=None,hist_terms_phase_one=None,init_disc=None):
@@ -120,6 +121,8 @@ class full_solver:
         self.hist_terms_phase_one=hist_terms_phase_one
 
         self.history_dict['history_of_graphs_by_iter']=[]
+
+        #self.my_bender_repo=benders_repo_new(self)
 
         self.apply_complete_algorithm()
         with open(self.output_file_path, 'w') as file:
@@ -221,6 +224,7 @@ class full_solver:
         did_add_ineq=False
         self.call_init_separ()
         #input('--')
+        num_calls_ineq=0
         while iter<self.jy_opt['max_iterations_loop_compress_project'] and (did_split==True or did_add_ineq==True):
             self.time_list_outer=dict()
             iter=iter+1
@@ -262,7 +266,40 @@ class full_solver:
                 if did_add_ineq==True:
                     #self.all_source_sink_actions=set(self.all_actions)-set(self.all_actions_not_source_sink_connected)
                     self.all_actions_inclumbent=self.all_actions_inclumbent.union(self.all_source_sink_actions)
-                #input('HERE')
+                use_benders_new=True
+                
+                if use_benders_new==True:
+                    debug_on=False
+                    if debug_on==True:
+                        print('saving ')
+                        with open("PlayHere.pkl", "wb") as f:
+                            pickle.dump(self, f)
+                        print('donee saving ')
+                    if num_calls_ineq==0:
+                        self.my_bender_repo=benders_repo_new(self)
+
+                    if debug_on==True and num_calls_ineq==0:
+                        
+                        self.call_ILP_solver()
+                        tmp=self.my_lower_bound_ILP.milp_solution.copy()
+                        
+                        [this_cut_value,did_gen_cut]=self.my_bender_repo.generate_cuts(tmp,self.my_lower_bound_ILP.milp_solution)
+                        if did_gen_cut>0.5:
+                            input('bad erro not feas')
+                        #else:
+                        #    print('paassing')
+                        #    input()
+                        #input('debugging the term')
+                    [tot_cut_value,TOT_gen_cut]=self.my_bender_repo.generate_cuts(self.my_lower_bound_LP.lp_primal_solution)#,self.my_lower_bound_ILP.milp_solution)
+                    print('tot_cut_value')
+                    print(tot_cut_value)
+                    print('TOT_gen_cut')
+                    print(TOT_gen_cut)
+                    if TOT_gen_cut>0.5:
+                        did_add_ineq=True
+                    #input('LOOK ME ')
+                num_calls_ineq=num_calls_ineq+1
+
                 #print('new_action_contrib')
                 #print(new_action_contrib)
                 #print('new_exog_terms')
@@ -326,6 +363,7 @@ class full_solver:
             print([did_add_ineq,did_split])
             
 
+        input('about to call ilp')
         if self.jy_opt['do_ilp']>0.5:
             self.call_ILP_solver()
         if self.jy_opt['run_baseline']:

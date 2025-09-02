@@ -659,18 +659,33 @@ def solve_gurobi_lp_bounds(dict_var_name_2_obj,
             for (var, con), coeff in safe_eq_map.items():
                 group_eq[con].append((var_dict[var], coeff))
 
+            #print('lookin for benders')
+            did_find_benders=False
+            benders_cut_names=[]
             for con_name, terms in group_exog.items():
                 expr = gp.LinExpr()
                 for var, coeff in terms:
                     expr.addTerms(coeff, var)
                 model.addConstr(expr >= safe_LB[con_name], name=con_name)
-
+                if 0>1 and con_name_rev[con_name].startswith('Benders'):
+                    print('----')
+                    print('----')
+                    print('----')
+                    print('expr')
+                    print(expr)
+                    print('safe_LB[con_name]')
+                    print(safe_LB[con_name])
+                    print('con_name_rev[con_name]')
+                    print(con_name_rev[con_name])
+                #    did_find_benders=True
+                #    benders_cut_names.append(con_name)
+                #    input('--')
             for con_name, terms in group_eq.items():
                 expr = gp.LinExpr()
                 for var, coeff in terms:
                     expr.addTerms(coeff, var)
                 model.addConstr(expr == safe_EQ[con_name], name=con_name)
-
+    
             model.ModelSense = GRB.MINIMIZE
 
             time_pre = time.time() - time_pre
@@ -725,6 +740,7 @@ def solve_gurobi_lp_bounds(dict_var_name_2_obj,
             time_post = time.time() - time_post
             reduced_costs   = {var_name_rev[var.VarName]: var.RC for var in model.getVars()}
 
+            
             return {
                 "primal_solution": primal_solution,
                 "dual_solution": dual_solution,
