@@ -108,7 +108,7 @@ class lower_bound_LP_milp:
         #    input('--')
         if self.OPT_do_ilp!=0 and self.full_prob.jy_opt['LAB_MP_ON']>0.5:
             #input('about to start')
-            DEBUG_ON=True
+            DEBUG_ON=False
             if DEBUG_ON==True:
                 print('DEBUG_ON')
                 with open("solver_checkpoint_BEF_.pkl", "wb") as f:
@@ -2544,7 +2544,14 @@ class lower_bound_LP_milp:
                     self.milp_solution_objective_value=self.lp_objective
                     
                     time_internal_list.append(self.lp_time)
-           
+            if 1>0:
+                act_vars = {
+                    varname: value
+                    for varname, value in self.milp_solution.items()
+                    if varname.startswith("act") and value != 0
+                }
+                self.full_prob.history_dict['iter_2_act_list'].append(act_vars)
+            
             LP_HIST_INTERNAL.append(self.milp_solution_objective_value)
             num_bin_hist.append(len(self.dict_var_name_2_is_binary))
             print('UB_USE_REMOVE-self.milp_solution_objective_value')
@@ -2632,24 +2639,26 @@ class lower_bound_LP_milp:
                 self.dict_var_name_2_is_binary[i]=1
                 self.full_prob.delta_name_2_lb[i]=0
                 self.full_prob.delta_name_2_ub[i]=1
-            else:
-                print('LOOK LOOOK')
-                print('LOOK LOOOK')
-                print('LOOK LOOOK')
-                print('LOOK LOOOK')
-                print('LOOK LOOOK')
-                print('i')
-                print(i)
-                print('self.full_prob.delta_name_2_lb[i]')
-                print(self.full_prob.delta_name_2_lb[i])
-                print('self.full_prob.delta_name_2_ub[i]')
-                print(self.full_prob.delta_name_2_ub[i])
-                print('------')
+            #else:
+            #    print('LOOK LOOOK')
+            #    print('LOOK LOOOK')
+            #    print('LOOK LOOOK')
+            #    print('LOOK LOOOK')
+            #    print('LOOK LOOOK')
+            #    print('i')
+            #    print(i)
+            #    print('self.full_prob.delta_name_2_lb[i]')
+            #    print(self.full_prob.delta_name_2_lb[i])
+            #    print('self.full_prob.delta_name_2_ub[i]')
+            #    print(self.full_prob.delta_name_2_ub[i])
+            #    print('------')
         for i in OLD_dict_var_name_2_is_integer:
             self.dict_var_name_2_is_integer[i]=OLD_dict_var_name_2_is_integer[i]
         for i in OLD_dict_var_name_2_is_binary:
             self.dict_var_name_2_is_binary[i]=OLD_dict_var_name_2_is_binary[i]
-
+        print('extra_var_name_priority')
+        print(self.extra_var_name_priority)
+        print('extra_var_name_priority')
         #fancy_fixed_keys = [
         #    k for k in self.full_prob.delta_name_2_lb
         #    if k.startswith("fancy")

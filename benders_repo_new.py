@@ -78,6 +78,30 @@ class benders_cut_generator:
             my_mult=-self.A_ineq_x[my_dual_var_x_pair]
             val=x[var_name]+EPSILON*np.random.rand()
             dict_con_name_2_LB[con_name]+=my_mult*val
+        for var in self.dict_var_name_2_obj:
+            if var in self.my_sub_prob.var_2_internal_2_act:
+                uv=self.my_sub_prob.var_2_internal_2_act[var]
+                u=uv[0]
+                v=uv[1]
+                var_name='act_'+str(u)+'_'+str(v)
+                if var_name not in self.MF.action_2_cost or (var_name in self.MF.delta_name_2_ub and self.MF.delta_name_2_ub[var_name]<0.001):
+                    self.dict_var_name_2_UB[var]=0
+                    #print('removing var')
+                    #print('var')
+                    #print(var)
+                    #print('var_name')
+                    #print(var_name)
+                    #input('NOT AN ERROR JUST CHECKING found one')
+                #else:
+                #    input('NOT AN ERROR JUST CHECKING  OK identified but ok')
+            #else:
+            #    if False==var.startswith('slack'):
+            #        print('--')
+            #        print('self.my_sub_prob.var_2_internal_2_act')
+             #       print(self.my_sub_prob.var_2_internal_2_act)
+             #       print('var')
+             #       print(var)
+             #       input('hihi')
         #print('dict_con_name_2_LB')
         #print(dict_con_name_2_LB)
         #print('non_neg dict')
@@ -158,7 +182,7 @@ class benders_cut_generator:
             #print("--")
             
             new_cut_name='Benders_cut_new_'+self.sub_prob_name+'_'+str(len(self.MF.exog_name_2_rhs))+'_'+str(np.floor(np.random.rand()*10000))
-            cut_RHS=cut_RHS-.01
+            cut_RHS=cut_RHS-.0001
             #print('len(self.MF.exog_name_2_rhs)')
             #print(len(self.MF.exog_name_2_rhs))
             self.MF.all_exog.append(cut_RHS)
@@ -285,8 +309,16 @@ class benders_repo_new:
         L=self.size_neigh_use_benders
         self.m_sz_pairs=[]
         self.m_sz_pairs.append(tuple([6,10]))
+        self.m_sz_pairs.append(tuple([6,9]))
         self.m_sz_pairs.append(tuple([2,3]))
+        #self.m_sz_pairs.append(tuple([2,5]))
+        self.m_sz_pairs.append(tuple([2,9]))
         self.m_sz_pairs.append(tuple([3,10]))
+        self.m_sz_pairs.append(tuple([4,10]))
+        #self.m_sz_pairs.append(tuple([5,8]))
+        #self.m_sz_pairs.append(tuple([5,7]))
+        #self.m_sz_pairs.append(tuple([5,9]))
+        #self.m_sz_pairs.append(tuple([5,8]))
         #[tuple([6,10,])]#[tuple([6,10]),tuple([6,9]),tuple([5,9])]
         #tuple([2,3]),tuple([2,5]),tuple([3,5]),
         #tup_tmp_1=tuple([np.floor(L/2)+1   ,L])
@@ -311,6 +343,7 @@ class benders_repo_new:
         tot_cut_value=0
         TOT_gen_cut=0
         tot_time_opt=0
+        max_time_opt=0
         for my_bend_prob in self.my_list_benders_cut_generator:
             print('generating cut ')
             print('my_bend_prob.sub_prob_name')
@@ -321,6 +354,7 @@ class benders_repo_new:
                 TOT_gen_cut=TOT_gen_cut+1
                 tot_cut_value=tot_cut_value+this_cut_value
             tot_time_opt=tot_time_opt+this_time_opt
+            max_time_opt=max([max_time_opt,this_time_opt])
             print('this_cut_value:  '+str(this_cut_value))
             print('tot_cut_value,TOT_gen_cut]:  '+str([tot_cut_value,TOT_gen_cut]))
             print('tot_time_opt.  '+str([this_time_opt,tot_time_opt]))
@@ -329,7 +363,7 @@ class benders_repo_new:
         #print('self.my_list_benders_cut_generator')
         #print(self.my_list_benders_cut_generator)
         #input('--')
-        return [tot_cut_value,TOT_gen_cut]
+        return [tot_cut_value,TOT_gen_cut,tot_time_opt,max_time_opt]
 
     def generate_sub_problems(self):
         self.my_sub_prob=[]
@@ -345,6 +379,11 @@ class benders_repo_new:
             my_set=frozenset(my_set)
             all_sets.add(my_set)
         counter=0
+        if 1<0:
+            all_sets=set([])
+            all_sets.add(frozenset([0,1,2,3,4,5,6,7]))
+            all_sets.add(frozenset([8,9,10,11,12,13,14,15,16]))
+            all_sets.add(frozenset([17,18,19,20,21,22,23,24]))
         for my_set in all_sets:
 
             my_sub_prob_input=sub_problem(self.MF,my_set,self.m_sz_pairs)
@@ -546,7 +585,7 @@ class sub_problem:
         #input('maing cover stuff')
         for u in self.my_set_cust:
             con_name='cover_con_'+str(u)
-            self.rhs_ineq[con_name]=.999
+            self.rhs_ineq[con_name]=.9999
         for edge_tup in self.ng_edges:
             var_name='ng_EDGE_'+str(edge_tup)
             i=edge_tup[0]
@@ -571,7 +610,11 @@ class sub_problem:
             con_name='my_SRI_'+str(q)
 
             self.rhs_ineq[con_name]=-np.floor(len(my_subset)/my_divisor)-0.000001
-
+            #print('con_name')
+            #print(con_name)
+            #print('self.rhs_ineq[con_name]')
+            #print(self.rhs_ineq[con_name])
+            #input('---')
             for ng_edge in self.ng_edge_cust_2_sink:
                 #print('ng_edge')
                 #print(ng_edge)
@@ -598,9 +641,12 @@ class sub_problem:
 #            var_neg_slack_act='slack_neg_'+act
 #            self.var_2_cost[var_pos_slack_act]=1
 #            self.var_2_cost[var_neg_slack_act]=1
+        self.var_2_internal_2_act=dict()
         for edge_tup in self.ng_edges:
             edge_name='ng_EDGE_'+str(edge_tup)
             self.var_2_cost[edge_name]=0
+            if edge_tup in self.my_ng_graph.ng_internal_edge_2_act:
+                self.var_2_internal_2_act[edge_name]=self.my_ng_graph.ng_internal_edge_2_act[edge_tup]
         if 1<0 and self.sub_prob_name=="my_sub_probfrozenset({9, 10, 11, 12, 13, 14, 15, 16, 17, 18})":
             input('here')
             #t=((14, frozenset({16, 17, 18, 12}), frozenset({12, 14, 16, 17, 18})), (15, frozenset({12, 14, 16, 17, 18}), frozenset({12, 14, 15, 16, 17, 18})))
@@ -681,6 +727,7 @@ class   Benders_NG_graph:
 
         self.ng_edge_source_2_cust=[]
         self.ng_edges=[]
+        self.ng_internal_edge_2_act=dict()
         self.ng_edges_non_source_sink=[]
         self.early_depart_time_by_node=dict()
         self.edges_removed=[]
@@ -705,6 +752,7 @@ class   Benders_NG_graph:
                     if var_name not in self.MF.action_2_cost:
                         continue
                     if var_name in self.MF.delta_name_2_ub and self.MF.delta_name_2_ub[var_name]<0.001:
+                        #input('found one NOT AN ERROR ')
                         continue
                     tmp=set(visited_excluding_last)-set([w])
                     tmp_1=frozenset(sorted(list(tmp)))
@@ -719,6 +767,7 @@ class   Benders_NG_graph:
                         e=tuple([node_pred,i])
                         self.ng_edges.append(e)
                         self.ng_edges_non_source_sink.append(e)
+                        self.ng_internal_edge_2_act[e]=tuple([w,u])
                     else:
                         #print('removing')
                         eREM=tuple([node_pred,i])
@@ -747,14 +796,14 @@ class   Benders_NG_graph:
     def compute_depart_time(self,v,u,time_dep_u):
         if time_dep_u<0:
             out=-np.inf
-            act='act_'+str(u)+'_'+str(v)
-            if act=='act_3_8':
-                print('REMOVINGact')
-                print(act)
-                print('REMOVINGact')
-                #input('dound two ')
+            #act='act_'+str(u)+'_'+str(v)
+            #if act=='act_3_8':
+            #    print('REMOVINGact')
+            #    print(act)
+            #    print('REMOVINGact')
+            #    #input('dound two ')
             return out
-        out=time_dep_u+self.MF.my_VRP.dist_mat_full[u,v]
+        out=time_dep_u-self.MF.my_VRP.dist_mat_full[u,v]
         
         out=min(out,self.MF.my_VRP.early_start[v])
         act='act_'+str(u)+'_'+str(v)
@@ -762,11 +811,7 @@ class   Benders_NG_graph:
             out=-np.inf
         if act in self.MF.delta_name_2_ub and self.MF.delta_name_2_ub[act]<0.001:
             out=-np.inf
-            if act=='act_3_8':
-                print('REMOVINGact')
-                print(act)
-                print('REMOVINGact')
-                input('dound one ')
+            
         return out
 
     

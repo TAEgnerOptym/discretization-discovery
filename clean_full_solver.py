@@ -109,6 +109,7 @@ class full_solver:
 
         self.history_dict=dict()
         self.history_dict['lblp_lower']=[]
+        self.history_dict['cuttingPlaneBendInfo']=[]
         self.history_dict['time_compress']=[]
         self.history_dict['ub_lp']=[]
         self.history_dict['prob_sizes_at_start']=[]
@@ -226,6 +227,8 @@ class full_solver:
         #input('--')
         num_calls_ineq=0
         while iter<self.jy_opt['max_iterations_loop_compress_project'] and (did_split==True or did_add_ineq==True):
+            did_add_ineq=False
+
             self.time_list_outer=dict()
             iter=iter+1
             t1=time.time()
@@ -259,7 +262,7 @@ class full_solver:
             
             [did_split,proj_objective_componentLps,proj_time_component_lps]=self.apply_splitting_2()
             
-
+            this_cutting_plane_info={'tot_cut_value':0,'TOT_gen_cut':0,'tot_time_opt':0,'max_time_opt':0}
             if did_split==False and self.jy_opt['ub_use_remove']-new_lp_value>0.001 and self.jy_opt['use_ineq']>0.5:
                 #[did_add_ineq,new_exog_terms,new_action_contrib]=self.separate_zero_val_terms(self.my_lower_bound_LP.lp_primal_solution)
                 [did_add_ineq,new_exog_terms,new_action_contrib]=self.separate_zero_val_terms_internal(self.my_lower_bound_LP.lp_primal_solution)
@@ -290,7 +293,9 @@ class full_solver:
                         #    print('paassing')
                         #    input()
                         #input('debugging the term')
-                    [tot_cut_value,TOT_gen_cut]=self.my_bender_repo.generate_cuts(self.my_lower_bound_LP.lp_primal_solution)#,self.my_lower_bound_ILP.milp_solution)
+                    [tot_cut_value,TOT_gen_cut,tot_time_opt,max_time_opt]=self.my_bender_repo.generate_cuts(self.my_lower_bound_LP.lp_primal_solution)#,self.my_lower_bound_ILP.milp_solution)
+                    this_cutting_plane_info={'tot_cut_value':tot_cut_value,'TOT_gen_cut':TOT_gen_cut,'tot_time_opt':tot_time_opt,'max_time_opt':max_time_opt}
+
                     print('tot_cut_value')
                     print(tot_cut_value)
                     print('TOT_gen_cut')
@@ -338,6 +343,7 @@ class full_solver:
             t1=time.time()
 
             self.history_dict['lblp_lower'].append(new_lp_value)
+            self.history_dict['cuttingPlaneBendInfo'].append(this_cutting_plane_info)
             self.history_dict['prob_sizes_at_start'].append(prob_sizes_at_start)
             self.history_dict['prob_sizes_after_compress'].append(prob_sizes_after_compress)
             self.history_dict['prob_sizes_after_split'].append(prob_sizes_after_split)
@@ -363,7 +369,7 @@ class full_solver:
             print([did_add_ineq,did_split])
             
 
-        input('about to call ilp')
+        #input('about to call ilp')
         if self.jy_opt['do_ilp']>0.5:
             self.call_ILP_solver()
         if self.jy_opt['run_baseline']:
