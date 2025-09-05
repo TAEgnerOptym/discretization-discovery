@@ -751,3 +751,186 @@ def solve_gurobi_lp_bounds(dict_var_name_2_obj,
                 "reduced_costs":reduced_costs
             }
 
+
+
+
+
+def solve_gurobi_lp_bounds_benders_pareto(dict_var_name_2_obj,
+                    dict_var_con_2_lhs_exog,
+                    dict_con_name_2_LB,
+                    dict_var_con_2_lhs_eq,
+                    dict_con_name_2_eq,dict_var_name_2_LB,dict_var_name_2_UB):
+
+    time_pre = time.time()
+
+    # Step 0: Create safe names for variables and constraints
+    var_names = list(dict_var_name_2_obj.keys())
+    con_names_exog = list(dict_con_name_2_LB.keys())
+    con_names_eq = list(dict_con_name_2_eq.keys())
+    all_con_names = list(set(con_names_exog) | set(con_names_eq))
+
+    #var_name_map = {v: f"v{i}" for i, v in enumerate(var_names)}
+    var_name_map = {
+        v: v if len(v) < 20 else f"v{i}"
+        for i, v in enumerate(var_names)}
+    con_name_map = {c: f"c{i}" for i, c in enumerate(all_con_names)}
+
+    var_name_rev = {v_alias: v for v, v_alias in var_name_map.items()}
+    con_name_rev = {c_alias: c for c, c_alias in con_name_map.items()}
+
+    # Remap data structures using safe names
+    safe_var_obj = {var_name_map[k]: v for k, v in dict_var_name_2_obj.items()}
+    safe_exog = {(var_name_map[v], con_name_map[c]): coeff
+                 for (v, c), coeff in dict_var_con_2_lhs_exog.items()}
+    safe_eq_map = {(var_name_map[v], con_name_map[c]): coeff
+                   for (v, c), coeff in dict_var_con_2_lhs_eq.items()}
+    safe_LB = {con_name_map[k]: v for k, v in dict_con_name_2_LB.items()}
+    safe_EQ = {con_name_map[k]: v for k, v in dict_con_name_2_eq.items()}
+
+    safe_var_LB = {var_name_map[k]: v for k, v in dict_var_name_2_LB.items()}
+    safe_var_UB = {var_name_map[k]: v for k, v in dict_var_name_2_UB.items()}
+    #if 1>0: 
+        #newlb_safe_exog = {
+        #    (v, c): coeff
+        #    for (v, c), coeff in dict_var_con_2_lhs_exog.items()
+        #    if isinstance(c, str) and c.startswith("NewLB_")
+        #}
+        #if len(newlb_safe_exog)>0.5:
+        #    print('IN THIS SPOT IN GUR LP')
+        #    print(newlb_safe_exog)
+        #    input('---')
+        #else:
+        #    print('empty 333')
+
+    options = {
+        "WLSACCESSID": "b7836a23-3df1-40ac-be4d-310282e2178e",
+        "WLSSECRET": "8dd2c11c-cb9b-46f3-b072-4887712ea0c9",
+        "LICENSEID": 2690165
+    }
+    original_stdout = sys.stdout
+    sys.stdout = open(os.devnull, 'w')
+    with gp.Env(params=options) as env:
+        with gp.Model("converted_LP", env=env) as model:
+            sys.stdout =original_stdout
+            model.setParam("OutputFlag", 0)  # Suppress solver output
+            model.setParam("Method" , 2)
+            model.setParam("Crossover" , 0)        # 2 = Barrier (interior-point)
+            model.setParam("BarConvTol", 1e-4)# =
+            #model.Params.Crossover = 0     # 0 = disable crossover (skip simplex cleanup)
+
+            #model.setParam("Method", 1)
+            # Step 1: Add variables
+            var_dict = {}
+            for name, obj_coeff in safe_var_obj.items():
+                lb = safe_var_LB.get(name, 0.0)
+                ub = safe_var_UB.get(name, GRB.INFINITY)
+                #if lb>0 or ub<100000:
+                #    print('[lb,ub]')
+                 #   print([lb,ub])
+                 #   input('here')
+                var_dict[name] = model.addVar(lb=lb, ub=ub, obj=obj_coeff, name=name)
+
+
+            model.update()
+
+            # Step 2: Group and add constraints
+            group_exog = defaultdict(list)
+            for (var, con), coeff in safe_exog.items():
+                group_exog[con].append((var_dict[var], coeff))
+
+            group_eq = defaultdict(list)
+            for (var, con), coeff in safe_eq_map.items():
+                group_eq[con].append((var_dict[var], coeff))
+
+            #print('lookin for benders')
+            did_find_benders=False
+            benders_cut_names=[]
+            for con_name, terms in group_exog.items():
+                expr = gp.LinExpr()
+                for var, coeff in terms:
+                    expr.addTerms(coeff, var)
+                model.addConstr(expr >= safe_LB[con_name], name=con_name)
+                if 0>1 and con_name_rev[con_name].startswith('Benders'):
+                    print('----')
+                    print('----')
+                    print('----')
+                    print('expr')
+                    print(expr)
+                    print('safe_LB[con_name]')
+                    print(safe_LB[con_name])
+                    print('con_name_rev[con_name]')
+                    print(con_name_rev[con_name])
+                #    did_find_benders=True
+                #    benders_cut_names.append(con_name)
+                #    input('--')
+            for con_name, terms in group_eq.items():
+                expr = gp.LinExpr()
+                for var, coeff in terms:
+                    expr.addTerms(coeff, var)
+                model.addConstr(expr == safe_EQ[con_name], name=con_name)
+    
+            model.ModelSense = GRB.MINIMIZE
+
+            time_pre = time.time() - time_pre
+            #print('Starting Gur LP')
+            time_opt = time.time()
+            model.optimize()
+            time_opt = time.time() - time_opt
+            #print('DONE Gur LP')
+
+            time_post = time.time()
+
+            if 1<0 and model.status != GRB.OPTIMAL:
+
+                print('model.status')
+                print(model.status)
+                model.write('ERROR_MODEL.mps')
+                _ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+                _snap = Path(f"debug_snapshot_{_ts}.pkl.gz")
+
+                _locals = locals().copy()
+
+                def _can_pickle(x):
+                    try:
+                        pickle.dumps(x)
+                        return True
+                    except Exception:
+                        return False
+
+                _safe = {k: v for k, v in _locals.items() if _can_pickle(v)}
+
+                # also capture a shallow, pickle-safe view of self (if present)
+                if "self" in _locals:
+                    _safe["self_shallow"] = {
+                        k: v for k, v in vars(_locals["self"]).items() if _can_pickle(v)
+                    }
+
+                with gzip.open(_snap, "wb") as f:
+                    pickle.dump(_safe, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+                raise RuntimeError("Gurobi did not find an optimal solution.")
+
+            # Step 3: Recover solutions and remap names
+            primal_solution = {
+                var_name_rev[var.VarName]: var.X for var in model.getVars()
+            }
+
+            dual_solution = {
+                con_name_rev[con.ConstrName]: con.Pi for con in model.getConstrs()
+            }
+
+            objective = model.ObjVal
+            time_post = time.time() - time_post
+            reduced_costs   = {var_name_rev[var.VarName]: var.RC for var in model.getVars()}
+
+            
+            return {
+                "primal_solution": primal_solution,
+                "dual_solution": dual_solution,
+                "objective": objective,
+                "time_pre": time_pre,
+                "time_opt": time_opt,
+                "time_post": time_post,
+                "reduced_costs":reduced_costs
+            }
+

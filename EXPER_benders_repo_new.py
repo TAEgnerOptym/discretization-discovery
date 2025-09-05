@@ -4,6 +4,7 @@ import random
 import re
 from collections import defaultdict
 from solve_gurobi_lp import solve_gurobi_lp_bounds
+from solve_gurobi_lp import solve_gurobi_lp_bounds_benders_pareto
 import numpy as np
 import sys
 from itertools import chain, combinations
@@ -16,15 +17,15 @@ from typing import Dict, Hashable, Tuple
 
 MIN_LP_OBJECTIVE_CUT=0.1
 COVER_EPSILON=0.0001
-OFFSET_COST_CUT=0.0000001
+OFFSET_COST_CUT=0.0001
 EPSILON_STANDARD=0.0001
 EPSILON_RHS_SUB=0.000001
-EPSILON_EDGE=0.0001
-EPSILON_MULT_PARETO_OBJ=0.0000001
-USE_RAND=1
-MAX_SIZE_CHOOSE_K=50
-VAL_STOP_ADDING_CUTS=100
-MY_SIZES_USE=[5,9]
+EPSILON_EDGE=0.00001
+EPSILON_MULT_PARETO_OBJ=0.0001
+USE_RAND=0
+MAX_SIZE_CHOOSE_K=230
+VAL_STOP_ADDING_CUTS=100000000
+MY_SIZES_USE=[9]
 
 def powerset(iterable):
     s = list(iterable)
@@ -62,9 +63,11 @@ class benders_cut_generator:
             self.dict_var_name_2_LB[var_name]=0
             self.dict_var_name_2_UB[var_name]=np.inf
    
-    
+
     def call_lp_pareto(self,x):
+        #print('part 1 of cut')
         [primal_solution_ORIG,dual_solution_ORIG,lp_objective_ORIG,time_opt_ORIG]=self.call_lp(x)
+        #print('part 2 of cut')
 
         if lp_objective_ORIG<MIN_LP_OBJECTIVE_CUT:
             return [primal_solution_ORIG,dual_solution_ORIG,lp_objective_ORIG,time_opt_ORIG]
@@ -105,14 +108,21 @@ class benders_cut_generator:
             val=eta[var_name]
             PARETO_dict_con_name_2_LB[con_name]+=my_mult*val
         
-        #self.dict_var_name_2_LB[z_var]=.9999
-        #self.dict_var_name_2_UB[z_var]=1.0001
+        #print('PARETO_dict_con_name_2_LB')
+        #p#rint(PARETO_dict_con_name_2_LB)
+        #i#nput('---')
+        self.dict_var_name_2_LB[z_var]=.9999
+        self.dict_var_name_2_UB[z_var]=1.0001
+        #print('part 3 of cut')
 
-        out_solution=solve_gurobi_lp_bounds(PARETO_dict_var_name_2_obj,
+        out_solution=solve_gurobi_lp_bounds_benders_pareto(PARETO_dict_var_name_2_obj,
                     PARETO_dict_var_con_2_lhs_exog,
                     PARETO_dict_con_name_2_LB,
                     self.dict_var_con_2_lhs_eq,
+                    #self.dict_con_name_2_eq,dict(),dict())
                     self.dict_con_name_2_eq,self.dict_var_name_2_LB,self.dict_var_name_2_UB)
+        #print('part 4 of cut')
+
         dual_solution=out_solution['dual_solution']
         primal_solution=out_solution['primal_solution']
         lp_objective=out_solution['objective']
@@ -120,20 +130,28 @@ class benders_cut_generator:
         time_opt_tot=time_opt+time_opt_ORIG
 
         check_obj=0
+        check_orig_backup=0
         for v in self.dict_var_name_2_obj:
             check_obj+=primal_solution[v]*self.dict_var_name_2_obj[v]
-        if abs(check_obj-lp_objective_ORIG)<lp_objective_ORIG*0.001:
+            check_orig_backup+=primal_solution_ORIG[v]*self.dict_var_name_2_obj[v]
+        if abs(check_obj-lp_objective_ORIG)>lp_objective_ORIG*0.1:
             print('check_obj')
             print(check_obj)
+            print('check_orig_backup')
+            print(check_orig_backup)
             print('lp_objective_ORIG')
             print(lp_objective_ORIG)
             print('primal_solution[z_var]')
             print(primal_solution[z_var])
+            print('PARETO_dict_var_name_2_obj[z_var]')
+            print(PARETO_dict_var_name_2_obj[z_var])
+            print('z_var')
+            print(z_var)
             input('error')
         #else:
         #    print('passed')
         #    input('---')
-            
+        #print('done cut')
         return [primal_solution,dual_solution,check_obj,time_opt_tot]
 
 
@@ -154,6 +172,7 @@ class benders_cut_generator:
                 var_name='act_'+str(u)+'_'+str(v)
                 if var_name not in self.MF.action_2_cost or (var_name in self.MF.delta_name_2_ub and self.MF.delta_name_2_ub[var_name]<EPSILON_STANDARD):
                     self.dict_var_name_2_UB[var]=0
+                    #input('did find')
                     
         self.dict_con_name_2_LB=dict_con_name_2_LB
         #print('calling LP')
@@ -161,13 +180,15 @@ class benders_cut_generator:
                     self.dict_var_con_2_lhs_exog,
                     self.dict_con_name_2_LB,
                     self.dict_var_con_2_lhs_eq,
-                    self.dict_con_name_2_eq,self.dict_var_name_2_LB,self.dict_var_name_2_UB)
+                    self.dict_con_name_2_eq,dict(),dict())
+                    #self.dict_con_name_2_eq,self.dict_var_name_2_LB,self.dict_var_name_2_UB)
         dual_solution=out_solution['dual_solution']
         primal_solution=out_solution['primal_solution']
         lp_objective=out_solution['objective']
         time_opt=out_solution['time_opt']
         return [primal_solution,dual_solution,lp_objective,time_opt]
     def generate_benders_cut(self,x,OPT_X_input=None):
+        
         self.in_x=x
         self.OPT_X_input=OPT_X_input
         tot_cut_value=0
@@ -230,6 +251,20 @@ class benders_repo_new:
         #input('hi')
         
         self.MF=my_full_prob
+
+        self.MF.jy_opt.update({
+            "MIN_LP_OBJECTIVE_CUT":      MIN_LP_OBJECTIVE_CUT,
+            "COVER_EPSILON":             COVER_EPSILON,
+            "OFFSET_COST_CUT":           OFFSET_COST_CUT,
+            "EPSILON_STANDARD":          EPSILON_STANDARD,
+            "EPSILON_RHS_SUB":           EPSILON_RHS_SUB,
+            "EPSILON_EDGE":              EPSILON_EDGE,
+            "EPSILON_MULT_PARETO_OBJ":   EPSILON_MULT_PARETO_OBJ,
+            "USE_RAND":                  USE_RAND,
+            "MAX_SIZE_CHOOSE_K":         MAX_SIZE_CHOOSE_K,
+            "VAL_STOP_ADDING_CUTS":      VAL_STOP_ADDING_CUTS,
+            "MY_SIZES_USE":              MY_SIZES_USE,
+        })
         if not hasattr(self.MF, "act_2_uv"):
             self.MF.act_2_uv = {}
 
@@ -257,6 +292,13 @@ class benders_repo_new:
 
     def generate_cuts(self,x_solution,OPT_X_input=None):
         
+        self.x_solution=x_solution
+        debug_on=False
+        if debug_on==True:
+            with open("PlayHere.pkl", "wb") as f:
+                print('saving prior')
+                pickle.dump(self, f)
+                print('done saving prior')
         tot_cut_value=0
         TOT_gen_cut=0
         tot_time_opt=0
@@ -264,8 +306,8 @@ class benders_repo_new:
 
         for my_bend_prob in random.sample(self.my_list_benders_cut_generator,len(self.my_list_benders_cut_generator)):
  #           print('generating cut ')
- #           print('my_bend_prob.sub_prob_name')
-#            print(my_bend_prob.sub_prob_name)
+            print('my_bend_prob.sub_prob_name')
+            print(my_bend_prob.sub_prob_name)
 #            print('----')
             [this_cut_value,did_gen_cut,this_time_opt]=my_bend_prob.generate_benders_cut(x_solution,OPT_X_input)
             if did_gen_cut==True:
@@ -355,6 +397,16 @@ class sub_problem:
         self.make_matching_constrs_sink()
 
         self.make_valid_ineq_con()
+        self.make_dual_lp_PRE()
+
+    def make_dual_lp_PRE(self):
+
+        self.DUAL_A_ineq=dict()
+
+        self.DUAL_r_ineq=dict()
+        self.DUAL_var_LB=dict()
+        self.DUAL_var_B=dict()
+
 
     def get_my_sz_pairs_by_size(self, K):
         m_sz_pairs = []

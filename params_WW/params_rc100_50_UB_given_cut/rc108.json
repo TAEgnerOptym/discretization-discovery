@@ -3,7 +3,7 @@
 "LAB_MP_ON":1,
 "use_diving_ineq":1,
 "ub_use_remove":598.001,
-"maxVarsAdd_in_ITER":10,
+"maxVarsAdd_in_ITER":0,
 "use_ng_size_init":0,
 "use_packing_in_construction":1,
 "LAB_MP_neigh_use_power":9,
@@ -29,7 +29,7 @@
 "use_delta_in_milp":1,
 "use_delta_in_lp":1,
 "turn_off_non_active_fg_project":0,
-"max_iterations_loop_compress_project":100,
+"max_iterations_loop_compress_project":40,
 "use_ineq":1,
 
 
@@ -52,5 +52,5 @@
 "in_demo_mode":0,
 "offset_cost_edge_project":0,
 "weight_slack_projector":0.00001,
-"max_ILP_time":1000
+"max_ILP_time":2000
 }
