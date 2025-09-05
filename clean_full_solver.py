@@ -23,7 +23,8 @@ from baseline_solver import baseline_solver
 import json
 from New_valid_sep.check_valid_round_2 import check_valid_round_2
 from projector_on_lb import projector_on_lb
-from benders_repo_new import benders_repo_new
+#from benders_repo_new import benders_repo_new
+from EXPER_benders_repo_new import benders_repo_new
 class full_solver:
 
     def __init__(self,full_input_dict,jy_opt,output_file_path,all_actions_inclumbent=None,actions_ignore=None,hist_terms_phase_one=None,init_disc=None):
@@ -189,7 +190,7 @@ class full_solver:
 
             tot_cost=0
             for my_act in self.all_actions:
-                out_sol[my_act]=my_ilp_sol[my_act]
+                #out_sol[my_act]=my_ilp_sol[my_act]
                 if my_ilp_sol[my_act]>0.5:
                     tot_cost=tot_cost+self.action_2_cost[my_act]
 
@@ -476,9 +477,9 @@ class full_solver:
                 self.full_input_dict['actionCon2Contrib'][tuple([act,con_name_ineq])]=1#self.delta_con_2_contrib[v_con]
                 new_action_contrib[tuple([act,con_name_ineq])]=1
                 all_acts.append(act)
-            print('all_acts')
-            print(all_acts)
-            print('all_acts')
+            #print('all_acts')
+            #print(all_acts)
+            #print('all_acts')
         did_add_ineq=False
         if len(result)>0.5:
             did_add_ineq=True
@@ -557,8 +558,8 @@ class full_solver:
             for act in self.Z_by_group_inside[g]:
                 self.full_input_dict['actionCon2Contrib'][tuple([act,con_name_ineq])]=-1#self.delta_con_2_contrib[v_con]
                 new_action_contrib[tuple([act,con_name_ineq])]=-1
-                print('tuple([act,con_name_ineq])')
-                print(tuple([act,con_name_ineq]))
+                #print('tuple([act,con_name_ineq])')
+                #print(tuple([act,con_name_ineq]))
         did_add_ineq=False
         if len(result)>0.5:
             did_add_ineq=True

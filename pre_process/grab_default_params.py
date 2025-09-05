@@ -3,6 +3,7 @@ import numpy as np
 def grab_default_params():
 
 	my_params=dict()
+	my_params['ParetoEps']=0.00001
 	my_params['turn_off_time_windows']=False
 	my_params['deactivate_time_graph']=False
 	my_params['deactivate_demand_graph']=False

@@ -36,7 +36,7 @@ out_name='RC102_50_cust.json'
 #out_name='RC208_50_cust.json'
 
 
-default_input='data/jy_RC107.txt'
+default_input='data/jy_RC101.txt'
 default_option_path='my_params_RC.json'
 out_name='RC208_50_cust.json'
 #default_input='data/jy_RC208.txt'

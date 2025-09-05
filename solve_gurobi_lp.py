@@ -697,7 +697,7 @@ def solve_gurobi_lp_bounds(dict_var_name_2_obj,
 
             time_post = time.time()
 
-            if model.status != GRB.OPTIMAL:
+            if 1<0 and model.status != GRB.OPTIMAL:
 
                 print('model.status')
                 print(model.status)

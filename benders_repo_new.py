@@ -8,7 +8,7 @@ import pickle
 sys.path.append("pre_process")
 
 from naive_pre import *
-EPSILON=0.0001
+EPSILON=0.00001
 
 from typing import Dict, Hashable, Tuple
 def powerset(iterable):
