@@ -2794,8 +2794,8 @@ class lower_bound_LP_milp:
         # --- 2) Build per-graph action weights ------------------------------------
         # For each h: weight for 'null_action' is 0; non-null actions map from duals.
         BIGPOS = 9.9999999999e11
-        EPS = 1e-8
-        EPS_MULT_END=2000
+        EPS = 1e-5
+        EPS_MULT_END=0#2000
         graph_act_2_weight = {}
         for h in self.graph_name_2_nodes:
             w = {self.null_action: 0.0}

@@ -21,7 +21,10 @@ import argparse
 #out_name='R104_100_cust.json'
 
 default_input='data/jy_C104.txt'
-default_option_path='my_params_C.json'
+#default_option_path='my_params_C.json'
+#default_option_path='params_WW/params_c100_50_UB_given_cut/c104.json'
+default_option_path='params_WW/params_c100_100_UB_given_cut/c104.json'
+
 out_name='RC102_50_cust.json'
 
 
@@ -36,9 +39,9 @@ out_name='RC102_50_cust.json'
 #out_name='RC208_50_cust.json'
 
 
-default_input='data/jy_RC101.txt'
-default_option_path='my_params_RC.json'
-out_name='RC208_50_cust.json'
+#default_input='data/jy_RC101.txt'
+#default_option_path='my_params_RC.json'
+#out_name='RC208_50_cust.json'
 #default_input='data/jy_RC208.txt'
 #default_option_path='my_params_RC.json'
 #default_input='data/jy_RC107.txt'

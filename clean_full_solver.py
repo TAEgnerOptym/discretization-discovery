@@ -193,11 +193,11 @@ class full_solver:
                 #out_sol[my_act]=my_ilp_sol[my_act]
                 if my_ilp_sol[my_act]>0.5:
                     tot_cost=tot_cost+self.action_2_cost[my_act]
-
-            for my_prim in self.all_primitive_vars:
-                if my_prim in my_ilp_sol:
-                    if my_ilp_sol[my_prim]>0.01:
-                        out_sol[my_prim]=my_ilp_sol[my_prim]
+                    out_sol[my_act]=1#my_ilp_sol[my_act]
+            #for my_prim in self.all_primitive_vars:
+            #    if my_prim in my_ilp_sol:
+            #        if my_ilp_sol[my_prim]>0.01:
+            #            out_sol[my_prim]=my_ilp_sol[my_prim]
             self.history_dict['jy_opt']=self.jy_opt
             self.history_dict['output_ilp_solution']=out_sol
         

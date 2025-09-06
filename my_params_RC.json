@@ -1,8 +1,8 @@
 {
-"num_cust_use":50,
-"LAB_MP_ON":1,
+"num_cust_use":25,
+"LAB_MP_ON":0,
 "use_diving_ineq":1,
-"ub_use_remove":944.001,
+"ub_use_remove":462.1001,
 "maxVarsAdd_in_ITER":10,
 "use_ng_size_init":0,
 "use_packing_in_construction":1,

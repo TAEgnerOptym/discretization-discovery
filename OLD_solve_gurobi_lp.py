@@ -361,6 +361,9 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
         if k.startswith("fancy")
         and dict_var_name_2_LB[k] ==dict_var_name_2_UB.get(k)
     ]
+    #print('fancy_fixed_keys HEREE')
+    #print(fancy_fixed_keys)
+    #input("---")
 
     with gp.Env(params=options) as env:
         with gp.Model("converted_MILP", env=env) as model:
@@ -484,20 +487,33 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
             for (var, con), coeff in safe_eq_map.items():
                 group_eq[con].append((var_dict[var], coeff))
 
-            for con_name, terms in group_exog.items():
-                #if not terms:   # skip empty lists
-                #    continue
-                vars_, coeffs = zip(*terms)                     # unpack once
-                expr = gp.LinExpr(coeffs, vars_)                # build in C
-                model.addConstr(expr >= safe_LB[con_name], name=con_name)
+            if USE_WORKING_I_KNOW_SLOW:
+                for con_name, terms in group_exog.items():
+                    expr = gp.LinExpr()
+                    for var, coeff in terms:
+                        expr.addTerms(coeff, var)
+                    model.addConstr(expr >= safe_LB[con_name], name=con_name)
+                
+                for con_name, terms in group_eq.items():
+                    expr = gp.LinExpr()
+                    for var, coeff in terms:
+                        expr.addTerms(coeff, var)
+                    model.addConstr(expr == safe_EQ[con_name], name=con_name)
+            else:
+                for con_name, terms in group_exog.items():
+                    #if not terms:   # skip empty lists
+                    #    continue
+                    vars_, coeffs = zip(*terms)                     # unpack once
+                    expr = gp.LinExpr(coeffs, vars_)                # build in C
+                    model.addConstr(expr >= safe_LB[con_name], name=con_name)
 
-            # Equality constraints
-            for con_name, terms in group_eq.items():
-                #if not terms:
-                #    continue
-                vars_, coeffs = zip(*terms)
-                expr = gp.LinExpr(coeffs, vars_)
-                model.addConstr(expr == safe_EQ[con_name], name=con_name)
+                # Equality constraints
+                for con_name, terms in group_eq.items():
+                    #if not terms:
+                    #    continue
+                    vars_, coeffs = zip(*terms)
+                    expr = gp.LinExpr(coeffs, vars_)
+                    model.addConstr(expr == safe_EQ[con_name], name=con_name)
 
 
             model.ModelSense = GRB.MINIMIZE
@@ -583,7 +599,183 @@ def solve_gurobi_lp_bounds(dict_var_name_2_obj,
                     dict_var_con_2_lhs_exog,
                     dict_con_name_2_LB,
                     dict_var_con_2_lhs_eq,
-                    dict_con_name_2_eq,dict_var_name_2_LB,dict_var_name_2_UB,use_pareto=False):
+                    dict_con_name_2_eq,dict_var_name_2_LB,dict_var_name_2_UB):
+
+    time_pre = time.time()
+    time_pre_1 = time.time()
+
+    # Step 0: Create safe names for variables and constraints
+    var_names = list(dict_var_name_2_obj.keys())
+    con_names_exog = list(dict_con_name_2_LB.keys())
+    con_names_eq = list(dict_con_name_2_eq.keys())
+    all_con_names = list(set(con_names_exog) | set(con_names_eq))
+
+    #var_name_map = {v: f"v{i}" for i, v in enumerate(var_names)}
+    var_name_map = {
+        v: v if len(v) < 20 else f"v{i}"
+        for i, v in enumerate(var_names)}
+    con_name_map = {c: f"c{i}" for i, c in enumerate(all_con_names)}
+
+    var_name_rev = {v_alias: v for v, v_alias in var_name_map.items()}
+    con_name_rev = {c_alias: c for c, c_alias in con_name_map.items()}
+
+    time_pre_1=time.time()-time_pre_1
+    time_pre_2=time.time()
+    # Remap data structures using safe names
+    safe_var_obj = {var_name_map[k]: v for k, v in dict_var_name_2_obj.items()}
+    safe_exog = {(var_name_map[v], con_name_map[c]): coeff
+                 for (v, c), coeff in dict_var_con_2_lhs_exog.items()}
+    safe_eq_map = {(var_name_map[v], con_name_map[c]): coeff
+                   for (v, c), coeff in dict_var_con_2_lhs_eq.items()}
+    safe_LB = {con_name_map[k]: v for k, v in dict_con_name_2_LB.items()}
+    safe_EQ = {con_name_map[k]: v for k, v in dict_con_name_2_eq.items()}
+
+    safe_var_LB = {var_name_map[k]: v for k, v in dict_var_name_2_LB.items()}
+    safe_var_UB = {var_name_map[k]: v for k, v in dict_var_name_2_UB.items()}
+    #if 1>0: 
+        #newlb_safe_exog = {
+        #    (v, c): coeff
+        #    for (v, c), coeff in dict_var_con_2_lhs_exog.items()
+        #    if isinstance(c, str) and c.startswith("NewLB_")
+        #}
+        #if len(newlb_safe_exog)>0.5:
+        #    print('IN THIS SPOT IN GUR LP')
+        #    print(newlb_safe_exog)
+        #    input('---')
+        #else:
+        #    print('empty 333')
+    time_pre_2=time.time()-time_pre_2
+    time_pre_3=time.time()
+    options = {
+        "WLSACCESSID": "b7836a23-3df1-40ac-be4d-310282e2178e",
+        "WLSSECRET": "8dd2c11c-cb9b-46f3-b072-4887712ea0c9",
+        "LICENSEID": 2690165
+    }
+    original_stdout = sys.stdout
+    sys.stdout = open(os.devnull, 'w')
+    with gp.Env(params=options) as env:
+        with gp.Model("converted_LP", env=env) as model:
+            sys.stdout =original_stdout
+            model.setParam("OutputFlag", 0)  # Suppress solver output
+            #model.setParam("Method", 1)
+            # Step 1: Add variables
+            var_dict = {}
+            for name, obj_coeff in safe_var_obj.items():
+                lb = safe_var_LB.get(name, 0.0)
+                ub = safe_var_UB.get(name, GRB.INFINITY)
+                #if lb>0 or ub<100000:
+                #    print('[lb,ub]')
+                 #   print([lb,ub])
+                 #   input('here')
+                var_dict[name] = model.addVar(lb=lb, ub=ub, obj=obj_coeff, name=name)
+
+            time_pre_3=time.time()-time_pre_3
+            time_pre_4=time.time()
+            model.update()
+
+            # Step 2: Group and add constraints
+            if 1<0:
+                group_exog = defaultdict(list)
+                for (var, con), coeff in safe_exog.items():
+                    group_exog[con].append((var_dict[var], coeff))
+
+                group_eq = defaultdict(list)
+                for (var, con), coeff in safe_eq_map.items():
+                    group_eq[con].append((var_dict[var], coeff))
+            else:
+                vget = var_dict.__getitem__
+                group_exog = defaultdict(list)
+                [group_exog[con].append((vget(var), coeff)) for (var, con), coeff in safe_exog.items()]
+
+                # build group_eq
+                group_eq = defaultdict(list)
+                [group_eq[con].append((vget(var), coeff)) for (var, con), coeff in safe_eq_map.items()]
+
+
+            time_pre_4=time.time()-time_pre_4
+            time_pre_5=time.time()
+            #print('lookin for benders')
+            if USE_WORKING_I_KNOW_SLOW:
+                for con_name, terms in group_exog.items():
+                    expr = gp.LinExpr()
+                    for var, coeff in terms:
+                        expr.addTerms(coeff, var)
+                    model.addConstr(expr >= safe_LB[con_name], name=con_name)
+                
+                for con_name, terms in group_eq.items():
+                    expr = gp.LinExpr()
+                    for var, coeff in terms:
+                        expr.addTerms(coeff, var)
+                    model.addConstr(expr == safe_EQ[con_name], name=con_name)
+            else:
+                for con_name, terms in group_exog.items():
+                    #if not terms:   # skip empty lists
+                    #    continue
+                    vars_, coeffs = zip(*terms)                     # unpack once
+                    expr = gp.LinExpr(coeffs, vars_)                # build in C
+                    model.addConstr(expr >= safe_LB[con_name], name=con_name)
+
+                # Equality constraints
+                for con_name, terms in group_eq.items():
+                    #if not terms:
+                    #    continue
+                    vars_, coeffs = zip(*terms)
+                    expr = gp.LinExpr(coeffs, vars_)
+                    model.addConstr(expr == safe_EQ[con_name], name=con_name)
+            model.ModelSense = GRB.MINIMIZE
+            time_pre_5=time.time()-time_pre_5
+            time_pre = time.time() - time_pre
+            #print('Starting Gur LP')
+            time_opt = time.time()
+            model.optimize()
+            time_opt = time.time() - time_opt
+            #print('DONE Gur LP')
+
+            time_post = time.time()
+
+            # Step 3: Recover solutions and remap names
+            primal_solution = {
+                var_name_rev[var.VarName]: var.X for var in model.getVars()
+            }
+
+            dual_solution = {
+                con_name_rev[con.ConstrName]: con.Pi for con in model.getConstrs()
+            }
+            debug_on=False
+            if debug_on:
+                s1=dict_con_name_2_LB.keys()-dual_solution.keys()
+                if len(s1)>0:
+                    print('s1')
+                    print(s1)
+                    print('len(s1)')
+                    print(len(s1))
+                    input('error here')
+            objective = model.ObjVal
+            time_post = time.time() - time_post
+            reduced_costs   = {var_name_rev[var.VarName]: var.RC for var in model.getVars()}
+
+            print('[time_pre_1,time_pre_2,time_pre_3,time_pre_4,time_pre_5,time_post,time_opt]')
+            print([time_pre_1,time_pre_2,time_pre_3,time_pre_4,time_pre_5,time_post,time_opt])
+            print('--')
+            return {
+                "primal_solution": primal_solution,
+                "dual_solution": dual_solution,
+                "objective": objective,
+                "time_pre": time_pre,
+                "time_opt": time_opt,
+                "time_post": time_post,
+                "reduced_costs":reduced_costs
+            }
+
+
+
+
+
+def solve_gurobi_lp_bounds_benders_pareto(dict_var_name_2_obj,
+                    dict_var_con_2_lhs_exog,
+                    dict_con_name_2_LB,
+                    dict_var_con_2_lhs_eq,
+                    dict_con_name_2_eq,dict_var_name_2_LB,dict_var_name_2_UB):
 
     time_pre = time.time()
 
@@ -593,6 +785,7 @@ def solve_gurobi_lp_bounds(dict_var_name_2_obj,
     con_names_eq = list(dict_con_name_2_eq.keys())
     all_con_names = list(set(con_names_exog) | set(con_names_eq))
 
+    #var_name_map = {v: f"v{i}" for i, v in enumerate(var_names)}
     var_name_map = {
         v: v if len(v) < 20 else f"v{i}"
         for i, v in enumerate(var_names)}
@@ -612,6 +805,18 @@ def solve_gurobi_lp_bounds(dict_var_name_2_obj,
 
     safe_var_LB = {var_name_map[k]: v for k, v in dict_var_name_2_LB.items()}
     safe_var_UB = {var_name_map[k]: v for k, v in dict_var_name_2_UB.items()}
+    #if 1>0: 
+        #newlb_safe_exog = {
+        #    (v, c): coeff
+        #    for (v, c), coeff in dict_var_con_2_lhs_exog.items()
+        #    if isinstance(c, str) and c.startswith("NewLB_")
+        #}
+        #if len(newlb_safe_exog)>0.5:
+        #    print('IN THIS SPOT IN GUR LP')
+        #    print(newlb_safe_exog)
+        #    input('---')
+        #else:
+        #    print('empty 333')
 
     options = {
         "WLSACCESSID": "b7836a23-3df1-40ac-be4d-310282e2178e",
@@ -623,46 +828,87 @@ def solve_gurobi_lp_bounds(dict_var_name_2_obj,
     with gp.Env(params=options) as env:
         with gp.Model("converted_LP", env=env) as model:
             sys.stdout =original_stdout
-            model.setParam("OutputFlag", 0)  
-            if use_pareto==True:
-                model.setParam("OutputFlag", 0)  # Suppress solver output
-                model.setParam("Method" , 2)
-                model.setParam("Crossover" , 0)        # 2 = Barrier (interior-point)
-                model.setParam("BarConvTol", 1e-4)
+            model.setParam("OutputFlag", 0)  # Suppress solver output
+            model.setParam("Method" , 2)
+            model.setParam("Crossover" , 0)        # 2 = Barrier (interior-point)
+            model.setParam("BarConvTol", 1e-4)# =
+            #model.Params.Crossover = 0     # 0 = disable crossover (skip simplex cleanup)
+
+            #model.setParam("Method", 1)
+            # Step 1: Add variables
             var_dict = {}
             for name, obj_coeff in safe_var_obj.items():
                 lb = safe_var_LB.get(name, 0.0)
                 ub = safe_var_UB.get(name, GRB.INFINITY)
+                #if lb>0 or ub<100000:
+                #    print('[lb,ub]')
+                 #   print([lb,ub])
+                 #   input('here')
                 var_dict[name] = model.addVar(lb=lb, ub=ub, obj=obj_coeff, name=name)
 
 
             model.update()
 
-            group_exog = defaultdict(list)
-            for (var, con), coeff in safe_exog.items():
-                group_exog[con].append((var_dict[var], coeff))
+            # Step 2: Group and add constraints
+            if 1<0:
+                group_exog = defaultdict(list)
+                for (var, con), coeff in safe_exog.items():
+                    group_exog[con].append((var_dict[var], coeff))
 
-            group_eq = defaultdict(list)
-            for (var, con), coeff in safe_eq_map.items():
-                group_eq[con].append((var_dict[var], coeff))
+                group_eq = defaultdict(list)
+                for (var, con), coeff in safe_eq_map.items():
+                    group_eq[con].append((var_dict[var], coeff))
+            else:
+                vget = var_dict.__getitem__
+                group_exog = defaultdict(list)
+                [group_exog[con].append((vget(var), coeff)) for (var, con), coeff in safe_exog.items()]
+
+                # build group_eq
+                group_eq = defaultdict(list)
+                [group_eq[con].append((vget(var), coeff)) for (var, con), coeff in safe_eq_map.items()]
+
+            #print('lookin for benders')
             
-            for con_name, terms in group_exog.items():
-                vars_, coeffs = zip(*terms)                     # unpack once
-                expr = gp.LinExpr(coeffs, vars_)                # build in C
-                model.addConstr(expr >= safe_LB[con_name], name=con_name)
+            if USE_WORKING_I_KNOW_SLOW:
+                for con_name, terms in group_exog.items():
+                    expr = gp.LinExpr()
+                    for var, coeff in terms:
+                        expr.addTerms(coeff, var)
+                    model.addConstr(expr >= safe_LB[con_name], name=con_name)
+                
+                for con_name, terms in group_eq.items():
+                    expr = gp.LinExpr()
+                    for var, coeff in terms:
+                        expr.addTerms(coeff, var)
+                    model.addConstr(expr == safe_EQ[con_name], name=con_name)
+            else:
+                for con_name, terms in group_exog.items():
+                    #if not terms:   # skip empty lists
+                    #    continue
+                    vars_, coeffs = zip(*terms)                     # unpack once
+                    expr = gp.LinExpr(coeffs, vars_)                # build in C
+                    model.addConstr(expr >= safe_LB[con_name], name=con_name)
 
-            for con_name, terms in group_eq.items():
-
-                vars_, coeffs = zip(*terms)
-                expr = gp.LinExpr(coeffs, vars_)
-                model.addConstr(expr == safe_EQ[con_name], name=con_name)
+                # Equality constraints
+                for con_name, terms in group_eq.items():
+                    #if not terms:
+                    #    continue
+                    vars_, coeffs = zip(*terms)
+                    expr = gp.LinExpr(coeffs, vars_)
+                    model.addConstr(expr == safe_EQ[con_name], name=con_name)
             model.ModelSense = GRB.MINIMIZE
 
-            time_pre=time.time()-time_pre
+            time_pre = time.time() - time_pre
+            #print('Starting Gur LP')
             time_opt = time.time()
             model.optimize()
             time_opt = time.time() - time_opt
-            time_post=time.time()
+            #print('DONE Gur LP')
+
+            time_post = time.time()
+
+            
+            # Step 3: Recover solutions and remap names
             primal_solution = {
                 var_name_rev[var.VarName]: var.X for var in model.getVars()
             }
@@ -672,8 +918,10 @@ def solve_gurobi_lp_bounds(dict_var_name_2_obj,
             }
 
             objective = model.ObjVal
+            time_post = time.time() - time_post
             reduced_costs   = {var_name_rev[var.VarName]: var.RC for var in model.getVars()}
-            time_post=time.time()-time_post
+
+            
             return {
                 "primal_solution": primal_solution,
                 "dual_solution": dual_solution,
@@ -684,179 +932,3 @@ def solve_gurobi_lp_bounds(dict_var_name_2_obj,
                 "reduced_costs":reduced_costs
             }
 
-
-
-
-
-
-def NEW_solve_gurobi_lp_bounds(
-    dict_var_name_2_obj,
-    dict_var_con_2_lhs_exog,
-    dict_con_name_2_LB,
-    dict_var_con_2_lhs_eq,
-    dict_con_name_2_eq,
-    dict_var_name_2_LB,
-    dict_var_name_2_UB,use_pareto=False
-):
-    """
-    Super-fast LP builder using Gurobi's matrix API.
-    - No Python loops over terms or constraints.
-    - Variables and constraints added in bulk.
-    - Returns solutions keyed by your original names (we avoid naming inside Gurobi for speed).
-    """
-    import os, sys, time
-    import numpy as np
-    import scipy.sparse as sp
-    import gurobipy as gp
-    from gurobipy import GRB
-
-    t0 = time.time()
-
-    # ---------- Ordered labels ----------
-    # Keep insertion order of your dicts; deterministic and cheap.
-    var_names  = list(dict_var_name_2_obj.keys())
-    exog_names = list(dict_con_name_2_LB.keys())
-    eq_names   = list(dict_con_name_2_eq.keys())
-
-    n = len(var_names)
-    mexog = len(exog_names)
-    meq   = len(eq_names)
-
-    # ---------- Variable data (vectorized) ----------
-    obj = np.fromiter((dict_var_name_2_obj[v]                 for v in var_names), float, count=n)
-    lb  = np.fromiter((dict_var_name_2_LB.get(v, 0.0)         for v in var_names), float, count=n)
-    ub  = np.fromiter((dict_var_name_2_UB.get(v, GRB.INFINITY) for v in var_names), float, count=n)
-
-    # ---------- Helper: build CSR without Python loops ----------
-    def _indexer(values, categories):
-        """Map array of 'values' into indices of 'categories' (both object arrays), vectorized."""
-        order = np.argsort(categories)
-        sorted_cats = categories[order]
-        pos = np.searchsorted(sorted_cats, values)
-        ok = (pos < sorted_cats.size) & (sorted_cats[pos] == values)
-        if not np.all(ok):
-            missing = np.unique(values[~ok]).tolist()
-            raise KeyError(f"Labels not found: {missing[:5]}{'...' if len(missing) > 5 else ''}")
-        return order[pos]
-
-    def build_block(map_dict, row_labels, col_labels):
-        """Convert {(var, con): coeff} -> CSR with rows=row_labels, cols=col_labels, no Python loops."""
-        if not map_dict:
-            return None
-        m, n = len(row_labels), len(col_labels)
-        N = len(map_dict)
-        # keys -> object array of shape (N, 2); vals -> float array
-        keys = np.fromiter(map_dict.keys(), dtype=object, count=N)
-        vals = np.fromiter(map_dict.values(), dtype=float,  count=N)
-        keys = np.stack(keys)       # shape (N, 2): [var, con]
-        vars_arr = keys[:, 0]
-        cons_arr = keys[:, 1]
-        row_labels = np.asarray(row_labels, dtype=object)
-        col_labels = np.asarray(col_labels, dtype=object)
-        rows = _indexer(cons_arr, row_labels)
-        cols = _indexer(vars_arr, col_labels)
-        return sp.coo_matrix((vals, (rows, cols)), shape=(m, n)).tocsr()
-
-    # ---------- Build constraint blocks (vectorized) ----------
-    A_exog = build_block(dict_var_con_2_lhs_exog, exog_names, var_names)  # rows: exog constraints, cols: vars
-    A_eq   = build_block(dict_var_con_2_lhs_eq,   eq_names,   var_names)  # rows: eq constraints,   cols: vars
-
-    rhs_exog = (np.fromiter((dict_con_name_2_LB[c] for c in exog_names), float, count=mexog)
-                if A_exog is not None else None)
-    rhs_eq   = (np.fromiter((dict_con_name_2_eq[c] for c in eq_names),   float, count=meq)
-                if A_eq   is not None else None)
-
-    # Stack into one big matrix constraint to minimize calls into the API
-    have_exog = A_exog is not None
-    have_eq   = A_eq   is not None
-
-    if have_exog and have_eq:
-        A = sp.vstack([A_exog, A_eq], format='csr')
-        rhs = np.concatenate([rhs_exog, rhs_eq])
-        senses = np.concatenate([np.full(mexog, '>'), np.full(meq, '=')])
-        # Keep slice info for later mapping of duals
-        exog_slice = slice(0, mexog)
-        eq_slice   = slice(mexog, mexog + meq)
-    elif have_exog:
-        A = A_exog
-        rhs = rhs_exog
-        senses = np.full(mexog, '>')
-        exog_slice = slice(0, mexog)
-        eq_slice   = slice(0, 0)   # empty
-    elif have_eq:
-        A = A_eq
-        rhs = rhs_eq
-        senses = np.full(meq, '=')
-        exog_slice = slice(0, 0)   # empty
-        eq_slice   = slice(0, meq)
-    else:
-        A = None
-
-    # ---------- Build & solve model (silence license banner) ----------
-    options = {
-        "WLSACCESSID": "b7836a23-3df1-40ac-be4d-310282e2178e",
-        "WLSSECRET":   "8dd2c11c-cb9b-46f3-b072-4887712ea0c9",
-        "LICENSEID":   2690165
-    }
-
-    original_stdout = sys.stdout
-    devnull = open(os.devnull, 'w')
-    sys.stdout = devnull
-    try:
-        with gp.Env(params=options) as env:
-            with gp.Model("lp_fast", env=env) as model:
-                model.setParam("OutputFlag", 0)
-                if use_pareto==True:
-                    model.setParam("OutputFlag", 0)  # Suppress solver output
-                    model.setParam("Method" , 2)
-                    model.setParam("Crossover" , 0)        # 2 = Barrier (interior-point)
-                    model.setParam("BarConvTol", 1e-4)
-                # Add all variables in one shot (continuous by default)
-                x = model.addMVar(shape=n, lb=lb, ub=ub, obj=obj)  # no per-var naming
-
-                # Add all constraints (if any) in a single matrix call
-                mcon = None
-                if A is not None:
-                    mcon = model.addMConstr(A, x, senses, rhs)     # accepts SciPy CSR & sense vector
-
-                model.ModelSense = GRB.MINIMIZE
-
-                time_pre = time.time() - t0
-                t_opt = time.time()
-                model.optimize()
-                time_opt = time.time() - t_opt
-
-                t_post = time.time()
-
-                # Retrieve primal/dual/rc in bulk (NumPy arrays)
-                x_val = x.X          # ndarray of variable values
-                rc    = x.RC         # ndarray of reduced costs (LP) 
-                objv  = float(model.ObjVal)
-
-                # Duals only for continuous LPs; mcon.Pi returns ndarray
-                dual_solution = {}
-                if mcon is not None:
-                    pi = mcon.Pi     # ndarray of size rhs.shape[0]
-                    if mexog:
-                        dual_solution.update(dict(zip(exog_names, map(float, pi[exog_slice]))))
-                    if meq:
-                        dual_solution.update(dict(zip(eq_names,   map(float, pi[eq_slice]))))
-
-                # Map arrays back to your original names without naming inside Gurobi
-                primal_solution = dict(zip(var_names, map(float, x_val)))
-                reduced_costs   = dict(zip(var_names, map(float, rc)))
-
-                time_post = time.time() - t_post
-    finally:
-        sys.stdout = original_stdout
-        devnull.close()
-
-    return {
-        "primal_solution": primal_solution,
-        "dual_solution": dual_solution,
-        "objective": objv,
-        "time_pre": time_pre,
-        "time_opt": time_opt,
-        "time_post": time_post,
-        "reduced_costs": reduced_costs,
-    }
