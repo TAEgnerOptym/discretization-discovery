@@ -23,15 +23,15 @@ from baseline_solver import baseline_solver
 import json
 from New_valid_sep.check_valid_round_2 import check_valid_round_2
 from projector_on_lb import projector_on_lb
-#from benders_repo_new import benders_repo_new
-from EXPER_benders_repo_new import benders_repo_new
+from benders_repo_new import benders_repo_new
+#from EXPER_benders_repo_new import benders_repo_new
 class full_solver:
 
-    def __init__(self,full_input_dict,jy_opt,output_file_path,all_actions_inclumbent=None,actions_ignore=None,hist_terms_phase_one=None,init_disc=None):
+    def __init__(self,full_input_dict,jy_opt,output_file_path,all_actions_inclumbent=None,actions_ignore=None,hist_terms_phase_one=None,init_disc=None,OPT_SOL=None):
         print('type(full_input_dict)')
         print(type(full_input_dict))
         self.all_actions_inclumbent=None
-        
+        self.OPT_SOL=OPT_SOL
         self.D=full_input_dict
         self.count_cutting_planes=0
         self.jy_opt=jy_opt
@@ -266,43 +266,28 @@ class full_solver:
             this_cutting_plane_info={'tot_cut_value':0,'TOT_gen_cut':0,'tot_time_opt':0,'max_time_opt':0}
             if did_split==False and self.jy_opt['ub_use_remove']-new_lp_value>0.001 and self.jy_opt['use_ineq']>0.5:
                 #[did_add_ineq,new_exog_terms,new_action_contrib]=self.separate_zero_val_terms(self.my_lower_bound_LP.lp_primal_solution)
-                [did_add_ineq,new_exog_terms,new_action_contrib]=self.separate_zero_val_terms_internal(self.my_lower_bound_LP.lp_primal_solution)
-                if did_add_ineq==True:
-                    #self.all_source_sink_actions=set(self.all_actions)-set(self.all_actions_not_source_sink_connected)
-                    self.all_actions_inclumbent=self.all_actions_inclumbent.union(self.all_source_sink_actions)
-                use_benders_new=True
+                if self.jy_opt['LAB_MP_ON']>0.5:
+
+                    [did_add_ineq,new_exog_terms,new_action_contrib]=self.separate_zero_val_terms_internal(self.my_lower_bound_LP.lp_primal_solution)
                 
-                if use_benders_new==True:
-                    debug_on=False
-                    if debug_on==True:
-                        print('saving ')
-                        with open("PlayHere.pkl", "wb") as f:
-                            pickle.dump(self, f)
-                        print('donee saving ')
-                    if num_calls_ineq==0:
-                        self.my_bender_repo=benders_repo_new(self)
-
-                    if debug_on==True and num_calls_ineq==0:
-                        
+                if False==hasattr(self,'my_bender_repo'):
+                    self.my_bender_repo=benders_repo_new(self)
+                    debug_on=True
+                    if debug_on==True and self.OPT_SOL==None:
                         self.call_ILP_solver()
-                        tmp=self.my_lower_bound_ILP.milp_solution.copy()
-                        
-                        [this_cut_value,did_gen_cut]=self.my_bender_repo.generate_cuts(tmp,self.my_lower_bound_ILP.milp_solution)
-                        if did_gen_cut>0.5:
-                            input('bad erro not feas')
-                        #else:
-                        #    print('paassing')
-                        #    input()
-                        #input('debugging the term')
-                    [tot_cut_value,TOT_gen_cut,tot_time_opt,max_time_opt]=self.my_bender_repo.generate_cuts(self.my_lower_bound_LP.lp_primal_solution)#,self.my_lower_bound_ILP.milp_solution)
-                    this_cutting_plane_info={'tot_cut_value':tot_cut_value,'TOT_gen_cut':TOT_gen_cut,'tot_time_opt':tot_time_opt,'max_time_opt':max_time_opt}
-
-                    print('tot_cut_value')
-                    print(tot_cut_value)
-                    print('TOT_gen_cut')
-                    print(TOT_gen_cut)
-                    if TOT_gen_cut>0.5:
-                        did_add_ineq=True
+                        self.OPT_SOL=self.my_lower_bound_ILP.milp_solution
+                    #my_ilp_sol=self.my_lower_bound_ILP.milp_solution
+                [tot_cut_value,TOT_gen_cut,tot_time_opt,max_time_opt]=self.my_bender_repo.generate_cuts(self.my_lower_bound_LP.lp_primal_solution,self.OPT_SOL)
+                this_cutting_plane_info={'tot_cut_value':tot_cut_value,'TOT_gen_cut':TOT_gen_cut,'tot_time_opt':tot_time_opt,'max_time_opt':max_time_opt}
+                print('tot_cut_value:  '+ str(tot_cut_value)+'. TOT_gen_cut: '+str(TOT_gen_cut))
+                #print(tot_cut_value)
+                #print('TOT_gen_cut')
+                #print(TOT_gen_cut)
+                if TOT_gen_cut>0.5:
+                    did_add_ineq=True
+                if did_add_ineq==True:
+                    self.all_actions_inclumbent=self.all_actions_inclumbent.union(self.all_source_sink_actions)
+                
                     #input('LOOK ME ')
                 num_calls_ineq=num_calls_ineq+1
 
@@ -355,19 +340,20 @@ class full_solver:
                 self.augment_history_graphs()
             
             print('ITER FINISHE:  '+str(iter))
-            print('new_lp_value=  '+str(new_lp_value))
+            print('new_lBLP_value=  '+str(new_lp_value))
+            print('new ubLP value= '+ str(self.history_dict['ub_lp'][-1]))
             print('did_compress_call:  '+str(did_compress_call))
             print('lp project time '+str(self.history_dict['lp_time_project'][-1]))
             print('lp compress time '+str(self.history_dict['time_compress'][-1]))
             print('lplb time '+str(self.history_dict['lp_time_LB'][-1]))
-            print('prob_sizes_at_start')
-            print(prob_sizes_at_start)
-            print('prob_sizes_after_compress')
+            print('prob_sizes_at_start:  '+ str(prob_sizes_at_start))
+            #print()
+            print('prob_sizes_after_compress:  '+str(prob_sizes_after_compress))
             print(prob_sizes_after_compress)
-            print('prob_sizes_after_split')
-            print(prob_sizes_after_split)
-            print('[did_add_ineq,did_split]')
-            print([did_add_ineq,did_split])
+            print('prob_sizes_after_split:  '+ str(prob_sizes_after_split))
+            #print(prob_sizes_after_split)
+            print('[did_add_ineq = '+str(did_add_ineq)+ '   did_split ='+str(did_split))
+            #print([did_add_ineq,did_split])
             
 
         #input('about to call ilp')
@@ -388,6 +374,10 @@ class full_solver:
 
         self.my_lower_bound_ILP=lower_bound_LP_milp(self,self.graph_node_2_agg_node,True,False)
         new_Ilp_value=self.my_lower_bound_ILP.milp_solution_objective_value
+        if self.jy_opt['ub_use_remove']>0:
+            if new_Ilp_value>0.001+self.jy_opt['ub_use_remove']:
+                print('WOrse that known optimal is generated')
+                input('error here ')
         self.history_dict['OUR_ilp_objective']=new_Ilp_value
         self.history_dict['OUR_MIP_Lower_Bound']=self.my_lower_bound_ILP.MIP_lower_bound
         self.history_dict['OUR_ilp_time']=self.my_lower_bound_ILP.milp_time

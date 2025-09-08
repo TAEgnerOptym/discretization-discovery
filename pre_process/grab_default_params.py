@@ -69,4 +69,20 @@ def grab_default_params():
 	my_params['use_ng_size_init']=0
 	my_params['do_presolve']=0
 	my_params['use_diving_ineq']=0
+
+
+
+	my_params['BEND_MIN_LP_OBJECTIVE_CUT']=0.1
+	my_params['BEND_USE_RAND']=0
+	my_params['BEND_MAX_SIZE_CHOOSE_K']=230
+	my_params['BEND_VAL_STOP_ADDING_CUTS']=100000000
+	my_params['BEND_MY_SIZES_USE']=[9]
+
+	my_params['NUMERICAL_BEND_OFFSET_COST_CUT']=0.0001
+	my_params['NUMERICAL_BEND_EPSILON_MULT_PARETO_OBJ']=0.001
+
+	my_params['NO_PARETO_NUMERICAL_BEND_OFFSET_COST_CUT']=0#0.0001
+	my_params['NO_PARETO_BEND_VAL_STOP_ADDING_CUTS']=1
+
+
 	return my_params

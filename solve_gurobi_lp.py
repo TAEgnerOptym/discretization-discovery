@@ -628,7 +628,7 @@ def solve_gurobi_lp_bounds(dict_var_name_2_obj,
                 model.setParam("OutputFlag", 0)  # Suppress solver output
                 model.setParam("Method" , 2)
                 model.setParam("Crossover" , 0)        # 2 = Barrier (interior-point)
-                model.setParam("BarConvTol", 1e-4)
+                #model.setParam("BarConvTol", 1e-2)
             var_dict = {}
             for name, obj_coeff in safe_var_obj.items():
                 lb = safe_var_LB.get(name, 0.0)
@@ -663,6 +663,13 @@ def solve_gurobi_lp_bounds(dict_var_name_2_obj,
             model.optimize()
             time_opt = time.time() - time_opt
             time_post=time.time()
+            if model.status != GRB.OPTIMAL:
+
+                model.write('errHere.mps')
+                print('model.status')
+                print(model.status)
+                raise RuntimeError("Gurobi did not find an optimal solution.")
+
             primal_solution = {
                 var_name_rev[var.VarName]: var.X for var in model.getVars()
             }

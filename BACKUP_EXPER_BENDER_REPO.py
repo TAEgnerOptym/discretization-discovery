@@ -1,7 +1,5 @@
 import functools
-from math import inf
-import copy
-from math import isclose
+
 import random
 import re
 from collections import defaultdict
@@ -18,16 +16,18 @@ from naive_pre import *
 
 from typing import Dict, Hashable, Tuple
 
-EPSILON_STANDARD=0.000001
-#EPSILON_RHS_SUB=0.000001
-#EPSILON_MULT_PARETO_OBJ=0.00001
-#MIN_LP_OBJECTIVE_CUT=0.1
-#USE_RAND=0
-#MAX_SIZE_CHOOSE_K=230
-#VAL_STOP_ADDING_CUTS=100000000
-#MY_SIZES_USE=[9]
-USE_BEND_OBJ_ALT=0
-DEBUG_ON_PRE=False
+MIN_LP_OBJECTIVE_CUT=0.1
+COVER_EPSILON=0.0001
+OFFSET_COST_CUT=0.01
+EPSILON_STANDARD=0.0001
+EPSILON_RHS_SUB=0.000001
+EPSILON_EDGE=0.00001
+EPSILON_MULT_PARETO_OBJ=0.00001
+USE_RAND=0
+MAX_SIZE_CHOOSE_K=130
+VAL_STOP_ADDING_CUTS=100000000
+MY_SIZES_USE=[9]
+
 def powerset(iterable):
     s = list(iterable)
     return chain.from_iterable(combinations(s, r) for r in range(len(s)+1))
@@ -71,24 +71,15 @@ class benders_cut_generator:
         #    input('error here')
         [primal_solution_ORIG,dual_solution_ORIG,lp_objective_ORIG,time_opt_ORIG]=self.call_lp(x)
         #print('part 2 of cut')
-        time_opt_components=[time_opt_ORIG,0]
 
-        if lp_objective_ORIG<self.MF.jy_opt['BEND_MIN_LP_OBJECTIVE_CUT']:
-            return [primal_solution_ORIG,dual_solution_ORIG,lp_objective_ORIG,time_opt_ORIG,time_opt_components,dict()]
+        if lp_objective_ORIG<MIN_LP_OBJECTIVE_CUT:
+            return [primal_solution_ORIG,dual_solution_ORIG,lp_objective_ORIG,time_opt_ORIG]
         
         PARETO_dict_var_con_2_lhs_exog=self.dict_var_con_2_lhs_exog.copy()
         PARETO_dict_var_name_2_obj=self.dict_var_name_2_obj.copy()
 
         z_var='pareto_var'
-        fact=1000
-        pareto_val=-(1-self.MF.jy_opt['NUMERICAL_BEND_EPSILON_MULT_PARETO_OBJ'])*lp_objective_ORIG
-        #print('before')
-        #print(pareto_val)
-        ##pareto_val=np.ceil(fact*pareto_val)/fact
-        #print('after')
-        #print(pareto_val)
-        #input('--')
-        PARETO_dict_var_name_2_obj[z_var]=pareto_val
+        PARETO_dict_var_name_2_obj[z_var]=-(1-EPSILON_MULT_PARETO_OBJ)*lp_objective_ORIG
         for con_name in self.dict_con_name_2_LB:
             val_1=-self.dict_con_name_2_LB[con_name]
             my_tup=tuple([z_var,con_name])
@@ -98,16 +89,13 @@ class benders_cut_generator:
             eta[my_term]=x[my_term]*0 
         for var_name in x:
             if var_name.startswith('act'):
-                if var_name not in self.MF.action_2_cost or (var_name in self.MF.delta_name_2_ub):# and self.MF.delta_name_2_ub[var_name]<EPSILON_STANDARD):
-                    
-                    if self.MF.delta_name_2_ub[var_name]!=0:
-                        input('error here')
+                if var_name not in self.MF.action_2_cost or (var_name in self.MF.delta_name_2_ub and self.MF.delta_name_2_ub[var_name]<EPSILON_STANDARD):
                     continue
                 else:
                     rand_term=1
-                    if self.MF.jy_opt['BEND_USE_RAND']>0.5:
+                    if USE_RAND>0.5:
                         rand_term=(0.5*(1+np.random.rand()))
-                    pareto_term=1*rand_term
+                    pareto_term=EPSILON_EDGE*rand_term
                     eta[var_name]=pareto_term
                     if eta[var_name]<0:
                         input('error sign')
@@ -123,20 +111,14 @@ class benders_cut_generator:
             val=eta[var_name]
             PARETO_dict_con_name_2_LB[con_name]+=my_mult*val
         
-        #if 1>0:
-        #    PARETO_dict_con_name_2_LB['lower_z']=(1-EPSILON_STANDARD)
-        #    PARETO_dict_con_name_2_LB['upper_z']=-(1+EPSILON_STANDARD)
-        #    PARETO_dict_var_con_2_lhs_exog[tuple(['pareto_var','lower_z'])]=1
-        #    PARETO_dict_var_con_2_lhs_exog[tuple(['pareto_var','upper_z'])]=-1
         #print('PARETO_dict_con_name_2_LB')
         #p#rint(PARETO_dict_con_name_2_LB)
         #i#nput('---')
-        #TMP_dict_var_name_2_LB=self.dict_var_name_2_LB.copy()
-        #TMP_dict_var_name_2_UB=self.dict_var_name_2_UB.copy()
-        #use_bounds_zVar=True
-        #if use_bounds_zVar:
-        #    TMP_dict_var_name_2_LB[z_var]=1-EPSILON_STANDARD
-        #    TMP_dict_var_name_2_UB[z_var]=1+EPSILON_STANDARD
+        TMP_dict_var_name_2_LB=self.dict_var_name_2_LB.copy()
+        TMP_dict_var_name_2_UB=self.dict_var_name_2_UB.copy()
+        if 1<0:
+            TMP_dict_var_name_2_LB[z_var]=.9999
+            TMP_dict_var_name_2_UB[z_var]=1.0001
         #print('part 3 of cut')
 
         #out_solution=solve_gurobi_lp_bounds_benders_pareto(PARETO_dict_var_name_2_obj,
@@ -150,29 +132,49 @@ class benders_cut_generator:
                     PARETO_dict_con_name_2_LB,
                     self.dict_var_con_2_lhs_eq,
                     #self.dict_con_name_2_eq,dict(),dict())
-                    self.dict_con_name_2_eq,self.dict_var_name_2_LB,self.dict_var_name_2_UB,True)
+                    self.dict_con_name_2_eq,TMP_dict_var_name_2_LB,TMP_dict_var_name_2_UB,True)
         #print('part 4 of cut')
 
         dual_solution=out_solution['dual_solution']
         primal_solution=out_solution['primal_solution']
-        reduced_costs_primal=out_solution['reduced_costs']
         lp_objective=out_solution['objective']
         time_opt=out_solution['time_opt']
         time_opt_tot=time_opt+time_opt_ORIG
-        time_opt_components=[time_opt_ORIG,time_opt]
+
         check_obj=0
         check_orig_backup=0
         for v in self.dict_var_name_2_obj:
             check_obj+=primal_solution[v]*self.dict_var_name_2_obj[v]
             check_orig_backup+=primal_solution_ORIG[v]*self.dict_var_name_2_obj[v]
-        
+
         dual_check_obj=0
         dual_check_orig_backup=0
+        #print('dual_solution_ORIG.keys()')
+        #print(dual_solution_ORIG.keys())
+        #s1=set(dual_solution_ORIG.keys())-set(self.dict_con_name_2_LB.keys())
+        #s2=set(self.dict_con_name_2_LB.keys())-set(dual_solution_ORIG.keys())
+        #s3=set(dual_solution.keys())-set(self.dict_con_name_2_LB.keys())
+        #s4=set(self.dict_con_name_2_LB.keys())-set(dual_solution.keys())
+        #print('len(s1)')
+        #print(len(s1))
+        #print('len(s2)')
+        #print(len(s2))
+        #print('len(s3)')
+        #print(len(s3))
+        #print('len(s4)')
+        #print(len(s4))
+        #print('---')
         for con_name in self.dict_con_name_2_LB:
             dual_check_obj+=dual_solution[con_name]*self.dict_con_name_2_LB[con_name]
             dual_check_orig_backup+=dual_solution_ORIG[con_name]*self.dict_con_name_2_LB[con_name]
         
-        if abs(dual_check_obj-dual_check_orig_backup)>dual_check_obj*0.1 or abs(dual_check_orig_backup-lp_objective_ORIG)>0.001:
+        #print ('dual_check_obj')
+        #print(dual_check_obj)
+        #print('dual_check_orig_backup')
+        #print(dual_check_orig_backup)
+        #input('---')
+        #if abs(check_obj-lp_objective_ORIG)>lp_objective_ORIG*0.1:
+        if abs(dual_check_obj-dual_check_orig_backup)>dual_check_obj*0.1 or abs(dual_check_orig_backup-lp_objective_ORIG)>0.01:
             print('check_obj')
             print(check_obj)
             print('check_orig_backup')
@@ -194,7 +196,7 @@ class benders_cut_generator:
         #    print('passed')
         #    input('---')
         #print('done cut')
-        return [primal_solution,dual_solution,lp_objective_ORIG,time_opt_tot,time_opt_components,reduced_costs_primal]
+        return [primal_solution,dual_solution,lp_objective_ORIG,time_opt_tot]
 
 
     def call_lp(self,x):
@@ -212,9 +214,7 @@ class benders_cut_generator:
                 u=uv[0]
                 v=uv[1]
                 var_name='act_'+str(u)+'_'+str(v)
-                if var_name not in self.MF.action_2_cost or (var_name in self.MF.delta_name_2_ub):# and self.MF.delta_name_2_ub[var_name]<EPSILON_STANDARD):
-                    if self.MF.delta_name_2_ub[var_name]!=0:
-                        input('error here')
+                if var_name not in self.MF.action_2_cost or (var_name in self.MF.delta_name_2_ub and self.MF.delta_name_2_ub[var_name]<EPSILON_STANDARD):
                     self.dict_var_name_2_UB[var]=0
                     #input('did find')
                     
@@ -244,17 +244,17 @@ class benders_cut_generator:
         self.OPT_X_input=OPT_X_input
         tot_cut_value=0
         #[primal_solution,dual_solution,lp_objective,time_opt]=self.call_lp(x)
-        [primal_solution,dual_solution,lp_objective,time_opt,time_opt_components,reduced_costs_primal]=self.call_lp_pareto(x)
+        [primal_solution,dual_solution,lp_objective,time_opt]=self.call_lp_pareto(x)
         self.primal_solution=primal_solution
         self.dual_solution=dual_solution
         self.lp_objective=lp_objective
         did_add=False
-        if lp_objective>self.MF.jy_opt['BEND_MIN_LP_OBJECTIVE_CUT']:
+        if lp_objective>MIN_LP_OBJECTIVE_CUT:
             did_add=True
             tot_cut_value=tot_cut_value+lp_objective
-            dict_x_2_coeff=defaultdict((float))
-            #for act in self.MF.all_non_null_action:
-            #    dict_x_2_coeff[act]=0
+            dict_x_2_coeff=dict()
+            for act in self.MF.all_non_null_action:
+                dict_x_2_coeff[act]=0
             cut_RHS=0
             for my_dual_var in self.rhs_ineq:
                 cut_RHS+=self.rhs_ineq[my_dual_var]*dual_solution[my_dual_var]
@@ -263,54 +263,26 @@ class benders_cut_generator:
                 my_dual_var=my_dual_var_x_pair[1]
                 my_mult=self.A_ineq_x[my_dual_var_x_pair]
                 my_term=dual_solution[my_dual_var]*my_mult
-                if my_term!=0:
-                    dict_x_2_coeff[my_act]=dict_x_2_coeff[my_act]+my_term
-            factor =1/EPSILON_STANDARD
-            cut_RHS_before=cut_RHS
-            #dict_x_2_coeff = {k: math.ceil(v * factor) / factor
-            #      for k, v in dict_x_2_coeff.items()}
-            #print('before')
-            #print(cut_RHS)
-            #cut_RHS = math.floor(cut_RHS * factor) / factor
+                dict_x_2_coeff[my_act]=dict_x_2_coeff[my_act]+my_term
+                
             
             new_cut_name='Benders_cut_new_'+self.sub_prob_name+'_'+str(len(self.MF.exog_name_2_rhs))+'_'+str(np.floor(np.random.rand()*10000))
-            #if USE_BEND_OBJ_ALT>0.5:
-            #    cut_RHS-=abs(cut_RHS*(self.MF.jy_opt['NUMERICAL_BEND_EPSILON_MULT_PARETO_OBJ']))
-            cut_RHS-=abs(cut_RHS*(self.MF.jy_opt['NUMERICAL_BEND_EPSILON_MULT_PARETO_OBJ']))
-
-            cut_RHS-=self.MF.jy_opt['NUMERICAL_BEND_OFFSET_COST_CUT']
-
-            
-            #print('mid')
-            #print(cut_RHS)
-            #print('---')
+            cut_RHS=cut_RHS-OFFSET_COST_CUT
             self.MF.all_exog.append(cut_RHS)
             self.MF.full_input_dict['allExogNames'].append(cut_RHS)
             self.MF.D['allExogNames'].append(new_cut_name)
 
-            
-            for act in dict_x_2_coeff:
-                my_tuple=tuple([act,new_cut_name])
-                new_val=dict_x_2_coeff[act]
-                if abs(new_val)>0:#EPSILON_STANDARD:
-                    #print('new_val')
-                    #print(new_val)
-                    #input('not wrong but shocked that this happened')
-                    self.MF.action_con_2_contrib[my_tuple]=new_val
-                    self.MF.D['actionCon2Contrib'][my_tuple]=new_val
-                    self.MF.full_input_dict['actionCon2Contrib'][my_tuple]=new_val
-                #else:
-                #    if new_val>0:
-                #        cut_RHS=cut_RHS-abs(new_val)
-                #else:
-                #    input('not wrong but i am shocked by this')
             self.MF.exog_name_2_rhs[new_cut_name]=cut_RHS
             self.MF.D['exogName2Rhs'][new_cut_name]=cut_RHS
             self.MF.full_input_dict['exogName2Rhs'][new_cut_name]=cut_RHS
 
-            #print('after')
-            #print(cut_RHS)
-            #print('---')
+            for act in dict_x_2_coeff:
+                my_tuple=tuple([act,new_cut_name])
+                new_val=dict_x_2_coeff[act]
+                if abs(new_val)>EPSILON_STANDARD:
+                    self.MF.action_con_2_contrib[my_tuple]=new_val
+                    self.MF.D['actionCon2Contrib'][my_tuple]=new_val
+                    self.MF.full_input_dict['actionCon2Contrib'][my_tuple]=new_val
             my_LHS_frac=0
             for act in dict_x_2_coeff:
                 term_add=(x[act]*dict_x_2_coeff[act])
@@ -320,29 +292,9 @@ class benders_cut_generator:
                 print(my_LHS_frac)
                 print('cut_RHS')
                 print(cut_RHS)
-                print('lp_objective')
-                print(lp_objective)
-                print('cut_RHS_before')
-                print(cut_RHS_before)
                 input('wrong no sense ')
-            if OPT_X_input!=None:
-                #input('HERE')
-                candid_LHS_opt=0
-                for act in dict_x_2_coeff:
-                    term_add=(OPT_X_input[act]*dict_x_2_coeff[act])
-                    candid_LHS_opt=candid_LHS_opt+term_add
-                if candid_LHS_opt<cut_RHS:
-                    print('candid_LHS_opt')
-                    print(candid_LHS_opt)
-                    print('cut_RHS')
-                    print(cut_RHS)
-                    print('writing file')
-                    #with open("BEND_no_good.pkl", "wb") as f:
-                    #    pickle.dump(self, f)
-                    
-                    print('writing don')
-                    input('big error cuts off solution')
-        return lp_objective,did_add,time_opt,time_opt_components
+            
+        return lp_objective,did_add,time_opt
 
 class benders_repo_new:
 
@@ -350,9 +302,20 @@ class benders_repo_new:
         #input('hi')
         
         self.MF=my_full_prob
-        self.call_pre_comp()
 
-        
+        self.MF.jy_opt.update({
+            "MIN_LP_OBJECTIVE_CUT":      MIN_LP_OBJECTIVE_CUT,
+            "COVER_EPSILON":             COVER_EPSILON,
+            "OFFSET_COST_CUT":           OFFSET_COST_CUT,
+            "EPSILON_STANDARD":          EPSILON_STANDARD,
+            "EPSILON_RHS_SUB":           EPSILON_RHS_SUB,
+            "EPSILON_EDGE":              EPSILON_EDGE,
+            "EPSILON_MULT_PARETO_OBJ":   EPSILON_MULT_PARETO_OBJ,
+            "USE_RAND":                  USE_RAND,
+            "MAX_SIZE_CHOOSE_K":         MAX_SIZE_CHOOSE_K,
+            "VAL_STOP_ADDING_CUTS":      VAL_STOP_ADDING_CUTS,
+            "MY_SIZES_USE":              MY_SIZES_USE,
+        })
         if not hasattr(self.MF, "act_2_uv"):
             self.MF.act_2_uv = {}
 
@@ -378,25 +341,6 @@ class benders_repo_new:
         self.generate_sub_problems()
         print('Done Generating sub-problems')
 
-    def call_pre_comp(self):
-        self.MF.uv_2_dist_inf_if_infeas= defaultdict(lambda: np.inf)
-        Nc=self.MF.my_VRP.num_cust
-        self.MF.v_feas_pred= defaultdict(lambda: np.inf)
-
-        for v in range(0,Nc+1):
-            self.MF.v_feas_pred[v]=set([])
-
-        for u in range(0,Nc+1):
-            for v in range(0,Nc+1):
-                act='act_'+str(u)+'_'+str(v)
-                
-                if act in self.MF.delta_name_2_ub:# and self.MF.delta_name_2_ub[act]<EPSILON_STANDARD:
-                    if self.MF.delta_name_2_ub[act]!=0:
-                        input('error here')
-                    continue
-                
-                self.MF.uv_2_dist_inf_if_infeas[(u,v)]=self.MF.my_VRP.dist_mat_full[u,v]
-                self.MF.v_feas_pred[v].add(u)
     def generate_cuts(self,x_solution,OPT_X_input=None):
         
         self.x_solution=x_solution
@@ -415,7 +359,7 @@ class benders_repo_new:
  #           print('generating cut ')
             print('my_bend_prob.sub_prob_name:  '+my_bend_prob.sub_prob_name)
 #            print('----')
-            [this_cut_value,did_gen_cut,this_time_opt,time_opt_components]=my_bend_prob.generate_benders_cut(x_solution,OPT_X_input)
+            [this_cut_value,did_gen_cut,this_time_opt]=my_bend_prob.generate_benders_cut(x_solution,OPT_X_input)
             if did_gen_cut==True:
                 TOT_gen_cut=TOT_gen_cut+1
                 tot_cut_value=tot_cut_value+this_cut_value
@@ -424,13 +368,11 @@ class benders_repo_new:
             #print('this_cut_value:  '+str(this_cut_value))
             #print('tot_cut_value,TOT_gen_cut]:  '+str([tot_cut_value,TOT_gen_cut]))
             #print('tot_time_opt.  '+str([this_time_opt,tot_time_opt]))
-            if self.MF.jy_opt['BEND_VAL_STOP_ADDING_CUTS']<tot_cut_value:
+            if VAL_STOP_ADDING_CUTS<tot_cut_value:
                 break
             #print(['tot_cut_value = '+str(tot_cut_value)+ ' TOT_gen_cut = '+str(TOT_gen_cut)+' this_time_opt = '+str(this_time_opt) +' tot_time_opt = '+str(tot_time_opt)+' max_time_opt'+str(max_time_opt)])
-            print('time_opt_components')
-            print(time_opt_components)
-            print('[this_cut_value,tot_cut_value,TOT_gen_cut,this_time_opt,tot_time_opt,max_time_opt]')
-            print([this_cut_value,tot_cut_value,TOT_gen_cut,this_time_opt,tot_time_opt,max_time_opt])
+            print('[this_cut_value,tot_cut_value,TOT_gen_cut,tot_time_opt,max_time_opt]')
+            print([this_cut_value,tot_cut_value,TOT_gen_cut,tot_time_opt,max_time_opt])
 
         return [tot_cut_value,TOT_gen_cut,tot_time_opt,max_time_opt]
 
@@ -441,7 +383,7 @@ class benders_repo_new:
         self.Nc=self.MF.my_VRP.num_cust
         all_sets=set()
 
-        for this_sz in self.MF.jy_opt['BEND_MY_SIZES_USE']:
+        for this_sz in MY_SIZES_USE:
             [ng_neigh_by_cust_power,junk]=naive_get_LA_neigh(my_VRP,this_sz)
         #self.ng_neigh_by_cust_power=ng_neigh_by_cust_power
             for u in range(0,self.Nc):
@@ -460,7 +402,8 @@ class benders_repo_new:
             new_cut_gen=benders_cut_generator(self.MF,M.sub_prob_name,M.var_2_cost,M.A_ineq_x,M.A_ineq_y,M.A_eq_y,M.rhs_ineq,my_sub_prob_input)
             self.my_list_benders_cut_generator.append(new_cut_gen)
             counter=counter+1
-            print('my_set_cust:  '+str(my_set)+'.  counter:  '+str(counter)+' out of '+str(len(all_sets)))
+            print('my_set_cust:  '+str(my_set))
+            print('counter:  '+str(counter))
             
 
 class sub_problem:
@@ -515,7 +458,6 @@ class sub_problem:
         #print('pt a 10')
         #self.OLD_make_valid_ineq_con_2()
         self.OLD_make_valid_ineq_con()
-        #self.OLD_make_valid_ineq_con_bit_better()
         #self.make_valid_ineq_con()
         #print('pt a 11')
         self.make_dual_lp_PRE()
@@ -541,7 +483,7 @@ class sub_problem:
         #print(num_cust_use)
         for k in num_cust_use:
             this_sz=math.comb(int(K),int(k))
-            if this_sz>self.MF.jy_opt['BEND_MAX_SIZE_CHOOSE_K']:
+            if this_sz>MAX_SIZE_CHOOSE_K:
                 #print('[k,K,MAX_SIZE_k_K,this_sz]')
                 ##print([k,K,MAX_SIZE_k_K,this_sz])
                 #input('look')
@@ -692,18 +634,11 @@ class sub_problem:
                 var_name='act_'+str(u)+'_'+str(v)
                 if var_name not in self.MF.action_2_cost:
                     continue
-                if var_name in self.MF.delta_name_2_ub:# and self.MF.delta_name_2_ub[var_name]<EPSILON_STANDARD:
-                    
-                    if self.MF.delta_name_2_ub[var_name]!=0:
-                        input('error here zz')
+                if var_name in self.MF.delta_name_2_ub and self.MF.delta_name_2_ub[var_name]<EPSILON_STANDARD:
                     continue
                 my_tup=tuple([var_name,con_name])
                 self.rhs_ineq[con_name]=0#-self.MF.jy_opt['ParetoEps']
                 self.A_ineq_x[my_tup]=1
-                if USE_BEND_OBJ_ALT>0.5:
-                    var_edge_act='EX_slack_pos_cust_'+var_name
-                    my_tup_ex=tuple([var_edge_act,con_name])
-                    self.A_ineq_y[my_tup_ex]=1
         for edge_tup in self.ng_edges_non_source_sink:
             var_name='ng_EDGE_'+str(edge_tup)
 
@@ -725,12 +660,11 @@ class sub_problem:
 
             self.A_ineq_y[my_tup]=-1
 
-
     def make_cover_con(self):
         #input('maing cover stuff')
         for u in self.my_set_cust:
             con_name='cover_con_'+str(u)
-            self.rhs_ineq[con_name]=1#-COVER_EPSILON
+            self.rhs_ineq[con_name]=1-COVER_EPSILON
         for edge_tup in self.ng_edges:
             var_name='ng_EDGE_'+str(edge_tup)
             i=edge_tup[0]
@@ -742,88 +676,58 @@ class sub_problem:
                 my_tup=tuple([var_name,con_name])
                 self.A_ineq_y[my_tup]=1
     
-    def make_valid_ineq_con(self):
-  
-        
-        ng_edge_2_str=dict()
-        for ng_edge in self.ng_edge_cust_2_sink:
-            ng_edge_2_str[ng_edge]='ng_EDGE_'+str(ng_edge)
 
-        q_2_rhs_candid=dict()
-        q_2_con_name=dict() #   con_name='my_SRI_'+str(q)
+    def BROKEN_make_valid_ineq_con(self):
+        EPS = EPSILON_RHS_SUB  # or EPSILON_RHS_SUB if it's a module const
 
-        for q in self.subset_and_divisor:
-            S=q[0]
-            D=q[1]
-            V=-(len(S)//D)
-            q_2_rhs_candid[q]=V
-            q_2_con_name[q]='my_SRI_'+str(q)
+        # --- 1) Build a stable bit index for all customers (do once) ---
+        if not hasattr(self, "_cust_bit_idx"):
+            U = set()
+            for subset, _div in self.subset_and_divisor:
+                U.update(subset)        # works for tuple/list/set/frozenset
 
+            for e in self.ng_edge_cust_2_sink:
+                U.update(e[0][2])       # same here
+            self._cust_bit_idx = {c: i for i, c in enumerate(U)}
+        idx = self._cust_bit_idx
 
-        unique_divisors = {d for (_, d) in self.subset_and_divisor}
-        unique_cust_sets = {s for (s,_) in self.subset_and_divisor}
-        num_cust_in_subset=len(self.my_set_cust)#int(max(unique_divisors))
-        dict_div_intersz_2_val=dict()
-        for my_divisor in unique_divisors:
-            dict_div_intersz_2_val[my_divisor]=dict()
-            for my_input_size in range(0,1+num_cust_in_subset):#range(0,unique_seconds+1):
-                dict_div_intersz_2_val[my_divisor][my_input_size]=-(my_input_size//my_divisor)
+        @functools.lru_cache(maxsize=None)
+        def to_mask_frozen(fz):
+            m = 0
+            for c in fz:
+                m |= 1 << idx[c]
+            return m
 
-        my_inter_size=dict()
+        def to_mask(S):
+            # use frozenset for caching
+            return to_mask_frozen(frozenset(S))
 
-        for S in unique_cust_sets:
-            my_inter_size[S]=defaultdict(float)
-            for ng_edge in self.ng_edge_cust_2_sink:
-                inter_sz=len(ng_edge[0][2].intersection(S))
-                if inter_sz>0:
-                    my_inter_size[S][ng_edge]=inter_sz
+        # --- 2) Precompute masks & names for edges (once) ---
+        edges = self.ng_edge_cust_2_sink
+        edge_masks = [to_mask(e[0][2]) for e in edges]
+        edge_names = [f"ng_EDGE_{e}" for e in edges]  # if this is slow/huge, use a compact name
 
-                    
-        THIS_A_ineq_y=self.A_ineq_y.copy()
-        THIS_rhs_ineq=self.rhs_ineq.copy()
-       
-        for q in self.subset_and_divisor:
-            S=q[0]
-            D=q[1]
-            most_viol_state=0
-            if len(my_inter_size[S])>0.5:
-                my_keys=my_inter_size[S].keys()
-                my_component_dict=dict()
-                
-                    
-                for ng_edge in my_keys:
-                    this_inter_sz=my_inter_size[S][ng_edge]
-                    val=dict_div_intersz_2_val[D][this_inter_sz]
-                    
-                    
-                    
-                    if val !=0:
-                        most_viol_state+=val
-                        my_component_dict[ng_edge]=val
-                rhs=q_2_rhs_candid[q]
-                if abs(rhs)<abs(most_viol_state):
-                #if 0<abs(most_viol_state):
-                    my_con_name=q_2_con_name[q]
-                    for ng_edge in my_component_dict:
-                        my_tup=tuple([ng_edge_2_str[ng_edge],my_con_name])
-                        val=my_component_dict[ng_edge]
-                        THIS_A_ineq_y[my_tup]=val
-                        
-                    THIS_rhs_ineq[my_con_name]=rhs
-        if DEBUG_ON_PRE==True:
-            self.OLD_make_valid_ineq_con_bit_better()
-            TST1=DEBUG_are_same_dict(THIS_rhs_ineq,self.rhs_ineq)
-            TST2=DEBUG_are_same_dict(THIS_A_ineq_y,self.A_ineq_y)
-            if TST1==False or TST2==False:
-                input('FAILED HERE')
-            print('PASSED DEBUGGING')
-            
+        # Local aliases (fewer attribute lookups)
+        A = self.A_ineq_y
+        RHS = self.rhs_ineq
 
+        # --- 3) Build constraints quickly ---
+        for subset, divisor in self.subset_and_divisor:
+            sub_mask = to_mask(subset)
+            # NOTE: str(subset) can be very slow/long; prefer a compact name:
+            con_name = f"my_SRI_d{divisor}_h{hash(frozenset(subset))}"
+            # original name would be: con_name = 'my_SRI_' + str((subset, divisor))
 
-        self.A_ineq_y=THIS_A_ineq_y#=self.A_ineq_y.copy()
-        self.rhs_ineq=THIS_rhs_ineq#=self.rhs_ineq.copy()
+            # RHS: -floor(len(subset)/divisor) - EPS
+            RHS[con_name] = -(len(subset) // divisor) - EPS
 
-
+            # Fill A_ineq_y only for non-zero entries
+            for m_edge, var_name in zip(edge_masks, edge_names):
+                inter_sz = (m_edge & sub_mask).bit_count()
+                if inter_sz >= divisor:              # else floor=0 → skip
+                    mult = -(inter_sz // divisor)    # -floor
+                    if mult:                         # guard (redundant given >= divisor)
+                        A[(var_name, con_name)] = mult
         
     def OLD_make_valid_ineq_con(self):
         for q in self.subset_and_divisor:
@@ -839,7 +743,7 @@ class sub_problem:
                 tmp=ng_edge[0][2]
                 ng_edge_2_sz_inter[ng_edge]=len(tmp.intersection(my_subset))
             did_find=False
-            num_found=0
+
             for ng_edge in self.ng_edge_cust_2_sink:
 
                 my_inter_sz=ng_edge_2_sz_inter[ng_edge]#len(ng_edge[0][2].intersection(my_subset))
@@ -849,11 +753,13 @@ class sub_problem:
                     my_tup=tuple([var_name,con_name])
                     self.A_ineq_y[my_tup]=my_mult
                     did_find=True
-                    num_found=num_found+1
             if did_find==True:
-                self.rhs_ineq[con_name]=-np.floor(len(my_subset)/my_divisor)
+                self.rhs_ineq[con_name]=-np.floor(len(my_subset)/my_divisor)-EPSILON_RHS_SUB
 
-    def OLD_make_valid_ineq_con_bit_better(self):
+    def OLD_make_valid_ineq_con_2(self):
+        var_name_2_str=dict()
+        for ng_edge in self.ng_edge_cust_2_sink:
+            var_name_2_str[ng_edge]=var_name='ng_EDGE_'+str(ng_edge)
         for q in self.subset_and_divisor:
 
             my_subset=q[0]
@@ -862,31 +768,82 @@ class sub_problem:
 
 
 
+            #ng_edge_2_sz_inter=dict()
+            for ng_edge in self.ng_edge_cust_2_sink:
+                tmp=ng_edge[0][2]
+                my_mult=-(len(tmp.intersection(my_subset))//my_divisor)
+                if my_mult<-0.5:
+                    my_tup=tuple([var_name,con_name])
+                    self.A_ineq_y[my_tup]=my_mult
+                    did_find=True
+            if did_find==True:
+                self.rhs_ineq[con_name]=-np.floor(len(my_subset)/my_divisor)-EPSILON_RHS_SUB
+
+
+    def make_valid_ineq_con(self):
+        if not hasattr(self, "_edge_varname"):
+            self._edge_varname = {edge_name: f"ng_EDGE_"+str(edge_name) for edge_name in self.ng_edge_cust_2_sink}
+
+        for q in self.subset_and_divisor:
+
+            my_subset=q[0]
+            my_divisor=q[1]
+            con_name='my_SRI_'+str(q)
+
+            ng_edge_2_sz_inter = {
+                ng: sum(1 for x in ng[0][2] if x in my_subset)
+                for ng in self.ng_edge_cust_2_sink
+            }
+            if max(ng_edge_2_sz_inter.values())<my_divisor-0.001:
+                continue
+
+            updates = {
+                (self._edge_varname[ng], con_name): -(s // my_divisor)
+                for ng, s in ng_edge_2_sz_inter.items()
+                if s >= my_divisor
+            }
+            #if len(updates)>0:
+            self.rhs_ineq[con_name]=-np.floor(len(my_subset)/my_divisor)-EPSILON_RHS_SUB
+
+            self.A_ineq_y.update(updates)
+            
+    def FANCY_make_valid_ineq_con(self):
+        def set_to_mask(S, idx=self._cust_bit_idx):
+            m = 0
+            for c in S:
+                m |= 1 << idx[c]
+            return m
+        for q in self.subset_and_divisor:
+
+            my_subset=q[0]
+            my_divisor=q[1]
+            con_name='my_SRI_'+str(q)
+
+            self.rhs_ineq[con_name]=-np.floor(len(my_subset)/my_divisor)-EPSILON_RHS_SUB
+
+
             ng_edge_2_sz_inter=dict()
+
+            if not hasattr(self, "_ng_edge_cust_sink_mask"):
+                U = set()
+                for ng_edge in self.ng_edge_cust_2_sink:
+                    U |= set(ng_edge[0][2])
+                self._ng_edge_cust_sink_mask = {c: i for i, c in enumerate(U)}
+            if not hasattr(self, "_edge_masks"):
+                self._edge_masks = {ng_edge: set_to_mask(ng_edge[0][2]) for ng_edge in self.ng_edge_cust_2_sink}
+
             for ng_edge in self.ng_edge_cust_2_sink:
                 tmp=ng_edge[0][2]
                 ng_edge_2_sz_inter[ng_edge]=len(tmp.intersection(my_subset))
-            did_find=False
-            num_found=0
-            terms_to_add=dict()
-            tot_found=0
+                
             for ng_edge in self.ng_edge_cust_2_sink:
 
                 my_inter_sz=ng_edge_2_sz_inter[ng_edge]#len(ng_edge[0][2].intersection(my_subset))
                 my_mult=-np.floor(my_inter_sz/my_divisor)
-                if abs(my_mult)>0:
-                    var_name='ng_EDGE_'+str(ng_edge)
-                    my_tup=tuple([var_name,con_name])
-                    if var_name in terms_to_add:
-                        input('err')
-                    terms_to_add[my_tup]=my_mult
-                    did_find=True
-                    tot_found=tot_found+my_mult
-            if abs(tot_found)>0:
-                candid_rhs=-np.floor(len(my_subset)/my_divisor)
-                if abs(candid_rhs)<abs(tot_found):
-                    self.rhs_ineq[con_name]=candid_rhs
-                    self.A_ineq_y.update(terms_to_add)
+                var_name='ng_EDGE_'+str(ng_edge)
+                my_tup=tuple([var_name,con_name])
+                self.A_ineq_y[my_tup]=my_mult
+
 
 
     def make_vars_cost(self):
@@ -899,28 +856,8 @@ class sub_problem:
         for u in self.my_set_cust:
             var_pos_slack_act='slack_pos_cust_'+str(u)
             var_neg_slack_act='slack_neg_cust_'+str(u)
-            if USE_BEND_OBJ_ALT<0.5:
-                self.var_2_cost[var_pos_slack_act]=1
-                self.var_2_cost[var_neg_slack_act]=1
-            else:
-                my_dist=np.ceil(self.MF.my_VRP.dist_2_depot[u]*100)/100
-                self.var_2_cost[var_pos_slack_act]=my_dist
-                self.var_2_cost[var_neg_slack_act]=my_dist
-
-        if USE_BEND_OBJ_ALT>0.5:
-            for u in self.my_set_cust:
-                for v in self.my_set_cust:
-            #if u in self.my_set_cust and v in self.my_set_cust:
-                    var_name='act_'+str(u)+'_'+str(v)
-                    if var_name not in self.MF.action_2_cost:
-                        continue
-                    if var_name in self.MF.delta_name_2_ub:# and self.MF.delta_name_2_ub[var_name]<EPSILON_STANDARD:
-                        
-                        if self.MF.delta_name_2_ub[var_name]!=0:
-                            input('error here zz')
-                        continue
-                    var_edge_act='EX_slack_pos_cust_'+var_name
-                    self.var_2_cost[var_edge_act]=self.MF.action_2_cost[var_name]
+            self.var_2_cost[var_pos_slack_act]=1
+            self.var_2_cost[var_neg_slack_act]=1
 
         self.var_2_internal_2_act=dict()
         for edge_tup in self.ng_edges:
@@ -955,8 +892,7 @@ class   Benders_NG_graph:
         self.make_all_nodes()
         #print('pt b 2')
 
-        #self.make_feas_edges()
-        self.BACK_make_feas_edges()
+        self.make_feas_edges()
         #print('pt b 3')
 
         #self.clean_feas_edges()
@@ -991,145 +927,9 @@ class   Benders_NG_graph:
 
         self.my_nodes_by_sz=my_nodes_by_sz
         self.my_nodes=my_nodes
-
-    def compute_depart_time(self,v,u,time_dep_u):
-        if time_dep_u<0:
-            out=-np.inf
-            return out
-        out=time_dep_u-self.MF.my_VRP.dist_mat_full[u,v]
-        
-        out=min(out,self.MF.my_VRP.early_start[v])
-        act='act_'+str(u)+'_'+str(v)
-        if out <self.MF.my_VRP.late_start[v]:
-            out=-np.inf
-        if act in self.MF.delta_name_2_ub:# and self.MF.delta_name_2_ub[act]<EPSILON_STANDARD:
-            if self.MF.delta_name_2_ub[act]!=0:
-                input('error here')
-            out=-np.inf
-            
-        return out
-
-
-    def _fs_minus_one(self, fs: frozenset, w):
-        """Cached frozenset difference fs \\ {w}."""
-        cache = getattr(self, "_fs_minus_cache", None)
-        if cache is None:
-            cache = self._fs_minus_cache = {}
-        key = (fs, w)
-        out = cache.get(key)
-        if out is None:
-            out = fs.difference((w,)) if w in fs else fs
-            cache[key] = out
-        return out
-
     def make_feas_edges(self):
-        # reset containers
-        self.my_orderings_by_node = {}
-        self.ng_edge_source_2_cust = []
-        self.ng_edges = []
-        self.ng_internal_edge_2_act = {}
-        self.ng_edges_non_source_sink = []
-        self.early_depart_time_by_node = {}
-        self.edges_removed = []
-
-        vrp   = self.MF.my_VRP
-        dist  = vrp.dist_mat_full
-        early = vrp.early_start
-        late  = vrp.late_start
-        feas_pred = self.MF.v_feas_pred
-        my_nodes  = self.my_nodes
-        #print('c1')
-        # Initialize from source
-        for i in self.my_nodes_by_sz[0]:
-            e = (self.source_node, i)
-            self.ng_edge_source_2_cust.append(e)
-            self.ng_edges.append(e)
-            u = i[0]
-            self.early_depart_time_by_node[i] = early[u]
-
-        # Build internal edges layer by layer
-        max_k = len(self.my_set_cust) - 1
-        add_ng = []
-        add_ng_ns = []
-        #print('c2')
-
-        for k in range(1, max_k + 1):
-            for i in self.my_nodes_by_sz[k]:
-                u, visited_fs = i[0], i[1]      # visited_fs must be frozenset
-                best = -inf
-
-                feas_u = feas_pred[u]
-
-                # iterate smaller side
-                if len(visited_fs) <= len(feas_u):
-                    itr, other = visited_fs, feas_u
-                else:
-                    itr, other = feas_u, visited_fs
-                self.early_depart_time_by_node[i]=-inf
-                for w in itr:
-                    if w not in other:
-                        continue
-
-                    prev_fs = self._fs_minus_one( visited_fs, w)
-                    #do_debug=True
-                    #if do_debug:
-                    #    baseline_val=frozenset(set(visited_fs)-set([w]))
-                    #    if prev_fs!=baseline_val:
-                    #        input('error he
-                    #prev_fs=frozenset(set(visited_fs)-set([w]))
-                    
-                    node_pred = (w, prev_fs, visited_fs)
-                    if node_pred not in my_nodes:
-                        continue
-
-                    #edp = self.early_depart_time_by_node.get(node_pred, -inf)
-                    edp = self.early_depart_time_by_node[node_pred]
-                    if edp < 0:
-                        continue
-
-                    t = edp - dist[w, u]
-                    if t < late[u]:
-                        #self.early_depart_time_by_node[i]=-inf
-                        continue
-                    if t > early[u]:
-                        t = early[u]
-
-                    if t > best:
-                        best = t
-                    e = (node_pred, i)
-                    add_ng.append(e)
-                    add_ng_ns.append(e)
-                    self.ng_internal_edge_2_act[e] = (w, u)
-
-                self.early_depart_time_by_node[i] = best
-        #print('c3')
-
-        # bulk-extend
-        if add_ng:
-            self.ng_edges.extend(add_ng)
-        if add_ng_ns:
-            self.ng_edges_non_source_sink.extend(add_ng_ns)
-        #print('c4')
-
-        # finalize with sink edges
-        self.ng_nodes = [self.source_node, self.sink_node]
-        self.ng_nodes_minus_source_sink = []
-        self.ng_edge_cust_2_sink = []
-
-        for my_node, dep_t in self.early_depart_time_by_node.items():
-            if dep_t >= 0:
-                self.ng_nodes.append(my_node)
-                self.ng_nodes_minus_source_sink.append(my_node)
-                e = (my_node, self.sink_node)
-                self.ng_edges.append(e)
-                self.ng_edge_cust_2_sink.append(e)
-        #print('Doen')
-        if DEBUG_ON_PRE:
-            self._verify_against_backup(atol=1e-9, rtol=1e-9, max_show=20)
-
-    def BACK_make_feas_edges(self):
-        
         self.my_orderings_by_node=dict()
+        my_nodes_by_sz=self.my_nodes_by_sz
         my_edges=set()
 
         self.ng_edge_source_2_cust=[]
@@ -1138,13 +938,6 @@ class   Benders_NG_graph:
         self.ng_edges_non_source_sink=[]
         self.early_depart_time_by_node=dict()
         self.edges_removed=[]
-        #print('c1')
-
-        vrp = self.MF.my_VRP
-        dist  = vrp.dist_mat_full   # numpy array (u,v) → travel time
-        early = vrp.early_start     # list/array
-        late  = vrp.late_start      # list/array
-        
         for i  in self.my_nodes_by_sz[0]:
             e=tuple([self.source_node,i])
             my_edges.add(e)
@@ -1152,42 +945,36 @@ class   Benders_NG_graph:
             self.ng_edges.append(e)
             u=i[0]
             self.early_depart_time_by_node[i]=self.MF.my_VRP.early_start[u]
-        #print('c2')
         for k in range(1,len(self.my_set_cust)):
             for i in self.my_nodes_by_sz[k]:
 
                 visited_excluding_last=i[1]
                 self.early_depart_time_by_node[i]=-np.inf
                 u=i[0]
-                set_exclud_last=set(visited_excluding_last)
-                for w in set_exclud_last.intersection(self.MF.v_feas_pred[u]):
-
-                    
-                    tmp=visited_excluding_last-set([w])
-                    tmp_1=frozenset(tmp)
-                    
-                    node_pred=tuple([w,tmp_1,i[1]])
+                for w in visited_excluding_last:
+                    var_name='act_'+str(w)+'_'+str(u)
+                    if var_name not in self.MF.action_2_cost:
+                        continue
+                    if var_name in self.MF.delta_name_2_ub and self.MF.delta_name_2_ub[var_name]<EPSILON_STANDARD:
+                        #input('found one NOT AN ERROR ')
+                        continue
+                    tmp=set(visited_excluding_last)-set([w])
+                    tmp_1=frozenset(sorted(list(tmp)))
+                    tmp_2=visited_excluding_last.copy()
+                    tmp_2=frozenset(sorted(list(tmp_2)))
+                    node_pred=tuple([w,tmp_1,tmp_2])
                     if node_pred not in self.my_nodes:#[node_pred]:
                         continue
-                    
-                    early_dep_pred=self.early_depart_time_by_node[node_pred]
-                    if early_dep_pred < 0:
-                        continue
-                    early_at_i_vai_w = early_dep_pred - dist[w, u]
-
-                    
-                    if early_at_i_vai_w < late[u]:
-                        continue
-                    if early_at_i_vai_w > early[u]:
-                        early_at_i_vai_w = early[u]
-                    
-                    self.early_depart_time_by_node[i]=max([self.early_depart_time_by_node[i],early_at_i_vai_w])
-                    e=tuple([node_pred,i])
-                    self.ng_edges.append(e)
-                    self.ng_edges_non_source_sink.append(e)
-                    self.ng_internal_edge_2_act[e]=tuple([w,u])
-                    
-        #print('c3')
+                    early_w=self.compute_depart_time(i[0],w,self.early_depart_time_by_node[node_pred])
+                    self.early_depart_time_by_node[i]=max([self.early_depart_time_by_node[i],early_w])
+                    if early_w>=0:
+                        e=tuple([node_pred,i])
+                        self.ng_edges.append(e)
+                        self.ng_edges_non_source_sink.append(e)
+                        self.ng_internal_edge_2_act[e]=tuple([w,u])
+                    else:
+                        eREM=tuple([node_pred,i])
+                        self.edges_removed.append(eREM)
         self.ng_nodes=[]
         self.ng_nodes_minus_source_sink=[]
         self.ng_nodes.append(self.source_node)
@@ -1200,169 +987,20 @@ class   Benders_NG_graph:
                 e=tuple([my_node,self.sink_node])
                 self.ng_edges.append(e)
                 self.ng_edge_cust_2_sink.append(e)
-        #print('c4')
+        
+    def compute_depart_time(self,v,u,time_dep_u):
+        if time_dep_u<0:
+            out=-np.inf
+            return out
+        out=time_dep_u-self.MF.my_VRP.dist_mat_full[u,v]
+        
+        out=min(out,self.MF.my_VRP.early_start[v])
+        act='act_'+str(u)+'_'+str(v)
+        if out <self.MF.my_VRP.late_start[v]:
+            out=-np.inf
+        if act in self.MF.delta_name_2_ub and self.MF.delta_name_2_ub[act]<EPSILON_STANDARD:
+            out=-np.inf
+            
+        return out
+
     
-    
-
-
-
-    import copy
-    from math import isclose
-
-    def _verify_against_backup(self, atol=1e-9, rtol=1e-9, max_show=20):
-        """Run BACK_make_feas_edges() on a deepcopy of self and compare results
-        with the current object's make_feas_edges() outputs. Prints concise diffs.
-        """
-        # 1) Snapshot current (fast) outputs
-        fast = {
-            "ng_edge_source_2_cust": set(self.ng_edge_source_2_cust),
-            "ng_edges":              set(self.ng_edges),
-            "ng_internal_edge_2_act": set(self.ng_internal_edge_2_act),
-            "ng_edges_non_source_sink": set(self.ng_edges_non_source_sink),
-            "early_depart_time_by_node": self.early_depart_time_by_node,
-            "ng_nodes":              set(self.ng_nodes),# if hasattr(self, "ng_nodes") else [],
-            "ng_nodes_minus_source_sink": set(self.ng_nodes_minus_source_sink), #if hasattr(self, "ng_nodes_minus_source_sink") else [],
-            "ng_edge_cust_2_sink":   set(self.ng_edge_cust_2_sink) #if hasattr(self, "ng_edge_cust_2_sink") else [],
-        }
-
-        # 2) Build a clean clone and run the backup on it
-        clone = copy.deepcopy(self)
-        clone.BACK_make_feas_edges()
-
-        ref = {
-            "ng_edge_source_2_cust": set(clone.ng_edge_source_2_cust),
-            "ng_edges":              set(clone.ng_edges),
-            "ng_internal_edge_2_act": set(clone.ng_internal_edge_2_act),
-            "ng_edges_non_source_sink": set(clone.ng_edges_non_source_sink),
-            "early_depart_time_by_node": clone.early_depart_time_by_node,
-            "ng_nodes":              set(clone.ng_nodes),
-            "ng_nodes_minus_source_sink": set(clone.ng_nodes_minus_source_sink),
-            "ng_edge_cust_2_sink":   set(clone.ng_edge_cust_2_sink),
-        }
-
-        # 3) Compare set-like artifacts (order-insensitive)
-        def show_set_diff(name, a, b):
-            A, B = _setify(a), _setify(b)
-            if A != B:
-                only_fast = list(A - B)[:max_show]
-                only_ref  = list(B - A)[:max_show]
-                print(f"[DIFF] {name}: {len(A)} (fast) vs {len(B)} (ref)")
-                if only_fast:
-                    print(f"  in fast not ref (up to {max_show}): {only_fast}")
-                if only_ref:
-                    print(f"  in ref not fast (up to {max_show}): {only_ref}")
-
-        show_set_diff("ng_edge_source_2_cust", fast["ng_edge_source_2_cust"], ref["ng_edge_source_2_cust"])
-        show_set_diff("ng_edges",              fast["ng_edges"],              ref["ng_edges"])
-        show_set_diff("ng_edges_non_source_sink", fast["ng_edges_non_source_sink"], ref["ng_edges_non_source_sink"])
-        show_set_diff("ng_nodes",              fast["ng_nodes"],              ref["ng_nodes"])
-        show_set_diff("ng_nodes_minus_source_sink", fast["ng_nodes_minus_source_sink"], ref["ng_nodes_minus_source_sink"])
-        show_set_diff("ng_edge_cust_2_sink",   fast["ng_edge_cust_2_sink"],   ref["ng_edge_cust_2_sink"])
-
-        # 4) Compare the dict mapping edges → action (exact match expected)
-        if fast["ng_internal_edge_2_act"] != ref["ng_internal_edge_2_act"]:
-            fset = set(fast["ng_internal_edge_2_act"].items())
-            rset = set(ref["ng_internal_edge_2_act"].items())
-            only_fast = list(fset - rset)[:max_show]
-            only_ref  = list(rset - fset)[:max_show]
-            print(f"[DIFF] ng_internal_edge_2_act: {len(fset)} (fast) vs {len(rset)} (ref)")
-            if only_fast:
-                print(f"  only in fast (up to {max_show}): {only_fast}")
-            if only_ref:
-                print(f"  only in ref (up to {max_show}): {only_ref}")
-
-        # 5) Compare early_depart_time_by_node with tolerances
-        miss_fast, miss_ref, bad_vals = _diff_dict_of_floats(
-            fast["early_depart_time_by_node"],
-            ref["early_depart_time_by_node"],
-            atol=atol, rtol=rtol, max_show=max_show
-        )
-        if miss_fast or miss_ref or bad_vals:
-            print(f"[DIFF] early_depart_time_by_node:")
-            if miss_fast:
-                print(f"  keys only in fast (up to {max_show}): {miss_fast}")
-            if miss_ref:
-                print(f"  keys only in ref  (up to {max_show}): {miss_ref}")
-            if bad_vals:
-                print(f"  value mismatches (up to {max_show} shown):")
-                for k, v1, v2 in bad_vals:
-                    print(f"    {k}: fast={v1}, ref={v2}")
-        diffs = []  
-        if fast["ng_internal_edge_2_act"] != ref["ng_internal_edge_2_act"]:
-            diffs.append(("ng_internal_edge_2_act",
-                        f"{len(fast['ng_internal_edge_2_act'])} vs {len(ref['ng_internal_edge_2_act'])}",
-                        None))
-
-        miss_fast, miss_ref, bad_vals = _diff_dict_of_floats(
-            fast["early_depart_time_by_node"],
-            ref["early_depart_time_by_node"],
-            atol=atol, rtol=rtol, max_show=max_show
-        )
-        if miss_fast or miss_ref or bad_vals:
-            diffs.append(("early_depart_time_by_node",
-                        f"keys mismatch or value mismatch",
-                        {"miss_fast": miss_fast, "miss_ref": miss_ref, "bad_vals": bad_vals}))
-
-        if diffs:
-            # Raise with details
-            raise AssertionError(f"make_feas_edges mismatch detected:\n{diffs}")
-        else:
-            print("[VERIFY] Fast and backup versions match.")
-
-        print("[VERIFY] Comparison complete.")
-
-
-
-def _setify(xs):
-    # Convert a list of tuples/lists to a set of tuples so order doesn’t matter
-    return set(tuple(x) for x in xs)
-
-def _diff_dict_of_floats(d1, d2, atol=1e-9, rtol=1e-9, max_show=20):
-    """Return lists of (key, v1, v2) for keys missing or values not close."""
-    only1 = [k for k in d1.keys() if k not in d2]
-    only2 = [k for k in d2.keys() if k not in d1]
-    badv  = []
-    for k in d1.keys() & d2.keys():
-        v1, v2 = d1[k], d2[k]
-        if not (isclose(v1, v2, abs_tol=atol, rel_tol=rtol) or
-                (v1 != v1 and v2 != v2)):  # both NaN case if it ever arises
-            badv.append((k, v1, v2))
-    return only1[:max_show], only2[:max_show], badv[:max_show]
-
-
-def DEBUG_are_same_dict(d1: dict, d2: dict, *, verbose: bool = True) -> bool:
-    """
-    Compare two dictionaries for exact equality of keys and values.
-
-    Parameters
-    ----------
-    d1, d2 : dict
-        Dictionaries to compare.
-    verbose : bool, optional
-        If True, print differences when dictionaries are not equal.
-
-    Returns
-    -------
-    bool
-        True if the dictionaries have the same keys and the same values
-        for those keys. False otherwise.
-    """
-    if d1.keys() != d2.keys():
-        if verbose:
-            only1 = d1.keys() - d2.keys()
-            only2 = d2.keys() - d1.keys()
-            if only1:
-                print("Keys only in first dict:", only1)
-            if only2:
-                print("Keys only in second dict:", only2)
-        input('--')
-        return False
-
-    for k in d1:
-        if d1[k] != d2[k]:
-            if verbose:
-                print(f"Value mismatch at key {k!r}: {d1[k]!r} != {d2[k]!r}")
-            input('--')
-            return False
-
-    return True

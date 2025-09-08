@@ -1,5 +1,3 @@
-import random
-import math
 import re
 from collections import defaultdict
 from solve_gurobi_lp import solve_gurobi_lp_bounds
@@ -11,8 +9,6 @@ sys.path.append("pre_process")
 
 from naive_pre import *
 EPSILON=0.00001
-COVER_CON_EPSILON=0#0.00001
-EPSILON_VALID_INEQ=0#0.000001
 
 from typing import Dict, Hashable, Tuple
 def powerset(iterable):
@@ -78,10 +74,6 @@ class benders_cut_generator:
         dict_con_name_2_LB=self.rhs_ineq.copy()
         for  my_dual_var_x_pair in self.A_ineq_x:
             var_name=my_dual_var_x_pair[0]
-            if var_name in self.MF.delta_name_2_ub:# and self.MF.delta_name_2_ub[var_name]<EPSILON_STANDARD):
-                #if self.MF.delta_name_2_ub[var_name]!=0:
-                #    input('error here')
-                continue
             con_name=my_dual_var_x_pair[1]
             my_mult=-self.A_ineq_x[my_dual_var_x_pair]
             
@@ -95,9 +87,31 @@ class benders_cut_generator:
                 u=uv[0]
                 v=uv[1]
                 var_name='act_'+str(u)+'_'+str(v)
-                if var_name not in self.MF.action_2_cost or (var_name in self.MF.delta_name_2_ub):
+                if var_name not in self.MF.action_2_cost or (var_name in self.MF.delta_name_2_ub and self.MF.delta_name_2_ub[var_name]<0.001):
                     self.dict_var_name_2_UB[var]=0
-                   
+                    #print('removing var')
+                    #print('var')
+                    #print(var)
+                    #print('var_name')
+                    #print(var_name)
+                    #input('NOT AN ERROR JUST CHECKING found one')
+                #else:
+                #    input('NOT AN ERROR JUST CHECKING  OK identified but ok')
+            #else:
+            #    if False==var.startswith('slack'):
+            #        print('--')
+            #        print('self.my_sub_prob.var_2_internal_2_act')
+             #       print(self.my_sub_prob.var_2_internal_2_act)
+             #       print('var')
+             #       print(var)
+             #       input('hihi')
+        #print('dict_con_name_2_LB')
+        #print(dict_con_name_2_LB)
+        #print('non_neg dict')
+        #for d in dict_con_name_2_LB:
+        #    if abs(dict_con_name_2_LB[d])>0.01:
+        #        print([d,str(dict_con_name_2_LB[d])])
+        #print('call LP')
         
         self.dict_con_name_2_LB=dict_con_name_2_LB
         #print('calling LP')
@@ -110,7 +124,15 @@ class benders_cut_generator:
         primal_solution=out_solution['primal_solution']
         lp_objective=out_solution['objective']
         time_opt=out_solution['time_opt']
-        
+        #print('primal_solution')
+        #print(primal_solution)
+        #print('dict_var_name_2_obj')
+        #print(self.dict_var_name_2_obj)
+        #print('dual_solution')
+        #print(dual_solution)
+        #print('lp_objective')
+        #print(lp_objective)
+        #print('done clalling LP')
         return [primal_solution,dual_solution,lp_objective,time_opt]
     def generate_benders_cut(self,x,OPT_X_input=None):
         #print('generate benders cut')
@@ -122,7 +144,7 @@ class benders_cut_generator:
         self.dual_solution=dual_solution
         self.lp_objective=lp_objective
         did_add=False
-        if lp_objective>self.MF.jy_opt['BEND_MIN_LP_OBJECTIVE_CUT']:
+        if lp_objective>0.01:
             did_add=True
             tot_cut_value=tot_cut_value+lp_objective
             dict_x_2_coeff=dict()
@@ -134,13 +156,38 @@ class benders_cut_generator:
             for my_dual_var_x_pair in self.A_ineq_x:
                 my_act=my_dual_var_x_pair[0]
                 my_dual_var=my_dual_var_x_pair[1]
+                #uv=self.MF.act_2_uv[my_act]
+                #u=uv[0]
+                #v=uv[1]
+                #print('my_dual_var_x_pair')
+                #print(my_dual_var_x_pair)
+                #con_name='agree_match_'+str(u)+'_'+str(v)
                 my_mult=self.A_ineq_x[my_dual_var_x_pair]
                 my_term=dual_solution[my_dual_var]*my_mult
                 dict_x_2_coeff[my_act]=dict_x_2_coeff[my_act]+my_term
-                
+                #if abs(my_term)>0.00001:
+                #    print('my_mult')
+                #    print(my_mult)
+                #    print('my_term')
+                #    print(my_term)
+                #    print('dual_solution[my_dual_var]')
+                #    print(dual_solution[my_dual_var])
+                #    print('my_dual_var')
+                #    print(my_dual_var)
+
+                    #input('looking')
+            #print("x act (nonzero only)", {k:v for k,v in x.items() if v != 0 and k.startswith('act')})
+            #print("x (nonzero only)", {k:v for k,v in x.items() if v != 0})
+            #print("my primal (nonzero only)", {k:v for k,v in primal_solution.items() if v != 0})
+            #print("my dict_x_2_coeff (nonzero only)", {k:v for k,v in dict_x_2_coeff.items() if v != 0})
+            ##print("dual_solution (nonzero only)", {k:v for k,v in dual_solution.items() if v != 0})
+            #print('cut_RHS:   '+str(cut_RHS))
+            #print("--")
             
             new_cut_name='Benders_cut_new_'+self.sub_prob_name+'_'+str(len(self.MF.exog_name_2_rhs))+'_'+str(np.floor(np.random.rand()*10000))
-            cut_RHS=cut_RHS-self.MF.jy_opt['NO_PARETO_NUMERICAL_BEND_OFFSET_COST_CUT']
+            cut_RHS=cut_RHS-.0001
+            #print('len(self.MF.exog_name_2_rhs)')
+            #print(len(self.MF.exog_name_2_rhs))
             self.MF.all_exog.append(cut_RHS)
             self.MF.full_input_dict['allExogNames'].append(cut_RHS)
             self.MF.D['allExogNames'].append(new_cut_name)
@@ -152,31 +199,84 @@ class benders_cut_generator:
             for act in dict_x_2_coeff:
                 my_tuple=tuple([act,new_cut_name])
                 new_val=dict_x_2_coeff[act]
-                self.MF.action_con_2_contrib[my_tuple]=new_val
-                self.MF.D['actionCon2Contrib'][my_tuple]=new_val
-                self.MF.full_input_dict['actionCon2Contrib'][my_tuple]=new_val
+                if abs(new_val)>0.00001:
+                    self.MF.action_con_2_contrib[my_tuple]=new_val
+                    self.MF.D['actionCon2Contrib'][my_tuple]=new_val
+                    self.MF.full_input_dict['actionCon2Contrib'][my_tuple]=new_val
             my_LHS_frac=0
             for act in dict_x_2_coeff:
                 term_add=(x[act]*dict_x_2_coeff[act])
                 my_LHS_frac=my_LHS_frac+term_add
+            #    if abs(dict_x_2_coeff[act])>0.0001:
+            #        print(['act'+act+' term_add  '+ str(term_add)+'    x[act]  '+str(x[act])+' dict_x_2_coeff[act] '+str(dict_x_2_coeff[act])])
             if my_LHS_frac>cut_RHS:
                 print('my_LHS_frac')
                 print(my_LHS_frac)
                 print('cut_RHS')
                 print(cut_RHS)
                 input('wrong no sense ')
+            
+            #print('my_LHS_frac')
+            #print(my_LHS_frac)
+            #print('cut_RHS')
+            #print(cut_RHS)
+            #print('self.my_sub_prob.my_set_cust')
+            #print(self.my_sub_prob.my_set_cust)
+            #print('new_cut_name')
+            #print(new_cut_name)
+            #input('--PASSED -')
+
             if OPT_X_input!=None:
                 my_LHS=0
                 my_LHS_frac=0
+                print('analyzing')
                 for act in dict_x_2_coeff:
+                    #if abs(dict_x_2_coeff[act])>0.00001:
+                    #    print('OPT_X_input[act]')
+                    #    print(OPT_X_input[act])
+                    #    print('dict_x_2_coeff[act]')
+                    #    print(dict_x_2_coeff[act])
+                    #    print('act')
+                    #    print(act)
+                    #    print('---')
+                    #if  OPT_X_input[act]>0.0001:
+                    #    print('OPT_X_input[act]')
+                    #    print(OPT_X_input[act])
+                    #    print('dict_x_2_coeff[act]')
+                    #    print(dict_x_2_coeff[act])
+                    #    input('OK look here')
                     my_LHS=my_LHS+(OPT_X_input[act]*dict_x_2_coeff[act])
                     my_LHS_frac=my_LHS_frac+(x[act]*dict_x_2_coeff[act])
+                #print('dict_x_2_coeff')
+                #print(dict_x_2_coeff)
+                for d in dual_solution:
+                    if  d.startswith("flow_in_out_")==False:#and abs(dual_solution[d])>0.0001:
+                        print([d+'   '+str(dual_solution[d])])
+                #print('my_LHS')
+                #print(my_LHS)
+                #print('my_LHS_frac')
+                #print(my_LHS_frac)
+                #print('cut_RHS')
+                #print(cut_RHS)
+                #print('lp_objective')
+                #print(lp_objective)
+                #print('my_LHS-my_rhs')
+                #print(my_LHS-cut_RHS)
+                #print('my_LHS_frac')
+                #print(my_LHS_frac)
+                #input('---')
+                #print('sub_prob_name')
+
+                print(self.sub_prob_name)
+                for act in self.MF.all_non_null_action:
+                    if OPT_X_input[act]>0.5:
+                        print(act+'. OPT_X_input[act]  '+str(OPT_X_input[act]),'dict val '+str(dict_x_2_coeff[act]))
                 if cut_RHS<my_LHS_frac:
                     input('ok no sense here')
                 if cut_RHS>my_LHS:
                     print('non_neg dict2 ')
                     for d in self.dict_con_name_2_LB:
-                        if abs(self.dict_con_name_2_LB[d])>0:
+                        if abs(self.dict_con_name_2_LB[d])>0.01:
                             print([d,str(self.dict_con_name_2_LB[d])])
                     
                     print('self.my_sub_prob.my_ng_graph.DEBUG_my_candid_edges')
@@ -210,14 +310,15 @@ class benders_repo_new:
                     raise ValueError(f"Not in 'act_u_v' format: {act!r}") from e
         self.size_neigh_use_benders=9
         L=self.size_neigh_use_benders
-        #self.m_sz_pairs=[]
-        #self.m_sz_pairs.append(tuple([6,10]))
-        #self.m_sz_pairs.append(tuple([6,9]))
-        #self.m_sz_pairs.append(tuple([2,3]))
-        ##self.m_sz_pairs.append(tuple([2,5]))
-        #self.m_sz_pairs.append(tuple([2,9]))
-        #self.m_sz_pairs.append(tuple([3,10]))
-        #self.m_sz_pairs.append(tuple([4,10]))
+        self.m_sz_pairs=[]
+        self.m_sz_pairs.append(tuple([6,10]))
+        self.m_sz_pairs.append(tuple([6,9]))
+        self.m_sz_pairs.append(tuple([2,3]))
+        #self.m_sz_pairs.append(tuple([2,5]))
+        self.m_sz_pairs.append(tuple([2,9]))
+        self.m_sz_pairs.append(tuple([3,10]))
+        self.m_sz_pairs.append(tuple([4,10]))
+
         self.A_eq_y=dict()
         self.A_eq_x=dict()
         self.rhs_ineq=dict()
@@ -226,20 +327,17 @@ class benders_repo_new:
         self.generate_sub_problems(OPT_X_SOL)
         print('Done Generating sub-problems')
 
-
     def generate_cuts(self,x_solution,OPT_X_input=None):
         
         tot_cut_value=0
         TOT_gen_cut=0
         tot_time_opt=0
         max_time_opt=0
-        counter=0
-        num_sub_probs=len(self.my_list_benders_cut_generator)
-        for my_bend_prob in random.sample(self.my_list_benders_cut_generator,len(self.my_list_benders_cut_generator)):
+        for my_bend_prob in self.my_list_benders_cut_generator:
+            print('generating cut ')
+            print('my_bend_prob.sub_prob_name')
+            print(my_bend_prob.sub_prob_name)
             print('----')
-            print('generating cut counter = '+str(counter)+'. out of '+str(num_sub_probs))
-            print('my_bend_prob.sub_prob_name = '+str(my_bend_prob.sub_prob_name))
-            counter=counter+1
             [this_cut_value,did_gen_cut,this_time_opt]=my_bend_prob.generate_benders_cut(x_solution,OPT_X_input)
             if did_gen_cut==True:
                 TOT_gen_cut=TOT_gen_cut+1
@@ -248,9 +346,9 @@ class benders_repo_new:
             max_time_opt=max([max_time_opt,this_time_opt])
             print('this_cut_value:  '+str(this_cut_value))
             print('tot_cut_value,TOT_gen_cut]:  '+str([tot_cut_value,TOT_gen_cut]))
-            print('tot_time_opt,tot_time_opt,max_time_opt.  '+str([this_time_opt,tot_time_opt,max_time_opt]))
-            if tot_cut_value>self.MF.jy_opt['NO_PARETO_BEND_VAL_STOP_ADDING_CUTS']:
-                break
+            print('tot_time_opt.  '+str([this_time_opt,tot_time_opt]))
+        print('[tot_cut_value,TOT_gen_cut]')
+        print([tot_cut_value,TOT_gen_cut])
         #print('self.my_list_benders_cut_generator')
         #print(self.my_list_benders_cut_generator)
         #input('--')
@@ -270,39 +368,44 @@ class benders_repo_new:
             my_set=frozenset(my_set)
             all_sets.add(my_set)
         counter=0
-        num_sets=len(all_sets)
+
         for my_set in all_sets:
 
-            my_sub_prob_input=sub_problem(self.MF,my_set,)
+            my_sub_prob_input=sub_problem(self.MF,my_set,self.m_sz_pairs)
             M=my_sub_prob_input
             self.my_sub_prob.append(my_sub_prob_input)
+            #    def __init__(self,MF,sub_prob_name,sub_prob_y_obj,A_ineq_x,A_ineq_y,A_eq_y,rhs_ineq):
 
             new_cut_gen=benders_cut_generator(self.MF,M.sub_prob_name,M.var_2_cost,M.A_ineq_x,M.A_ineq_y,M.A_eq_y,M.rhs_ineq,my_sub_prob_input)
             self.my_list_benders_cut_generator.append(new_cut_gen)
             counter=counter+1
             print('my_set_cust:  '+str(my_set))
-            print('counter:  '+str(counter)+ " out of  "+str(num_sets))
+            print('counter:  '+str(counter))
             if OPT_X_SOL!=None:
-                
+                print('my_set')
+                print(my_set)
+                print('counter')
+                print(counter)
                 [lp_objective,did_add]=new_cut_gen.generate_benders_cut(OPT_X_SOL)
                 counter=counter+1
-                if did_add==False or lp_objective>EPSILON:
+                if did_add==False or lp_objective>0.001:
                     print('lp_objective')
                     print(lp_objective)
                     print('did_add')
                     print(did_add)
                     print('--my primal solution -')
                     for p in new_cut_gen.primal_solution:
+                        #if new_cut_gen.primal_solution[p]>0.0001:
                         print([p+'   '+str(new_cut_gen.primal_solution[p])])
                     print('new_cut_gen.lp_objective')
                     print(new_cut_gen.lp_objective)
                     input('CUT HAS AN ISSUE FAILS HERE on cut')
 
 class sub_problem:
-    def __init__(self,MF,my_set_cust):
+    def __init__(self,MF,my_set_cust,m_sz_pairs):
         self.MF=MF
         self.my_set_cust=my_set_cust
-        self.get_my_sz_pairs_by_size(len(my_set_cust))
+        self.m_sz_pairs=m_sz_pairs
 
         self.my_ng_graph=Benders_NG_graph(my_set_cust,MF)
         self.ng_edge_source_2_cust=self.my_ng_graph.ng_edge_source_2_cust
@@ -327,61 +430,9 @@ class sub_problem:
         self.make_matching_constrs_source()
         self.make_matching_constrs_sink()
 
-        #self.make_valid_ineq_con()
-        self.COPIED_make_valid_ineq_con()
+        self.make_valid_ineq_con()
+
     
-    def get_my_sz_pairs_by_size(self, K):
-        m_sz_pairs = []
-
-        num_cust_use_pos = np.arange(2,K)#np.array([3])
-        num_cust_use_neg = K-np.arange(0,K-1)#K - np.array([0, 1])
-
-        num_cust_use = np.concatenate([num_cust_use_pos, num_cust_use_neg])
-        num_cust_use = {k for k in num_cust_use if k > 2 and k <= K}
-        for k in num_cust_use:
-            this_sz=math.comb(int(K),int(k))
-            if this_sz>self.MF.jy_opt['BEND_MAX_SIZE_CHOOSE_K']:
-                continue
-            for r in range(2, k + 1):
-                m_sz_pairs.append((r, k))
-        X = list(m_sz_pairs)
-        do_keep=[]
-
-        for (r1,k1) in X:
-            this_do_keep=True
-
-            if k1%r1==0:
-                this_do_keep=False
-
-                continue
-            for (r2,k2) in X:
-                #dom 
-                if r1==r2 and k2>k1 and (k1//r1)==(k2//r2):
-                    this_do_keep=False
-                    break
-                if k1==k2 and r1>r2 and (k1//r1)==(k2//r2):
-                    this_do_keep=False
-                    break
-            if this_do_keep==True:
-                do_keep.append((r1,k1))
-        do_keep_2=[]
-        for (r1,k1) in do_keep:
-            this_do_keep=True
-            for (r2,k2) in do_keep:
-
-                if k2==k1 and r1>r2 and r1%r2==0:
-                    this_do_keep=False
-            if this_do_keep==True:
-                do_keep_2.append((r1,k1))
-        #print('do_keep')
-        #print(do_keep)
-        #3print('do_keep_2')
-        #p#rint(do_keep_2)
-        
-        self.m_sz_pairs = do_keep_2
-
-
-
     def get_divisor_subset_tuples(self):
         """
         N: iterable of items
@@ -475,7 +526,7 @@ class sub_problem:
                 var_name='act_'+str(u)+'_'+str(v)
                 if var_name not in self.MF.action_2_cost:
                     continue
-                if var_name in self.MF.delta_name_2_ub:
+                if var_name in self.MF.delta_name_2_ub and self.MF.delta_name_2_ub[var_name]<0.001:
                     continue
                 my_tup=tuple([var_name,con_name])
                 self.rhs_ineq[con_name]=-EPSILON
@@ -490,7 +541,7 @@ class sub_problem:
             ACT_NAME='act_'+str(u)+'_'+str(v)
             if ACT_NAME not in self.MF.action_2_cost:
                 input('cant hapen')
-            if ACT_NAME in self.MF.delta_name_2_ub and self.MF.delta_name_2_ub[ACT_NAME]<EPSILON:
+            if ACT_NAME in self.MF.delta_name_2_ub and self.MF.delta_name_2_ub[ACT_NAME]<0.001:
                 input('cant hapen')
             con_name='agree_match_'+str(u)+'_'+str(v)
             if con_name not in self.rhs_ineq:
@@ -506,7 +557,7 @@ class sub_problem:
     def make_cover_con(self):
         for u in self.my_set_cust:
             con_name='cover_con_'+str(u)
-            self.rhs_ineq[con_name]=1-COVER_CON_EPSILON#.9999
+            self.rhs_ineq[con_name]=.9999
         for edge_tup in self.ng_edges:
             var_name='ng_EDGE_'+str(edge_tup)
             i=edge_tup[0]
@@ -517,87 +568,6 @@ class sub_problem:
                 
                 my_tup=tuple([var_name,con_name])
                 self.A_ineq_y[my_tup]=1
-
-
-    def COPIED_make_valid_ineq_con(self):
-        debug_on=True
-        ng_edge_2_str=dict()
-        for ng_edge in self.ng_edge_cust_2_sink:
-            ng_edge_2_str[ng_edge]='ng_EDGE_'+str(ng_edge)
-
-
-        unique_divisors = {d for (_, d) in self.subset_and_divisor}
-        unique_cust_sets = {s for (s,_) in self.subset_and_divisor}
-        num_cust_in_subset=len(self.my_set_cust)#int(max(unique_divisors))
-        dict_div_intersz_2_val=dict()
-
-        for my_divisor in unique_divisors:
-            dict_div_intersz_2_val[my_divisor]=dict()
-            for my_input_size in range(0,1+num_cust_in_subset):#range(0,unique_seconds+1):
-                dict_div_intersz_2_val[my_divisor][my_input_size]=-(my_input_size//my_divisor)
-
-        my_inter_size=dict()
-
-        for S in unique_cust_sets:
-            my_inter_size[S]=defaultdict(float)
-            for ng_edge in self.ng_edge_cust_2_sink:
-                inter_sz=len(ng_edge[0][2].intersection(S))
-                if inter_sz>0:
-                    my_inter_size[S][ng_edge]=inter_sz
-
-        for q in self.subset_and_divisor:
-            my_subset=q[0]
-            my_divisor=q[1]
-            S=my_subset
-            D=my_divisor
-            con_name='my_SRI_'+str(q)
-
-
-
-            ng_edge_2_sz_inter=dict()
-            for ng_edge in self.ng_edge_cust_2_sink:
-                tmp=ng_edge[0][2]
-                ng_edge_2_sz_inter[ng_edge]=len(tmp.intersection(my_subset))
-            did_find=False
-            tot_found=0
-            num_found=0
-            for ng_edge in self.ng_edge_cust_2_sink:
-
-                #my_inter_sz=ng_edge_2_sz_inter[ng_edge]
-                this_inter_sz=my_inter_size[S][ng_edge]
-                my_mult=dict_div_intersz_2_val[D][this_inter_sz]
-               # if debug_on==True:
-               #     my_mult_BACK=-np.floor(my_inter_sz/my_divisor)
-                #    if my_mult!=my_mult_BACK:
-                #        print('my_mult')
-                #        print(my_mult)
-                #        input('error here')
-                if abs(my_mult)>0:
-                    var_name=ng_edge_2_str[ng_edge]
-                    my_tup=tuple([var_name,con_name])
-                    #if my_tup in self.A_ineq_y:
-                    #    print('my_tup')
-                    #    print(my_tup)
-                    #    input('error here')
-                    self.A_ineq_y[my_tup]=my_mult
-                    did_find=True
-                    num_found=num_found+1
-                    tot_found=tot_found+abs(my_mult)
-            if did_find==True:
-                #if con_name in self.rhs_ineq:
-                #    input('error here 2')
-                self.rhs_ineq[con_name]=-(len(my_subset)//my_divisor)
-
-                if abs(tot_found)+0.3<=abs(self.rhs_ineq[con_name]):
-                    print('my_subset')
-                    print(my_subset)
-                    print('my_divisor')
-                    print(my_divisor)
-                    print('tot_found')
-                    print(tot_found)
-                    print('self.rhs_ineq')
-                    print(self.rhs_ineq)
-                    input('not wrong but how common is this ')
     def make_valid_ineq_con(self):
         for q in self.subset_and_divisor:
 
@@ -605,7 +575,7 @@ class sub_problem:
             my_divisor=q[1]
             con_name='my_SRI_'+str(q)
 
-            self.rhs_ineq[con_name]=-np.floor(len(my_subset)/my_divisor)-EPSILON_VALID_INEQ
+            self.rhs_ineq[con_name]=-np.floor(len(my_subset)/my_divisor)-0.000001
 
             for ng_edge in self.ng_edge_cust_2_sink:
                 my_inter_sz=len(ng_edge[0][2].intersection(my_subset))
@@ -657,6 +627,7 @@ class   Benders_NG_graph:
         self.MF=MF
         self.make_all_nodes()
         self.make_feas_edges()
+        #self.clean_feas_edges()
     def  make_all_nodes(self):
         Nc=self.MF.my_VRP.num_cust
 
@@ -685,10 +656,16 @@ class   Benders_NG_graph:
                 if node_dem<=self.MF.my_VRP.vehicle_capacity:
                     my_nodes.append(new_node)
                     my_nodes_by_sz[len(s1)].append(new_node)
+                    #print('new_node')
+                    #print(new_node)
+                    #input('killing by size ')
+                    #if s2==frozenset([0,1,2,3,4,5,6]):
+                    #    input('look here')
         self.my_nodes_by_sz=my_nodes_by_sz
         self.my_nodes=my_nodes
     def make_feas_edges(self):
         self.my_orderings_by_node=dict()
+        my_nodes_by_sz=self.my_nodes_by_sz
         my_edges=set()
 
         self.ng_edge_source_2_cust=[]
@@ -707,6 +684,9 @@ class   Benders_NG_graph:
         for k in range(1,len(self.my_set_cust)):
             for i in self.my_nodes_by_sz[k]:
                 
+                #print('i')
+                #print(i)
+                
                 visited_excluding_last=i[1]
                 self.early_depart_time_by_node[i]=-np.inf
                 u=i[0]
@@ -714,7 +694,8 @@ class   Benders_NG_graph:
                     var_name='act_'+str(w)+'_'+str(u)
                     if var_name not in self.MF.action_2_cost:
                         continue
-                    if var_name in self.MF.delta_name_2_ub and self.MF.delta_name_2_ub[var_name]<EPSILON:
+                    if var_name in self.MF.delta_name_2_ub and self.MF.delta_name_2_ub[var_name]<0.001:
+                        #input('found one NOT AN ERROR ')
                         continue
                     tmp=set(visited_excluding_last)-set([w])
                     tmp_1=frozenset(sorted(list(tmp)))
@@ -730,7 +711,12 @@ class   Benders_NG_graph:
                         self.ng_edges.append(e)
                         self.ng_edges_non_source_sink.append(e)
                         self.ng_internal_edge_2_act[e]=tuple([w,u])
-                   
+                    else:
+                        #print('removing')
+                        eREM=tuple([node_pred,i])
+                        #print(eREM)
+                        #print('removing')
+                        self.edges_removed.append(eREM)
         
 
         self.ng_nodes=[]
@@ -743,10 +729,13 @@ class   Benders_NG_graph:
             if self.early_depart_time_by_node[my_node]>=0:
                 self.ng_nodes.append(my_node)
                 self.ng_nodes_minus_source_sink.append(my_node)
+                #if len(self.my_orderings_by_node[my_node])>0.5:
                 e=tuple([my_node,self.sink_node])
                 self.ng_edges.append(e)
                 self.ng_edge_cust_2_sink.append(e)
         
+
+
     def compute_depart_time(self,v,u,time_dep_u):
         if time_dep_u<0:
             out=-np.inf
@@ -758,7 +747,7 @@ class   Benders_NG_graph:
         act='act_'+str(u)+'_'+str(v)
         if out <self.MF.my_VRP.late_start[v]:
             out=-np.inf
-        if act in self.MF.delta_name_2_ub and self.MF.delta_name_2_ub[act]<EPSILON:
+        if act in self.MF.delta_name_2_ub and self.MF.delta_name_2_ub[act]<0.001:
             out=-np.inf
             
         return out

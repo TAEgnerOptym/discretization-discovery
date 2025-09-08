@@ -497,8 +497,8 @@ class projector_on_lb:
             self.CLEAN_dict_con_name_2_LB,
             self.CLEAN_dict_var_con_2_lhs_eq,
             self.CLEAN_dict_con_name_2_eq,lb_use,ub_use)
-        print('internal objective')
-        print(out_solution['objective'])
+        #print('internal objective')
+        #print(out_solution['objective'])
         
 
         self.lp_dual_solution=out_solution['dual_solution']

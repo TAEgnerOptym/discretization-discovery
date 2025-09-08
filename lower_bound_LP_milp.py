@@ -248,8 +248,7 @@ class lower_bound_LP_milp:
         #    ub_current=np.inf
         if self.full_prob.jy_opt['do_ilp']==False and 'ub_lp' in self.full_prob.history_dict and len(self.full_prob.history_dict['ub_lp'])>0 :
             ub_current=min([ub_current,self.full_prob.history_dict['ub_lp'][-1]])
-        print('ub_current')
-        print(ub_current)
+        
         #input('---')
         eta=(ub_current-self.lp_objective)+0.001
         if eta<0:
@@ -257,8 +256,7 @@ class lower_bound_LP_milp:
             print('eta')
             print(eta)
             input('error here')
-        print('eta')
-        print(eta)
+        print('ub_current = '+ str(ub_current)+ '  eta = '+str(eta))
         primal_solution=self.out_solution_JY['primal_solution']
         reduced_costs=self.out_solution_JY['reduced_costs']
         usedTerms=set(self.all_actions)-set(self.actions_ignore)
@@ -351,19 +349,20 @@ class lower_bound_LP_milp:
             u: heapq.nsmallest(2, entries)
             for u, entries in candidate_per_u.items()
         }
-        print('num_found_high')
-        print(num_found_high)
-        print('num_found_low')
-        print(num_found_low)
-        print('num_used')
-        print(num_used)
-        print('num_already_gone')
-        print(num_already_gone)
-        print('num_in_solution_ignore')
-        print(num_in_solution_ignore)
-        print('num_active')
-        print(num_active)
-        print('---')
+        self.terms_remove_this_round=terms_remove
+        print('num_found_high,num_found_low,num_used,num_already_gone,num_in_solution_ignore,num_active')
+        print([num_found_high,num_found_low,num_used,num_already_gone,num_in_solution_ignore,num_active])
+        #print(num_found_high)
+        #print('num_found_low')
+        #print(num_found_low)
+        #print('num_used')
+        #print(num_used)
+        #print('num_already_gone')
+        #print(num_already_gone)
+        #print('num_in_solution_ignore')
+        #print(num_in_solution_ignore)
+        #print('num_active')
+        #print(num_active)
         #print(result)
         #print('result')
        # input('--')
@@ -374,7 +373,7 @@ class lower_bound_LP_milp:
            # given set terms_to_remove. got through the dictionary hijp  which we index by ij and remove any terms for which hijp[ij] for which p in hijp[ij]
             allowed_terms=set(self.all_actions)-set(terms_remove)
             allowed_terms.add('null_action')
-            print('removing')
+            #print('removing')
             t_list=[]
 
             t1=time.time()
@@ -423,9 +422,9 @@ class lower_bound_LP_milp:
             }
             t_list.append(time.time()-t1)
             t1=time.time()
-            print('t_list')
-            print(t_list)
-            print('done removing')
+            #print('t_list')
+            #print(t_list)
+            #print('done removing')
         return result        
 
     def remove_remove_delta_and_delta_con(self):
