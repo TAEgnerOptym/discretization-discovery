@@ -39,7 +39,8 @@ def make_problem_instance(input_file_path,my_params,my_json_file_path):
             my_ng_graph=ng_graph(my_instance,ng_neigh_by_cust)
         else:
             #if 1>0:
-            from ng_graph_fancy_slow import ng_graph_fancy_slow
+            #from ng_graph_fancy_slow import ng_graph_fancy_slow
+            from ng_neigh_fancy_paper import ng_graph_fancy_slow
 
             my_ng_graph=ng_graph_fancy_slow(my_instance,ng_neigh_by_cust)
             #else:

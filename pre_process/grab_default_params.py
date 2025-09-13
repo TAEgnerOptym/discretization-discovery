@@ -83,6 +83,7 @@ def grab_default_params():
 
 	my_params['NO_PARETO_NUMERICAL_BEND_OFFSET_COST_CUT']=0#0.0001
 	my_params['NO_PARETO_BEND_VAL_STOP_ADDING_CUTS']=1
+	my_params['NO_PARETO_EPSILON_MAX_VAL_CON']=0.01
 
 
 	return my_params

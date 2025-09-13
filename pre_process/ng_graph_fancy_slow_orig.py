@@ -229,6 +229,8 @@ class ng_graph_fancy_slow:
                 
 
     def __init__(self,my_instance,ng_neigh_by_cust):
+        input('DEPRECIATED')
+
         self.my_instance=my_instance
         self.ng_neigh_by_cust=ng_neigh_by_cust
         self.Nc=len(self.ng_neigh_by_cust)

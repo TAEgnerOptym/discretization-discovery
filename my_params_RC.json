@@ -1,8 +1,9 @@
 {
 "num_cust_use":25,
+"NO_PARETO_BEND_VAL_STOP_ADDING_CUTS":20,
 "LAB_MP_ON":0,
 "use_diving_ineq":1,
-"ub_use_remove":462.1001,
+"ub_use_remove":461.1001,
 "maxVarsAdd_in_ITER":10,
 "use_ng_size_init":0,
 "use_packing_in_construction":1,

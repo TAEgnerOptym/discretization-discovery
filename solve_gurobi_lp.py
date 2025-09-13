@@ -1,3 +1,4 @@
+import pandas as pd
 import gurobipy as gp
 from gurobipy import GRB
 from collections import defaultdict
@@ -12,7 +13,8 @@ import io
 import sys
 import os
 import numpy as np
-
+from itertools import groupby
+from operator import itemgetter
 USE_WORKING_I_KNOW_SLOW=False
 class Tee(io.TextIOBase):
     def __init__(self, *streams):
@@ -585,7 +587,10 @@ def solve_gurobi_lp_bounds(dict_var_name_2_obj,
                     dict_var_con_2_lhs_eq,
                     dict_con_name_2_eq,dict_var_name_2_LB,dict_var_name_2_UB,use_pareto=False):
 
+    
+
     time_pre = time.time()
+    time_pre_1 = time.time()
 
     # Step 0: Create safe names for variables and constraints
     var_names = list(dict_var_name_2_obj.keys())
@@ -612,6 +617,7 @@ def solve_gurobi_lp_bounds(dict_var_name_2_obj,
 
     safe_var_LB = {var_name_map[k]: v for k, v in dict_var_name_2_LB.items()}
     safe_var_UB = {var_name_map[k]: v for k, v in dict_var_name_2_UB.items()}
+    time_pre_1 = time.time()-time_pre_1
 
     options = {
         "WLSACCESSID": "b7836a23-3df1-40ac-be4d-310282e2178e",
@@ -630,34 +636,86 @@ def solve_gurobi_lp_bounds(dict_var_name_2_obj,
                 model.setParam("Crossover" , 0)        # 2 = Barrier (interior-point)
                 #model.setParam("BarConvTol", 1e-2)
             var_dict = {}
+            time_pre_2=time.time()
             for name, obj_coeff in safe_var_obj.items():
                 lb = safe_var_LB.get(name, 0.0)
                 ub = safe_var_UB.get(name, GRB.INFINITY)
                 var_dict[name] = model.addVar(lb=lb, ub=ub, obj=obj_coeff, name=name)
-
+            time_pre_2=time.time()-time_pre_2
+            time_pre_3=time.time()
 
             model.update()
+            time_pre_3=time.time()-time_pre_3
+            time_pre_4=time.time()
 
-            group_exog = defaultdict(list)
-            for (var, con), coeff in safe_exog.items():
-                group_exog[con].append((var_dict[var], coeff))
+            if 1<0:
+                #group_exog = defaultdict(list)
+                #for (var, con), coeff in safe_exog.items():
+                #    group_exog[con].append((var_dict[var], coeff))
+#
+#                group_eq = defaultdict(list)
+#                for (var, con), coeff in safe_eq_map.items():
+#                    group_eq[con].append((var_dict[var], coeff))
+                vget = var_dict.__getitem__
+                def group_by_con_pandas(mapping):
+                    """mapping: dict with keys (var, con) and values coeff"""
+                    if not mapping:
+                        return {}
 
-            group_eq = defaultdict(list)
-            for (var, con), coeff in safe_eq_map.items():
-                group_eq[con].append((var_dict[var], coeff))
-            
+                    # Build a DataFrame: columns = var, con, coeff
+                    rows = ((var, con, coeff) for (var, con), coeff in mapping.items())
+                    df = pd.DataFrame.from_records(rows, columns=["var", "con", "coeff"])
+
+                    # Map var via var_dict in vectorized style
+                    df["var"] = df["var"].map(vget)
+
+                    # Group by 'con' and rebuild: con -> [(mapped_var, coeff), ...]
+                    grouped = {
+                        con: list(zip(g["var"].to_numpy(), g["coeff"].to_numpy()))
+                        for con, g in df.groupby("con", sort=False)
+                    }
+                    return grouped
+
+                # Use it for both
+                group_exog = group_by_con_pandas(safe_exog)
+                group_eq   = group_by_con_pandas(safe_eq_map)
+
+            else:
+                vget = var_dict.__getitem__
+                get_con = lambda kv: kv[0][1]          # (var, con) -> con
+                get_pair = itemgetter(0, 1)            # ((var, con), coeff) -> ((var, con), coeff)
+
+                # ---- exog ----
+                ex_items = safe_exog.items()
+                # sort once by con (kv[0][1])
+                ex_sorted = sorted(ex_items, key=get_con)
+                group_exog = {
+                    con: [(vget(var), coeff) for (var, _), coeff in grp]
+                    for con, grp in groupby(ex_sorted, key=get_con)
+                }
+
+                # ---- eq ----
+                eq_items = safe_eq_map.items()
+                eq_sorted = sorted(eq_items, key=get_con)
+                group_eq = {
+                    con: [(vget(var), coeff) for (var, _), coeff in grp]
+                    for con, grp in groupby(eq_sorted, key=get_con)
+                }
+            time_pre_4=time.time()-time_pre_4
+            time_pre_5=time.time()
             for con_name, terms in group_exog.items():
                 vars_, coeffs = zip(*terms)                     # unpack once
                 expr = gp.LinExpr(coeffs, vars_)                # build in C
                 model.addConstr(expr >= safe_LB[con_name], name=con_name)
-
+            time_pre_5=time.time()-time_pre_5
+            time_pre_6=time.time()
             for con_name, terms in group_eq.items():
 
                 vars_, coeffs = zip(*terms)
                 expr = gp.LinExpr(coeffs, vars_)
                 model.addConstr(expr == safe_EQ[con_name], name=con_name)
             model.ModelSense = GRB.MINIMIZE
-
+            time_pre_6=time.time()-time_pre_6
             time_pre=time.time()-time_pre
             time_opt = time.time()
             model.optimize()
@@ -681,6 +739,10 @@ def solve_gurobi_lp_bounds(dict_var_name_2_obj,
             objective = model.ObjVal
             reduced_costs   = {var_name_rev[var.VarName]: var.RC for var in model.getVars()}
             time_post=time.time()-time_post
+            print(['time_pre,time_opt,time_post'])
+            print([time_pre,time_opt,time_post])
+            print('time_pre_1,time_pre_2,time_pre_3,time_pre_4,time_pre_5,time_pre_6')
+            print([time_pre_1,time_pre_2,time_pre_3,time_pre_4,time_pre_5,time_pre_6])
             return {
                 "primal_solution": primal_solution,
                 "dual_solution": dual_solution,

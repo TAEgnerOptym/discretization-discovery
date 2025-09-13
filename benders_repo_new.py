@@ -8,12 +8,13 @@ import sys
 from itertools import chain, combinations
 import pickle
 sys.path.append("pre_process")
-
+import time
 from naive_pre import *
-EPSILON=0.00001
+EPSILON=0.0001
 COVER_CON_EPSILON=0#0.00001
 EPSILON_VALID_INEQ=0#0.000001
-
+EPSILON_MAX_VAL_CON=0.01
+EPSILON_MULT=0.01
 from typing import Dict, Hashable, Tuple
 def powerset(iterable):
     s = list(iterable)
@@ -74,8 +75,11 @@ class benders_cut_generator:
 
 
     def call_lp(self,x):
-
+        phase1_time=time.time()
         dict_con_name_2_LB=self.rhs_ineq.copy()
+        tot_add_by_con_name_no_eps=defaultdict(float)
+        tot_add_by_con_name=defaultdict(float)
+        tot_add_by_con_name_only_eps=defaultdict(float)
         for  my_dual_var_x_pair in self.A_ineq_x:
             var_name=my_dual_var_x_pair[0]
             if var_name in self.MF.delta_name_2_ub:# and self.MF.delta_name_2_ub[var_name]<EPSILON_STANDARD):
@@ -84,11 +88,29 @@ class benders_cut_generator:
                 continue
             con_name=my_dual_var_x_pair[1]
             my_mult=-self.A_ineq_x[my_dual_var_x_pair]
-            
-            val=x[var_name]+EPSILON#self.MF.jy_opt[]
+            rand_val=EPSILON_MULT
             if self.MF.jy_opt['BEND_USE_RAND']>0.5:
-                val=x[var_name]+EPSILON*(np.random.rand+0.1)
-            dict_con_name_2_LB[con_name]+=my_mult*val
+                rand_val=EPSILON_MULT*(np.random.rand+0.1)
+            val=x[var_name]+rand_val#self.MF.jy_opt[]
+            val_no_eps=x[var_name]
+            
+            tot_add_by_con_name[con_name]+=my_mult*val
+            tot_add_by_con_name_no_eps[con_name]+=my_mult*val_no_eps
+            tot_add_by_con_name_only_eps[con_name]+=my_mult*rand_val
+        for con_name in tot_add_by_con_name:
+            #dict_con_name_2_LB[con_name]-=EPSILON_MAX_VAL_CON#max([-0.01,tot_add_by_con_name[con_name]])
+            dict_con_name_2_LB[con_name]+=tot_add_by_con_name_no_eps[con_name]#tot_add_by_con_name[con_name]
+            dict_con_name_2_LB[con_name]-=self.MF.jy_opt['NO_PARETO_EPSILON_MAX_VAL_CON']#max([-0.01,tot_add_by_con_name[con_name]])
+            #dict_con_name_2_LB[con_name]+=tot_add_by_con_name_only_eps[con_name]#tot_add_by_con_name[con_name]
+            #print('con_name')
+            #print(con_name)
+            #print('tot_add_by_con_name[con_name]')
+            #print(tot_add_by_con_name[con_name])
+            #print('self.rhs_ineq[con_name]')
+            #print(self.rhs_ineq[con_name])
+            #print('dict_con_name_2_LB[con_name]')
+            #print(dict_con_name_2_LB[con_name])
+            #input('---')
         for var in self.dict_var_name_2_obj:
             if var in self.my_sub_prob.var_2_internal_2_act:
                 uv=self.my_sub_prob.var_2_internal_2_act[var]
@@ -101,6 +123,7 @@ class benders_cut_generator:
         
         self.dict_con_name_2_LB=dict_con_name_2_LB
         #print('calling LP')
+        phase1_time=time.time()-phase1_time
         out_solution=solve_gurobi_lp_bounds(self.dict_var_name_2_obj,
                     self.dict_var_con_2_lhs_exog,
                     self.dict_con_name_2_LB,
@@ -110,14 +133,16 @@ class benders_cut_generator:
         primal_solution=out_solution['primal_solution']
         lp_objective=out_solution['objective']
         time_opt=out_solution['time_opt']
-        
+        print('phase 1 time = '+str(phase1_time))
         return [primal_solution,dual_solution,lp_objective,time_opt]
     def generate_benders_cut(self,x,OPT_X_input=None):
-        #print('generate benders cut')
+        print('calling LP maker')
         self.in_x=x
         self.OPT_X_input=OPT_X_input
         tot_cut_value=0
         [primal_solution,dual_solution,lp_objective,time_opt]=self.call_lp(x)
+        print('Done calling LP maker')
+
         self.primal_solution=primal_solution
         self.dual_solution=dual_solution
         self.lp_objective=lp_objective
@@ -188,6 +213,8 @@ class benders_cut_generator:
                     with open("NEWINTERPlayHere.pkl", "wb") as f:
                         pickle.dump(self, f)
                     input('error here')
+        print('Done call benders cut LP maker')
+
         return lp_objective,did_add,time_opt
 
 
