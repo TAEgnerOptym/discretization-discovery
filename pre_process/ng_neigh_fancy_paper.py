@@ -9,7 +9,7 @@ class ng_graph_fancy_slow:
 
 
     def __init__(self,my_instance,ng_neigh_by_cust):
-        print('making ng-graph p1')
+        #print('making ng-graph p1')
         self.my_instance=my_instance
         self.ng_neigh_by_cust=ng_neigh_by_cust
         self.Nc=len(self.ng_neigh_by_cust)
@@ -17,26 +17,26 @@ class ng_graph_fancy_slow:
         #print(self.Nc)
         #input('---')
         self.my_instance.my_params['DEBUG_NG_turn_off_CLEAN']=False
-        print('making ng-graph p2')
+        #print('making ng-graph p2')
 
         self.make_nodes()
-        print('making ng-graph p3')
+        #print('making ng-graph p3')
 
         #self.make_edges_slow()
         self.make_edges_fast()
-        print('making ng-graph p4')
+        #print('making ng-graph p4')
 
         self.compute_earliest_by_node()
-        print('making ng-graph p5')
+        #print('making ng-graph p5')
 
         self.compute_earliest_by_edge()
-        print('making ng-graph p6')
+        #print('making ng-graph p6')
 
         self.eval_edges_keep()
-        print('making ng-graph p7')
+        #print('making ng-graph p7')
 
         self.clean_order()
-        print('making ng-graph DONE')
+        #print('making ng-graph DONE')
 
 
 
@@ -610,6 +610,9 @@ class ng_graph_fancy_slow:
         #print('----')
         #print('----')
         #print('----')
+        #print('dict_node_2_early')
+        #print(self.dict_node_2_early)
+        #input('--')
         dist=self.my_instance.dist_mat_full
         for i in self.all_nodes_exc_source_sink:
             time_u=self.dict_node_2_early[i]
@@ -667,6 +670,7 @@ class ng_graph_fancy_slow:
 
     def eval_edges_keep(self):
         E_after_removal=[]
+        self.dict_e_2_i_hat=dict()
         for e in self.E:
             i=e[0]
             j=e[1]
@@ -674,6 +678,7 @@ class ng_graph_fancy_slow:
             Ni=i[1]
             v=j[0]
             Nj=j[1]
+            self.dict_e_2_i_hat[(i,j)]=None
             if u==v or u==self.Nc or v==self.Nc+1 or len(Ni)==0:
                 E_after_removal.append(e)
                 continue
@@ -686,13 +691,15 @@ class ng_graph_fancy_slow:
             in_tup=tuple([ihat,j])
             
             my_arrival_time=self.dict_node_early_j_given_pred_i[in_tup]
-            
+            self.dict_e_2_i_hat[(i,j)]=ihat
             if my_arrival_time>=-0.5:
                 E_after_removal.append(e)
+            
+        self.DEBUG_E_prior_removal=self.E.copy()
         self.E=E_after_removal
     def clean_order(self):
         self.node_list=dict()
-
+        self.DEBUG_ez_lookup_e_2_ihat=dict()
         for u in self.my_nodes:
             new_nodes=[]
             for n in self.my_nodes[u]:
@@ -701,9 +708,11 @@ class ng_graph_fancy_slow:
                 new_nodes.append(this_node)
             self.node_list[u]=new_nodes
         E_2=[]
+        self.DEBUG_E_after_removal=self.E.copy()
         for e in self.E:
             i=e[0]
             j=e[1]
+
             tmp1=sorted(list(i[1]))
             this_node_1=[i[0],tmp1]
             tmp2=sorted(list(j[1]))
@@ -715,6 +724,10 @@ class ng_graph_fancy_slow:
             this_node_2_str=this_node_2_str.replace(' ','_')
             this_new_edge=tuple([this_node_1,this_node_2])
             E_2.append(this_new_edge)
+            help1=tuple([e[0][0],frozenset(e[0][1])])
+            help2=tuple([e[1][0],frozenset(e[1][1])])
+            self.DEBUG_ez_lookup_e_2_ihat[tuple([help1,help2])]=self.dict_e_2_i_hat[e]
+            #self.DEBUG_e_to_str_ver[e]=this_new_edge
         self.E=E_2
 
     def make_edges_fast(self):

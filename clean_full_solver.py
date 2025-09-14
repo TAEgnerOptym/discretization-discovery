@@ -1,3 +1,4 @@
+import ast
 import copy
 import pickle
 from collections import defaultdict
@@ -229,6 +230,7 @@ class full_solver:
         did_split=True
         self.current_LP_solution=[]
         did_add_ineq=False
+        did_ever_generate_cut=False
         self.call_init_separ()
         #input('--')
         num_calls_ineq=0
@@ -238,11 +240,11 @@ class full_solver:
             self.time_list_outer=dict()
             iter=iter+1
             if 1<0:
-                print('remaking')
-                input('--')
+                #print('remaking')
+                #input('--')
                 self.remake_ng_graph()
-                print('done remaking')
-                input('--')
+                #print('done remaking')
+                #input('--')
             t1=time.time()
 
             prob_sizes_at_start=self.count_size()
@@ -276,6 +278,8 @@ class full_solver:
             
             this_cutting_plane_info={'tot_cut_value':0,'TOT_gen_cut':0,'tot_time_opt':0,'max_time_opt':0}
             if did_split==False and self.jy_opt['ub_use_remove']-new_lp_value>0.001 and self.jy_opt['use_ineq']>0.5:
+                
+                did_ever_generate_cut=True
                 #[did_add_ineq,new_exog_terms,new_action_contrib]=self.separate_zero_val_terms(self.my_lower_bound_LP.lp_primal_solution)
                 if self.jy_opt['LAB_MP_ON']>0.5:
 
@@ -338,6 +342,8 @@ class full_solver:
                     print('AT TERM NOT splitting up after')
 
             t1=time.time()
+            if did_ever_generate_cut==False:
+                self.history_dict['ROOT_LP_PRIOR_ADDING_CUTS']=new_lp_value
 
             self.history_dict['lblp_lower'].append(new_lp_value)
             self.history_dict['cuttingPlaneBendInfo'].append(this_cutting_plane_info)
@@ -671,13 +677,44 @@ class full_solver:
 
 
     def remake_ng_graph(self):
-        print('remaking')
+
+        def str_ver_2_tup_froz_ver(my_tup):
+            i_str=my_tup[0]
+            j_str=my_tup[0]
+            i = ast.literal_eval(i_str)
+            j = ast.literal_eval(j_str)
+            u=i[0]
+            v=j[0]
+            Ni=i[1]
+            Nj=j[1]
+            Ni=frozenset(Ni)
+            Nj=frozenset(Nj)
+            i_out=tuple([u,Ni])
+            j_out=tuple([v,Nj])
+            out=tuple(i_out,j_out)
+            return out
+        def tup_froz_2_str_key(my_froz_term):
+            i=my_froz_term[0]
+            j=my_froz_term[1]
+            tmp1=sorted(list(i[1]))
+            this_node_1=[i[0],tmp1]
+            tmp2=sorted(list(j[1]))
+            this_node_2=[j[0],tmp2]
+            
+            this_node_1_str=str(this_node_1)
+            this_node_2_str=str(this_node_2)
+            this_node_1_str=this_node_1_str.replace(' ','_')
+            this_node_2_str=this_node_2_str.replace(' ','_')
+            this_new_edge=tuple([this_node_1_str,this_node_2_str])
+            return this_new_edge
         my_vrp_copy = copy.deepcopy(self.my_VRP)
         Nc=self.my_VRP.num_cust
         dist_mat_full_copy=self.my_VRP.dist_mat_full
         num_remove=0
         uv_remove=set()
         acts_remove=set([])
+        old_ng_graph=ng_graph_fancy_slow(self.my_VRP,self.full_input_dict['ng_neigh_by_cust'][0:-2])
+
         for u in range(0,Nc):
             for v in range(0,Nc):
                 my_act='act_'+str(u)+'_'+str(v)
@@ -687,56 +724,80 @@ class full_solver:
                     num_remove=num_remove+1
                     uv_remove.add(tuple([u,v]))
                     acts_remove.add(my_act)
-        print('num_remove')
-        print(num_remove)
-        print('uv_remove')
-        print(uv_remove)
         my_vrp_copy.dist_mat_full=dist_mat_full_copy
         #print(self.full_input_dict['ng_neigh_by_cust'])
         #print(len(self.full_input_dict['ng_neigh_by_cust']))
         my_new_ng_graph=ng_graph_fancy_slow(my_vrp_copy,self.full_input_dict['ng_neigh_by_cust'][0:-2])
         
-        orig=self.ORIG_ng_graph_h_ijp.copy()
-        my_keys=[]
-        
 
-        my_keys=[]
-        for ij_new in my_new_ng_graph.E:#self.D['hij2P']['ngGraph']:
-            i=ij_new[0]
-            j=ij_new[1]
-            str_i=str(i)
-            str_j=str(j)
+        
+        orig=self.ORIG_ng_graph_h_ijp.copy()
+        
+        
+        new_hijp_ng=dict()
+        DEBUG_my_key_2_e=dict()
+        for ij in  my_new_ng_graph.E:
+            i=ij[0]
+            j=ij[1]
             u=i[0]
             v=j[0]
-            if tuple([u,v]) in uv_remove:
-                print(tuple([u,v]) )
-                input('error here big')
-            #else:
-            #    print('cool')
-            #    print(tuple([u,v]) )
-            my_key_candid=tuple([str_i,str_j])
-            #print('my_key_candid')
-            #print(my_key_candid)
-            if my_key_candid not in orig:#self.D['hij2P']['ngGraph']:
-                print('big error')
-                print('my_key_candid')
-                print(my_key_candid)
-                input('---')
-            my_keys.append(my_key_candid)
-        print('filtered start')
-        filtered = {k: self.ORIG_ng_graph_h_ijp[k] for k in my_keys}
-        print('filtering done')
+            x_name=[]
+            if u!=v:
+                x_name='act_'+str(u)+'_'+str(v)
+            else:
+                x_name='null_action'
+            if x_name not in self.all_actions and x_name!=self.null_action:
+                print('x_name')
+                print(x_name)
+                input('err') 
+            my_tup=tuple([str(i),str(j)])
+            if my_tup not in orig:
+                #print('orig')
+                #print(orig)
+                print('str(ij)')
+                print(str(ij))
+                input('error big')
+            new_hijp_ng[my_tup]=[x_name]
+            DEBUG_my_key_2_e[my_tup]=ij
+        keys_remove=orig.keys()-new_hijp_ng.keys()
+        e_remove=set(old_ng_graph.DEBUG_E_after_removal)-set(my_new_ng_graph.DEBUG_E_after_removal)
 
-        #num_remove=len(orig)-len(filtered)
-        print('num_remove')
-        print(num_remove)
-        input('--')
-        self.D['hij2P']['ngGraph']
-        set_remove=set(self.ORIG_ng_graph_h_ijp.keys())-set(filtered.keys())
-        self.set_of_edges_force_zero=set_remove
+        print('len(keys_remove)')
+        print(len(keys_remove))
+        print('len(e_remove)')
+        print(len(e_remove))
+        print('----')
+        if len(e_remove)!=len(keys_remove):
+            
+            for e in e_remove:
 
-        print('edges to kill')
-        print('len(set_remove)')
-        print(len(set_remove))
-        print('set_remove')
-        input('---')
+                e_rep=tup_froz_2_str_key(e)
+                if e_rep not in self.ORIG_h_ijp['ngGraph']:
+                    print('e_rep')
+                    print(e_rep)
+                    input('really big error')
+            for k in keys_remove:
+                e_rep=str_ver_2_tup_froz_ver(k)
+                if e_rep not in old_ng_graph.DEBUG_E_after_removal:
+                    input('bery giv')
+            input('bigErrorOrSoIthink')
+        for k in keys_remove:
+            iL=k[0]
+            jL=k[1]
+            i = ast.literal_eval(iL)
+            j = ast.literal_eval(jL)
+            u=i[0]
+            v=j[0]
+            Ni=i[1]
+            Nj=j[1]
+            if tuple([u,v]) not in uv_remove:
+                print('i')
+                print(i)
+                print('j')
+                print(j)
+                input('Not an error but look')
+            #print('hihi')
+
+        self.D['hij2P']['ngGraph']=new_hijp_ng
+        
+
