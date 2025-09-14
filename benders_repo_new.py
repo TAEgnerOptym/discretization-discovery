@@ -346,17 +346,24 @@ class sub_problem:
         self.sub_prob_name='my_sub_prob'+str(my_set_cust)
         self.A_ineq_x=dict()
         self.rhs_ineq=dict()
-
+        #print('p1')
         self.make_vars_cost()
+        #print('p2')
         self.make_cover_con()
+        #print('p3')
         #self.make_flow_in_out()
         self.fast_make_flow_in_out()
+        #print('p4')
         self.make_matching_constrs_reg_edge()
+       # print('p5')
         self.make_matching_constrs_source()
+        #print('p6')
         self.make_matching_constrs_sink()
+        #print('p7')
 
         #self.make_valid_ineq_con()
         self.COPIED_make_valid_ineq_con()
+        #print('p8')
     
     def get_my_sz_pairs_by_size(self, K):
         m_sz_pairs = []
@@ -547,6 +554,7 @@ class sub_problem:
                 self.A_ineq_y[my_tup]=1
 
 
+    
     def COPIED_make_valid_ineq_con(self):
         debug_on=True
         ng_edge_2_str=dict()
@@ -565,7 +573,6 @@ class sub_problem:
                 dict_div_intersz_2_val[my_divisor][my_input_size]=-(my_input_size//my_divisor)
 
         my_inter_size=dict()
-
         if 1<0:
             for S in unique_cust_sets:
                 my_inter_size[S]=defaultdict(float)
@@ -574,10 +581,9 @@ class sub_problem:
                     if inter_sz>0:
                         my_inter_size[S][ng_edge]=inter_sz
         else:
-
-            # Precompute (edge, edge_set) once outside the S-loop
             _edges = list(self.ng_edge_cust_2_sink)
-            _edge_sets = [e[0][2] if isinstance(e[0][2], set) else set(e[0][2]) for e in _edges]
+            _edge_sets = [es if isinstance((es := e[0][2]), set) else set(es) for e in _edges]
+
             my_inter_size = {}
 
             for S in unique_cust_sets:
@@ -586,24 +592,9 @@ class sub_problem:
                 d = {e: sz for e, es in zip(_edges, _edge_sets) if (sz := len(es & S_set)) > 0}
                 if d:  # keep only non-empty entries (matches your original behavior)
                     my_inter_size[S] = defaultdict(float, d)
-            if 1<0:
-                BACK_my_inter_size=dict()
-
-                for S in unique_cust_sets:
-                    BACK_my_inter_size[S]=defaultdict(float)
-                    for ng_edge in self.ng_edge_cust_2_sink:
-                        inter_sz=len(ng_edge[0][2].intersection(S))
-                        if inter_sz>0:
-                            BACK_my_inter_size[S][ng_edge]=inter_sz
-                for S in BACK_my_inter_size:
-                    for ng_edge in BACK_my_inter_size[S]:
-                        if BACK_my_inter_size[S][ng_edge]!=my_inter_size[S][ng_edge]:
-                            input('error here')
-                for S in my_inter_size:
-                    for ng_edge in my_inter_size[S]:
-                        if BACK_my_inter_size[S][ng_edge]!=my_inter_size[S][ng_edge]:
-                            input('error here 2')
-
+        
+        #print('ap5')
+        
         for q in self.subset_and_divisor:
             my_subset=q[0]
             my_divisor=q[1]
@@ -611,25 +602,10 @@ class sub_problem:
             D=my_divisor
             con_name='my_SRI_'+str(q)
 
-
-            
-            ng_edge_2_sz_inter=dict()
-            if 0>1:
-                for ng_edge in self.ng_edge_cust_2_sink:
-                    tmp=ng_edge[0][2]
-                    ng_edge_2_sz_inter[ng_edge]=len(tmp.intersection(my_subset))
-            else:
-                my_subset_set = set(my_subset)
-
-                ng_edge_2_sz_inter = {
-                    ng_edge: len(ng_edge[0][2] & my_subset_set)
-                    for ng_edge in self.ng_edge_cust_2_sink
-                }
-            
             did_find=False
             tot_found=0
             num_found=0
-            if 0<1:
+            if 1<0:
                 for ng_edge in self.ng_edge_cust_2_sink:
 
                     this_inter_sz=my_inter_size[S][ng_edge]
@@ -641,29 +617,29 @@ class sub_problem:
                         did_find=True
                         num_found=num_found+1
                         tot_found=tot_found+abs(my_mult)
-                else:
-                    edge_inter = my_inter_size.get(S, {})                 # {ng_edge: inter_sz} for this S
-                    val_by_sz  = dict_div_intersz_2_val[D]                # {inter_sz: multiplier}
-                    to_name    = ng_edge_2_str                            # {ng_edge: "ng_EDGE_<...>"}
+            else:
+                edge_inter = my_inter_size.get(S, {})                 # {ng_edge: inter_sz} for this S
+                val_by_sz  = dict_div_intersz_2_val[D]                # {inter_sz: multiplier}
+                to_name    = ng_edge_2_str                            # {ng_edge: "ng_EDGE_<...>"}
 
-                    # Build all nonzero coefficients in one pass
-                    edge_terms = {
-                        (to_name[e], con_name): m
-                        for e, sz in edge_inter.items()
-                        if (m := val_by_sz.get(sz, 0)) != 0
-                    }
+                # Build all nonzero coefficients in one pass
+                edge_terms = {
+                    (to_name[e], con_name): m
+                    for e, sz in edge_inter.items()
+                    if (m := val_by_sz.get(sz, 0)) != 0
+                }
 
-                    # Bulk write
-                    self.A_ineq_y.update(edge_terms)
+                # Bulk write
+                self.A_ineq_y.update(edge_terms)
 
-                    # Fast counters
-                    did_find  = bool(edge_terms)
-                    num_found = len(edge_terms)
-                    tot_found = sum(abs(v) for v in edge_terms.values())
+                # Fast counters
+                did_find  = bool(edge_terms)
+                num_found = len(edge_terms)
+                tot_found = sum(abs(v) for v in edge_terms.values())
             if did_find==True:
                 self.rhs_ineq[con_name]=-(len(my_subset)//my_divisor)
 
-                if 0>1 and  abs(tot_found)+0.3<=abs(self.rhs_ineq[con_name]):
+                if 1<0 and abs(tot_found)+0.3<=abs(self.rhs_ineq[con_name]):
                     print('my_subset')
                     print(my_subset)
                     print('my_divisor')

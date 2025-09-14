@@ -283,7 +283,7 @@ class full_solver:
                 
                 if 1>0 or False==hasattr(self,'my_bender_repo'):
                     self.my_bender_repo=benders_repo_new(self)
-                    debug_on=True
+                    debug_on=False
                     if debug_on==True and self.OPT_SOL==None:
                         self.call_ILP_solver()
                         self.OPT_SOL=self.my_lower_bound_ILP.milp_solution
