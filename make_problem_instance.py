@@ -23,6 +23,7 @@ def make_problem_instance(input_file_path,my_params,my_json_file_path):
     #input('start dem')
     my_time_graph=time_graph(my_instance,time_thresh)
     my_ng_graph=None
+    ng_neigh_by_cust=[]
     if my_params['use_ng']>0.5:
         print('gettign navie neigh')
         [ng_neigh_by_cust,junk]=naive_get_LA_neigh(my_instance,(my_params['num_NG']))
@@ -73,8 +74,16 @@ def make_problem_instance(input_file_path,my_params,my_json_file_path):
         del my_object_no_la.out_dict['hij2P']['capGraph']
         my_object_no_la.out_dict['allGraphNames'].remove('capGraph')
         #del my_object_no_la.out_dict['allGraphNames']['capGraph']
-
     
+    ng_neigh_by_cust2=ng_neigh_by_cust.copy()
+    ng_neigh_by_cust2=ng_neigh_by_cust2[0:-2]
+    ng_neigh_by_cust2.append([])
+    ng_neigh_by_cust2.append([])
+    ng_neigh_by_cust2 = [[int(x) for x in sublist] for sublist in ng_neigh_by_cust2]
+    my_object_no_la.out_dict['ng_neigh_by_cust']=ng_neigh_by_cust2
+    #my_object_no_la.out_dict['ng_graph']=ng_graph
+    #print(ng_neigh_by_cust)
+    #input('---')
     data=my_object_no_la.out_dict
 
     

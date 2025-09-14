@@ -1,3 +1,4 @@
+import copy
 import pickle
 from collections import defaultdict
 from typing import Dict, DefaultDict, Set, List
@@ -24,6 +25,8 @@ import json
 from New_valid_sep.check_valid_round_2 import check_valid_round_2
 from projector_on_lb import projector_on_lb
 from benders_repo_new import benders_repo_new
+from pre_process.ng_neigh_fancy_paper import *
+
 #from EXPER_benders_repo_new import benders_repo_new
 class full_solver:
 
@@ -125,7 +128,9 @@ class full_solver:
         self.history_dict['history_of_graphs_by_iter']=[]
 
         #self.my_bender_repo=benders_repo_new(self)
-
+        #input('---')
+        self.ORIG_ng_graph_h_ijp=self.D['hij2P']['ngGraph'].copy()
+        self.ORIG_h_ijp=copy.deepcopy(self.D['hij2P'])
         self.apply_complete_algorithm()
         with open(self.output_file_path, 'w') as file:
             json.dump(self.history_dict, file)
@@ -232,6 +237,12 @@ class full_solver:
 
             self.time_list_outer=dict()
             iter=iter+1
+            if 1<0:
+                print('remaking')
+                input('--')
+                self.remake_ng_graph()
+                print('done remaking')
+                input('--')
             t1=time.time()
 
             prob_sizes_at_start=self.count_size()
@@ -270,7 +281,7 @@ class full_solver:
 
                     [did_add_ineq,new_exog_terms,new_action_contrib]=self.separate_zero_val_terms_internal(self.my_lower_bound_LP.lp_primal_solution)
                 
-                if False==hasattr(self,'my_bender_repo'):
+                if 1>0 or False==hasattr(self,'my_bender_repo'):
                     self.my_bender_repo=benders_repo_new(self)
                     debug_on=True
                     if debug_on==True and self.OPT_SOL==None:
@@ -659,3 +670,73 @@ class full_solver:
         
 
 
+    def remake_ng_graph(self):
+        print('remaking')
+        my_vrp_copy = copy.deepcopy(self.my_VRP)
+        Nc=self.my_VRP.num_cust
+        dist_mat_full_copy=self.my_VRP.dist_mat_full
+        num_remove=0
+        uv_remove=set()
+        acts_remove=set([])
+        for u in range(0,Nc):
+            for v in range(0,Nc):
+                my_act='act_'+str(u)+'_'+str(v)
+                if my_act in self.delta_name_2_ub and self.delta_name_2_ub[my_act]<0.001 and my_act not in self.all_actions_inclumbent:# and u<Nc and v<Nc:
+                    dist_mat_full_copy[u,v]=np.inf
+                    #print('FOUND A REMOVE')
+                    num_remove=num_remove+1
+                    uv_remove.add(tuple([u,v]))
+                    acts_remove.add(my_act)
+        print('num_remove')
+        print(num_remove)
+        print('uv_remove')
+        print(uv_remove)
+        my_vrp_copy.dist_mat_full=dist_mat_full_copy
+        #print(self.full_input_dict['ng_neigh_by_cust'])
+        #print(len(self.full_input_dict['ng_neigh_by_cust']))
+        my_new_ng_graph=ng_graph_fancy_slow(my_vrp_copy,self.full_input_dict['ng_neigh_by_cust'][0:-2])
+        
+        orig=self.ORIG_ng_graph_h_ijp.copy()
+        my_keys=[]
+        
+
+        my_keys=[]
+        for ij_new in my_new_ng_graph.E:#self.D['hij2P']['ngGraph']:
+            i=ij_new[0]
+            j=ij_new[1]
+            str_i=str(i)
+            str_j=str(j)
+            u=i[0]
+            v=j[0]
+            if tuple([u,v]) in uv_remove:
+                print(tuple([u,v]) )
+                input('error here big')
+            #else:
+            #    print('cool')
+            #    print(tuple([u,v]) )
+            my_key_candid=tuple([str_i,str_j])
+            #print('my_key_candid')
+            #print(my_key_candid)
+            if my_key_candid not in orig:#self.D['hij2P']['ngGraph']:
+                print('big error')
+                print('my_key_candid')
+                print(my_key_candid)
+                input('---')
+            my_keys.append(my_key_candid)
+        print('filtered start')
+        filtered = {k: self.ORIG_ng_graph_h_ijp[k] for k in my_keys}
+        print('filtering done')
+
+        #num_remove=len(orig)-len(filtered)
+        print('num_remove')
+        print(num_remove)
+        input('--')
+        self.D['hij2P']['ngGraph']
+        set_remove=set(self.ORIG_ng_graph_h_ijp.keys())-set(filtered.keys())
+        self.set_of_edges_force_zero=set_remove
+
+        print('edges to kill')
+        print('len(set_remove)')
+        print(len(set_remove))
+        print('set_remove')
+        input('---')

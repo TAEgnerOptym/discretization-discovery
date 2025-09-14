@@ -566,43 +566,12 @@ class sub_problem:
 
         my_inter_size=dict()
 
-        if 1<0:
-            for S in unique_cust_sets:
-                my_inter_size[S]=defaultdict(float)
-                for ng_edge in self.ng_edge_cust_2_sink:
-                    inter_sz=len(ng_edge[0][2].intersection(S))
-                    if inter_sz>0:
-                        my_inter_size[S][ng_edge]=inter_sz
-        else:
-
-            # Precompute (edge, edge_set) once outside the S-loop
-            _edges = list(self.ng_edge_cust_2_sink)
-            _edge_sets = [e[0][2] if isinstance(e[0][2], set) else set(e[0][2]) for e in _edges]
-            my_inter_size = {}
-
-            for S in unique_cust_sets:
-                S_set = S if isinstance(S, set) else set(S)
-                # build only nonzero intersections for this S
-                d = {e: sz for e, es in zip(_edges, _edge_sets) if (sz := len(es & S_set)) > 0}
-                if d:  # keep only non-empty entries (matches your original behavior)
-                    my_inter_size[S] = defaultdict(float, d)
-            if 1<0:
-                BACK_my_inter_size=dict()
-
-                for S in unique_cust_sets:
-                    BACK_my_inter_size[S]=defaultdict(float)
-                    for ng_edge in self.ng_edge_cust_2_sink:
-                        inter_sz=len(ng_edge[0][2].intersection(S))
-                        if inter_sz>0:
-                            BACK_my_inter_size[S][ng_edge]=inter_sz
-                for S in BACK_my_inter_size:
-                    for ng_edge in BACK_my_inter_size[S]:
-                        if BACK_my_inter_size[S][ng_edge]!=my_inter_size[S][ng_edge]:
-                            input('error here')
-                for S in my_inter_size:
-                    for ng_edge in my_inter_size[S]:
-                        if BACK_my_inter_size[S][ng_edge]!=my_inter_size[S][ng_edge]:
-                            input('error here 2')
+        for S in unique_cust_sets:
+            my_inter_size[S]=defaultdict(float)
+            for ng_edge in self.ng_edge_cust_2_sink:
+                inter_sz=len(ng_edge[0][2].intersection(S))
+                if inter_sz>0:
+                    my_inter_size[S][ng_edge]=inter_sz
 
         for q in self.subset_and_divisor:
             my_subset=q[0]
@@ -663,7 +632,7 @@ class sub_problem:
             if did_find==True:
                 self.rhs_ineq[con_name]=-(len(my_subset)//my_divisor)
 
-                if 0>1 and  abs(tot_found)+0.3<=abs(self.rhs_ineq[con_name]):
+                if abs(tot_found)+0.3<=abs(self.rhs_ineq[con_name]):
                     print('my_subset')
                     print(my_subset)
                     print('my_divisor')
