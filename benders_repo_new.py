@@ -376,6 +376,7 @@ class sub_problem:
         for k in num_cust_use:
             this_sz=math.comb(int(K),int(k))
             if this_sz>self.MF.jy_opt['BEND_MAX_SIZE_CHOOSE_K']:
+                #input('NOT WRONG BUT AT 260 should not happenJUST SHOULD NOT HAPPEN')
                 continue
             for r in range(2, k + 1):
                 m_sz_pairs.append((r, k))

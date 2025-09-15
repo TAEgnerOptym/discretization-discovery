@@ -267,13 +267,23 @@ class projector_on_lb:
             self.dict_var_name_2_obj[var_name]=0
         self.times_lp_times['help_construct_LB_make_vars_4']=time.time()-t1
         t1=time.time()
+        #self.h_var_name_2_fg=dict()
+        #self.h_var_name_2_ij=dict()
         for h in self.graph_names:
+            #self.h_var_name_2_fg[h]=dict()
+            #self.h_var_name_2_ij[h]=dict()
             for tup_fg in self.h_fg_2_ij[h]:
                 
                 f=tup_fg[0]
                 g=tup_fg[1]
                 var_name='EDGE_h='+h+'_f='+f+'_g='+g
                 self.dict_var_name_2_obj[var_name]=0
+                #self.h_var_name_2_fg[h][var_name]=tup_fg
+                #self.h_var_name_2_ij[h][var_name]=[]
+                #if len(self.h_fg_2_ij[h][tup_fg])!=1:
+                #    input('err here')
+                #for ij in self.h_fg_2_ij[h][tup_fg]:
+                #    self.h_var_name_2_ij[h][var_name].append(ij)
                 #if (self.full_prob.jy_opt['allOneBig_init']==False and self.full_prob.jy_opt['do_split_based_init']==True) and self.full_prob.jy_opt['all_vars_binary']==True:
         self.times_lp_times['help_construct_LB_make_vars_5']=time.time()-t1
         t1=time.time()

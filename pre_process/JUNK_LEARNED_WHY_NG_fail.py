@@ -8,8 +8,10 @@ class ng_graph_fancy_slow:
 
 
 
-    def __init__(self,my_instance,ng_neigh_by_cust):
+    def __init__(self,my_instance,ng_neigh_by_cust,Debug_edges_forbidden=dict(),Debug_time_rem=dict()):
         #print('making ng-graph p1')
+        self.Debug_edges_forbidden=Debug_edges_forbidden
+        self.Debug_time_rem=Debug_time_rem
         self.my_instance=my_instance
         self.ng_neigh_by_cust=ng_neigh_by_cust
         self.Nc=len(self.ng_neigh_by_cust)
@@ -442,13 +444,26 @@ class ng_graph_fancy_slow:
 
                     if candid > d2e_local[j]:
                         d2e_local[j] = candid
-
+        print('AT END OF EARLY NODE')
+        print('self.my_instance.dist_mat_full[6,10]')
+        print(self.my_instance.dist_mat_full[6,10])
+        print('self.dict_node_2_early[tuple([10,frozenset([6])])]')
+        print(self.dict_node_2_early[tuple([10,frozenset([6])])])
+        print('----')
     def compute_earliest_by_edge(self):
+        print('AT START OF EARLY EDGE')
+        print('self.my_instance.dist_mat_full[6,10]')
+        print(self.my_instance.dist_mat_full[6,10])
+        print('self.dict_node_2_early[tuple([10,frozenset([6])])]')
+        print(self.dict_node_2_early[tuple([10,frozenset([6])])])
+        print('----')
+
         self.dict_node_early_j_given_pred_i=defaultdict(lambda: -np.inf)
         #print('----')
         #print('----')
         #print('----')
         #print('----')
+        
         dist=self.my_instance.dist_mat_full
         for i in self.all_nodes_exc_source_sink:
             time_u=self.dict_node_2_early[i]
@@ -494,19 +509,38 @@ class ng_graph_fancy_slow:
                     #print('pt2')
 
                     j=tuple([w,Ni])
-
+                
                 self.dict_node_early_j_given_pred_i[(i,j)]=self.compute_early_depart_from_v_given_pred_u(time_u,u,w)
                 #if self.dict_node_early_j_given_pred_i[(i,j)]<0:
-#
+#               
+                if j==tuple([10,frozenset([6])]) and u==6:
+                    print('i')
+                    print(i)
+                    print('self.dict_node_early_j_given_pred_i[(i,j)]')
+                    print(self.dict_node_early_j_given_pred_i[(i,j)])
+                    print('self.dict_node_2_early[j)]')
+                    print(self.dict_node_2_early[j])
+                    print('self.dict_node_2_early[tuple([10,frozenset([6])])]')
+                    print(self.dict_node_2_early[tuple([10,frozenset([6])])])
+                    print('j')
+                    print(j)
+                    input('hihi') 
+
 #                    print('i')
 #                    print(i)
 #                    print('j')
 #                    print(j)
 #                    input('-not wrong but debuggin-')
-
+        print('AT END OF EARLY EDGE')
+        print('self.dict_node_2_early[tuple([10,frozenset([6])])]')
+        print(self.dict_node_2_early[tuple([10,frozenset([6])])])
     def eval_edges_keep(self):
-        self.E_before_removal=self.E.copy()
+        print('AT START OF eval_edges_keep')
+        print('self.dict_node_2_early[tuple([10,frozenset([6])])]')
+        print(self.dict_node_2_early[tuple([10,frozenset([6])])])
+        print('----')
         E_after_removal=[]
+        DEBUG_E_ERROR=set([])
         for e in self.E:
             i=e[0]
             j=e[1]
@@ -527,8 +561,59 @@ class ng_graph_fancy_slow:
             
             my_arrival_time=self.dict_node_early_j_given_pred_i[in_tup]
             
+            if e in self.Debug_edges_forbidden:
+                flag1=False
+                flag2=False
+                print('-------')
+                if self.dict_node_2_early[ihat]<self.Debug_time_rem[u]-0.001:
+                    flag1=True
+                    DEBUG_E_ERROR.add(e)
+                    print('elf.dict_node_2_early[ihat]')
+                    print(self.dict_node_2_early[ihat])
+                    print('self.Debug_time_rem[u]')
+                    print(self.Debug_time_rem[u])
+                    input('error here maybe? 1')
+                if my_arrival_time<self.Debug_time_rem[v]-0.001:
+                    flag2=True
+                    DEBUG_E_ERROR.add(e)
+
+                    print('my_arrival_time')
+                    print(my_arrival_time)
+                    print('self.Debug_time_rem[v]')
+                    print(self.Debug_time_rem[v])
+                    input('error here maybe? 2')
+                if flag2==True and flag1==False:
+                    input('BIGG')
+                    input('BIGG')
+                    input('BIGG')
+                    input('BIGG')
+                    input('BIGG')
+                    input('BIGG')
+
             if my_arrival_time>=-0.5:
                 E_after_removal.append(e)
+                continue
+
+            
+            if e in self.Debug_edges_forbidden:
+                print('this one is beign removed')
+                print('my_arrival_time')
+                print(my_arrival_time)
+                print('self.dict_node_2_early[ihat]')
+                print(self.dict_node_2_early[ihat])
+                print('ihat')
+                print(ihat)
+                print('self.my_instance.dist_full_mat[u,v]')
+                print(self.my_instance.dist_mat_full[u,v])
+                print('e')
+                print(e)
+                print('self.dict_node_2_early[tuple([10,frozenset([6])])]')
+                print(self.dict_node_2_early[tuple([10,frozenset([6])])])
+                input('--')
+        if len(DEBUG_E_ERROR)>0:
+            print('DEBUG_E_ERROR')
+            print(DEBUG_E_ERROR)
+            input('--')
         self.E=E_after_removal
     def clean_order(self):
         self.E_after_removal=self.E.copy()
@@ -661,3 +746,4 @@ class ng_graph_fancy_slow:
                 # iterate only v with finite dist and v != u
                 for v in vs:
                     add_non_self_succ_core(v, my_node, allowed)
+        self.E_before_removal=self.E.copy()

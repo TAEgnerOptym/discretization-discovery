@@ -33,12 +33,10 @@ from pre_process.ng_neigh_fancy_paper import *
 #from EXPER_benders_repo_new import benders_repo_new
 class full_solver:
 
-    def __init__(self,full_input_dict,jy_opt,output_file_path,all_actions_inclumbent=None,actions_ignore=None,hist_terms_phase_one=None,init_disc=None,OPT_SOL=None,Actions_of_given_sol=None):
+    def __init__(self,full_input_dict,jy_opt,output_file_path,all_actions_inclumbent=None,actions_ignore=None,hist_terms_phase_one=None,init_disc=None,OPT_SOL=None):
         print('type(full_input_dict)')
         print(type(full_input_dict))
         self.all_actions_inclumbent=None
-        
-            
         self.OPT_SOL=OPT_SOL
         self.D=full_input_dict
         self.count_cutting_planes=0
@@ -111,14 +109,7 @@ class full_solver:
         self.graph_names=full_input_dict['allGraphNames']
 
         self.all_source_sink_actions=set(self.all_actions)-set(self.all_actions_not_source_sink_connected)
-        self.init_default_solution_is_empty=False
-        self.Actions_of_given_sol=Actions_of_given_sol
-        if self.Actions_of_given_sol==None:
-            self.Actions_of_given_sol=self.all_source_sink_actions
-            self.init_default_solution_is_empty=False
-        self.objective_of_initial_sol=0
-        for my_act in self.Actions_of_given_sol:
-            self.objective_of_initial_sol+=self.action_2_cost[my_act]
+
         self.delta_name_2_ub=full_input_dict['delta_name_2_ub']
         self.delta_name_2_lb=full_input_dict['delta_name_2_lb']
         self.ineq_replaced_by_lb_ub=full_input_dict['ineq_replaced_by_lb_ub']
@@ -215,26 +206,10 @@ class full_solver:
             #    if my_prim in my_ilp_sol:
             #        if my_ilp_sol[my_prim]>0.01:
             #            out_sol[my_prim]=my_ilp_sol[my_prim]
-            if (tot_cost-self.history_dict['OUR_ilp_objective'])>0.001:
-                input('wierd')
-            else:
-                print('GOOD CORRECT. tot_cost')
-                print(tot_cost)
             self.history_dict['jy_opt']=self.jy_opt
             self.history_dict['output_ilp_solution']=out_sol
+        
 
-            self.history_dict['Actions_of_given_sol']=str(self.Actions_of_given_sol)
-            
-            self.generate_paths_from_actions(out_sol)
-
-            self.history_dict['init_default_solution_is_empty']=self.init_default_solution_is_empty
-            self.history_dict['Actions_of_given_sol']='none just used source and sink terms'#str(self.Actions_of_given_sol)
-
-            if self.init_default_solution_is_empty>0.5:
-                self.history_dict['Actions_of_given_sol']=str(self.Actions_of_given_sol)
-
-            self.history_dict['objective_of_initial_sol']=self.objective_of_initial_sol
-            self.history_dict['my_paths']=str(self.my_paths)
     
     def augment_history_graphs(self):
 
@@ -258,8 +233,7 @@ class full_solver:
         self.current_LP_solution=[]
         did_add_ineq=False
         did_ever_generate_cut=False
-        self.jy_opt['LAB_MP_ON']=0
-        #self.call_init_separ()
+        self.call_init_separ()
         #input('--')
         num_calls_ineq=0
         while iter<self.jy_opt['max_iterations_loop_compress_project'] and (did_split==True or did_add_ineq==True):
@@ -267,7 +241,12 @@ class full_solver:
 
             self.time_list_outer=dict()
             iter=iter+1
-            
+            if 1<0:
+                #print('remaking')
+                #input('--')
+                self.remake_ng_graph()
+                #print('done remaking')
+                #input('--')
             t1=time.time()
 
             prob_sizes_at_start=self.count_size()
@@ -300,16 +279,17 @@ class full_solver:
             [did_split,proj_objective_componentLps,proj_time_component_lps]=self.apply_splitting_2()
             
             this_cutting_plane_info={'tot_cut_value':0,'TOT_gen_cut':0,'tot_time_opt':0,'max_time_opt':0}
-            if did_ever_generate_cut==False:
-                self.history_dict['ROOT_LP_PRIOR_ADDING_CUTS']=new_lp_value
             if did_split==False and self.jy_opt['ub_use_remove']-new_lp_value>0.001 and self.jy_opt['use_ineq']>0.5:
                 
                 did_ever_generate_cut=True
                 #[did_add_ineq,new_exog_terms,new_action_contrib]=self.separate_zero_val_terms(self.my_lower_bound_LP.lp_primal_solution)
+                if self.jy_opt['LAB_MP_ON']>0.5:
+
+                    [did_add_ineq,new_exog_terms,new_action_contrib]=self.separate_zero_val_terms_internal(self.my_lower_bound_LP.lp_primal_solution)
                 
-                if 1>0:#or False==hasattr(self,'my_bender_repo'):
+                if 1>0 or False==hasattr(self,'my_bender_repo'):
                     self.my_bender_repo=benders_repo_new(self)
-                    debug_on=False
+                    debug_on=True
                     #
                     #
                     #
@@ -318,6 +298,7 @@ class full_solver:
                     if debug_on==True and self.OPT_SOL==None:
                         self.call_ILP_solver()
                         self.OPT_SOL=self.my_lower_bound_ILP.milp_solution
+                       
 #
 #
 #
@@ -334,14 +315,40 @@ class full_solver:
                 this_cutting_plane_info={'tot_cut_value':tot_cut_value,'TOT_gen_cut':TOT_gen_cut,'tot_time_opt':tot_time_opt,'max_time_opt':max_time_opt}
                 print('tot_cut_value:  '+ str(tot_cut_value)+'. TOT_gen_cut: '+str(TOT_gen_cut))
                 #print(tot_cut_value)
+                #print('TOT_gen_cut')
+                #print(TOT_gen_cut)
                 if TOT_gen_cut>0.5:
                     did_add_ineq=True
                 if did_add_ineq==True:
-                    self.all_actions_inclumbent=self.all_actions_inclumbent.union(self.Actions_of_given_sol)
+                    self.all_actions_inclumbent=self.all_actions_inclumbent.union(self.all_source_sink_actions)
                 
                     #input('LOOK ME ')
                 num_calls_ineq=num_calls_ineq+1
 
+                #print('new_action_contrib')
+                #print(new_action_contrib)
+                #print('new_exog_terms')
+                #print(new_exog_terms)
+
+                #if 1>0:
+                #    newlb_safe_exog = {
+                #        (v, c): coeff
+                #        for (v, c), coeff in self.full_input_dict['actionCon2Contrib'].items()
+                #        if isinstance(c, str) and c.startswith("NewLB_")
+                 #   }
+                #    if len(newlb_safe_exog)>0.5:
+                #        print('114 IN THIS SPOT IN ALg Self LP')
+                 #       print(newlb_safe_exog)
+                  #      input('---')
+                  #  else:
+                #        print('empty ')
+                #p#rint('newlb_safe_exog')
+                #p#rint(newlb_safe_exog)
+                #input('-CHECKING HRE--')
+                #input('---')
+                #if did_add_ineq==True:
+                #    print('MAYBE;  NOT SURE YET; This really should not occur I dont think i mea')
+                #    input('hih')
             prob_sizes_after_split=self.count_size()
 
             if did_split==False and did_compress_call==False and did_add_ineq==False:
@@ -354,7 +361,8 @@ class full_solver:
                     print('AT TERM NOT splitting up after')
 
             t1=time.time()
-            
+            if did_ever_generate_cut==False:
+                self.history_dict['ROOT_LP_PRIOR_ADDING_CUTS']=new_lp_value
 
             self.history_dict['lblp_lower'].append(new_lp_value)
             self.history_dict['cuttingPlaneBendInfo'].append(this_cutting_plane_info)
@@ -387,7 +395,6 @@ class full_solver:
         #input('about to call ilp')
         if self.jy_opt['do_ilp']>0.5:
             self.call_ILP_solver()
-
         if self.jy_opt['run_baseline']:
             self.call_baseline()
         if self.jy_opt['do_ilp']>0.5:
@@ -443,7 +450,251 @@ class full_solver:
         self.graph_node_2_agg_node=self.NEW_graph_node_2_agg_node
     
 
-    def generate_paths_from_actions(self,out_sol):
+    def separate_zero_val_terms(self,primal_sol_lp):
+        #input('IN HERE')
+        #if hasattr(self,'did_init_separ')==False:
+        #    self.call_init_separ()
+        D=self.D
+        costs=D['action2Cost']
+        G=self.G
+        ub_keys = set(self.delta_name_2_ub)
+
+        for g, zs in self.Z_by_group.items():
+            self.Z_by_group[g] = zs - ub_keys
+        for g, zs in self.Z_by_group_inside.items():
+            self.Z_by_group_inside[g] = zs - ub_keys
+
+        self.cost_val = {
+            g: min(costs[act] for act in self.Z_by_group[g]) if self.Z_by_group[g] else float("inf")
+            for g in G
+        }
+        amount_inside = {
+            g: (sum(primal_sol_lp[act] for act in self.Z_by_group[g]))
+            for g in G
+        }
+        K=1
+        filtered = [
+            ((1 - amount_inside[g]) * self.cost_val[g], g)
+            for g in amount_inside
+            if amount_inside[g] < 0.99
+        ]
+        #print('len(filtered)')
+        #print(len(filtered))
+        #input('--')
+        largest_k = heapq.nlargest(K, filtered)
+
+        result = [g for _, g in largest_k]
+        new_exog_terms=dict()
+        new_action_contrib=dict()
+        for g in result:
+            con_name_ineq='NewLB_'+str(g)
+            con_name_ineq='NewLB_'+str(len(self.full_input_dict['exogName2Rhs']))
+
+            self.full_input_dict['exogName2Rhs'][con_name_ineq]=1
+            self.full_input_dict['allExogNames'].append(con_name_ineq)
+            new_exog_terms[con_name_ineq]=1
+            print('adding ')
+            print('amount_inside[g]')
+            print(amount_inside[g])
+            print('con_name_ineq')
+            print(con_name_ineq)
+            all_acts=[]
+            for act in self.Z_by_group[g]:
+                self.full_input_dict['actionCon2Contrib'][tuple([act,con_name_ineq])]=1#self.delta_con_2_contrib[v_con]
+                new_action_contrib[tuple([act,con_name_ineq])]=1
+                all_acts.append(act)
+            #print('all_acts')
+            #print(all_acts)
+            #print('all_acts')
+        did_add_ineq=False
+        if len(result)>0.5:
+            did_add_ineq=True
+           # print('did_find_separ')
+           # print(did_add_ineq)
+           # input('did_find_separ')
+
+        #print('---')
+        #newlb_safe_exog = {
+        #    (v, c): coeff
+        #    for (v, c), coeff in self.full_input_dict['actionCon2Contrib'].items()
+        #    if isinstance(c, str) and c.startswith("NewLB_")
+        #}
+        #print('newlb_safe_exog')
+        #print(newlb_safe_exog)
+        #print('newlb_safe_exog')
+
+        #input('--')
+
+       # if did_find_separ:
+        #    for con_name in new_exog_terms:
+        #        self.full_input_dict['exogName2Rhs'][con_name]=new_exog_terms[]
+        #        self.full_input_dict['allExogNames'].append(con_name)
+            #    for (act,con_name) in new_action_contrib:
+            #        self.dict_var_con_2_lhs_exog[(act,con_name)]=new_action_contrib[(act,con_name)]
+
+        return [did_add_ineq,new_exog_terms,new_action_contrib]
+        
+    
+    def separate_zero_val_terms_internal(self,primal_sol_lp):
+        #input('IN HERE')
+        if hasattr(self,'did_init_separ')==False:
+            self.call_init_separ()
+        D=self.D
+        costs=D['action2Cost']
+        G=self.G
+        ub_keys = set(self.delta_name_2_ub)
+
+        for g, zs in self.Z_by_group.items():
+            self.Z_by_group[g] = zs - ub_keys
+        for g, zs in self.Z_by_group_inside.items():
+            self.Z_by_group_inside[g] = zs - ub_keys
+
+        self.cost_val = {
+            g: min(costs[act] for act in self.Z_by_group[g]) if self.Z_by_group[g] else float("inf")
+            for g in G
+        }
+        amount_inside = {
+            g: (sum(primal_sol_lp[act] for act in self.Z_by_group_inside[g]))
+            for g in G
+        }
+        K=10
+        filtered = [
+            ((amount_inside[g]+0.99999-len(g)) * self.cost_val[g], g)
+            for g in amount_inside
+            if (amount_inside[g]+0.99999-len(g))>0.01
+        ]
+        #print('len(filtered)')
+        #print(len(filtered))
+        #input('--')
+        largest_k = heapq.nlargest(K, filtered)
+
+        result = [g for _, g in largest_k]
+        new_exog_terms=dict()
+        new_action_contrib=dict()
+        for g in result:
+            con_name_ineq='NewLB_'+str(g)
+            self.full_input_dict['exogName2Rhs'][con_name_ineq]=-len(g)+.999
+            self.full_input_dict['allExogNames'].append(con_name_ineq)
+            new_exog_terms[con_name_ineq]=-len(g)+.999
+            print('adding ')
+            print('con_name_ineq')
+            print(con_name_ineq)
+            print('new con val')
+            print(self.full_input_dict['exogName2Rhs'][con_name_ineq])
+            for act in self.Z_by_group_inside[g]:
+                self.full_input_dict['actionCon2Contrib'][tuple([act,con_name_ineq])]=-1#self.delta_con_2_contrib[v_con]
+                new_action_contrib[tuple([act,con_name_ineq])]=-1
+                #print('tuple([act,con_name_ineq])')
+                #print(tuple([act,con_name_ineq]))
+        did_add_ineq=False
+        if len(result)>0.5:
+            did_add_ineq=True
+            #input('ADDING HRE LOOK.  IS THIS SYSTEM OPERATIONAL CHECK')
+        return [did_add_ineq,new_exog_terms,new_action_contrib]
+        
+
+    
+    def call_init_separ(self):
+        self.did_init_separ=True
+        my_VRP=self.D['my_VRP']
+        Nc=self.my_VRP.num_cust
+
+        self.dict_pred_gain=dict()
+        [ng_neigh_by_cust_power,junk]=naive_get_LA_neigh(my_VRP,self.jy_opt['LAB_MP_neigh_use_power'])
+        [ng_neigh_by_cust_all,junk]=naive_get_LA_neigh(my_VRP,Nc)
+        self.ng_neigh_by_cust_power=ng_neigh_by_cust_power
+        G=set()
+        self.G_power=set()
+        self.G_radius=set()
+        #for g in G:
+        #    if len(g)<0.5:
+        #        print(g)
+         #       input('hiw000')
+        for u in range(0,Nc):
+            #QZ=38
+            #print('ng_neigh_by_cust_power[QZ]')
+            #print(ng_neigh_by_cust_power[QZ])
+            #print('len(ng_neigh_by_cust_power[QZ])')
+            #print(len(ng_neigh_by_cust_power[QZ]))
+            if len(ng_neigh_by_cust_power[u])<0.5:
+                continue
+            neighborhood = set(ng_neigh_by_cust_power[u]) | {u}
+            for g in power_set(neighborhood):
+                if len(g)>1:  # skip empty set and size 1 sets
+                    G.add(frozenset(g))
+                    self.G_power.add(frozenset(g))
+            for k in range(1,Nc):
+                my_terms=ng_neigh_by_cust_all[u][0:k]
+                G.add(frozenset(my_terms))
+                self.G_radius.add(frozenset(my_terms))
+
+        #for g in G:
+        #    if len(g)<0.5:
+        #        print(g)
+        #        input('hiw233') 
+        G.add(frozenset(np.arange(0,Nc)))
+        if 1<0:
+            G=set()
+            C1 = frozenset({0,1,2,3,4,5,6,7})
+            C2 = frozenset({8,9,10,11,12,13,14,15,16})
+            C3 = frozenset({17,18,19,20,21,22,23,24})
+            C12=frozenset(set(C1).union(set(C2)))
+            C13=frozenset(set(C1).union(set(C3)))
+            C23=frozenset(set(C2).union(set(C3)))
+            C123=frozenset(np.arange(0,25))
+            G.add(C1)
+            G.add(C2)
+            G.add(C3)
+            G.add(C12)
+            G.add(C13)
+            G.add(C23)
+            G.add(C123)
+            #G=set()
+            #TL = frozenset({4, 2, 0, 44, 7, 45, 3, 6, 5, 1})
+            #G.add(TL)
+            #TC = frozenset({42, 39, 35, 34, 43, 36, 41, 38, 37, 40})
+            #G.add(TC)
+
+            #BL = frozenset({16, 46, 13, 11, 15, 14, 10, 9, 12, 8})
+            #G.add(BL)
+
+            #BC = frozenset({23, 21, 19, 48, 18, 24, 22, 20, 47, 17})
+            #G.add(BC)
+
+            #BR = frozenset({49, 33, 30, 28, 26, 31, 29, 27, 25, 32})
+            #G.add(BR)
+
+        self.Z_by_group = defaultdict(set)  # g → set of act_u_v
+        self.Z_by_group_inside = defaultdict(set)  # g → set of act_u_v
+        all_non_null_action=set(self.D['allNonNullAction'])-set(['null_action'])
+        u_in_groups = defaultdict(set)
+        v_not_in_groups = defaultdict(set)
+
+        for g in G:
+            for u in g:
+                u_in_groups[u].add(g)
+            for v in range(0,Nc+2):  # include depot if needed
+                if v not in g:
+                    v_not_in_groups[v].add(g)
+            
+        # Step 2: Build Z_by_group using set intersection
+        num_add=0
+
+        for act in all_non_null_action:
+            num_add=num_add+1
+            _, u_str, v_str = act.split("_")
+            u, v = int(u_str), int(v_str)
+
+            relevant_groups = u_in_groups[u] & v_not_in_groups[v]
+            relevant_groups_inside = u_in_groups[u] & u_in_groups[v]
+            for g in relevant_groups:
+                self.Z_by_group[g].add(act)
+            for g in relevant_groups_inside:
+                self.Z_by_group_inside[g].add(act)
+        self.G=G
+        
+
+    def generate_paths_from_actions(self):
         """
         Build VRP routes from self.all_actions_inclumbent, which contains names like 'act_u_v'
         (or a dict mapping action->value; only truthy values kept).
@@ -464,7 +715,7 @@ class full_solver:
         START, END = Nc, Nc + 1
 
         # ---- 1) normalize input to (u,v) edges ----
-        raw = out_sol
+        raw = self.actions_in_solution
         if isinstance(raw, dict):
             names = [k for k, v in raw.items() if v]
         elif isinstance(raw, (set, list, tuple)):
@@ -564,9 +815,219 @@ class full_solver:
         #             r.append(cur)
         #         routes.append(r)
 
-       
+        print('paths')
+        print(routes)
+        input('-paths')
         self.my_paths=routes
 
         
+  
+
+def str_ver_2_tup_froz_ver(my_tup):
+    i_str=my_tup[0]
+    j_str=my_tup[1]
+    i = ast.literal_eval(i_str)
+    j = ast.literal_eval(j_str)
+    u=i[0]
+    v=j[0]
+    Ni=i[1]
+    Nj=j[1]
+    Ni=frozenset(Ni)
+    Nj=frozenset(Nj)
+    i_out=tuple([u,Ni])
+    j_out=tuple([v,Nj])
+    out=tuple([i_out,j_out])
+    return out
+def tup_froz_2_str_key(my_froz_term):
+    i=my_froz_term[0]
+    j=my_froz_term[1]
+    tmp1=sorted(list(i[1]))
+    this_node_1=[i[0],tmp1]
+    tmp2=sorted(list(j[1]))
+    this_node_2=[j[0],tmp2]
+    
+    this_node_1_str=str(this_node_1)
+    this_node_2_str=str(this_node_2)
+    #this_node_1_str=this_node_1_str.replace(' ','_')
+    #this_node_2_str=this_node_2_str.replace(' ','_')
+    this_new_edge=tuple([this_node_1_str,this_node_2_str])
+    return this_new_edge
 
 
+
+
+    def remake_ng_graph(self):
+
+        
+        my_vrp_copy = copy.deepcopy(self.my_VRP)
+        Nc=self.my_VRP.num_cust
+        dist_mat_full_copy=my_vrp_copy.dist_mat_full.copy()
+        num_remove=0
+        uv_remove=set()
+        acts_remove=set([])
+        old_ng_graph=ng_graph_fancy_slow(self.my_VRP,self.full_input_dict['ng_neigh_by_cust'][0:-2])
+        input('OK NOW BE READT')
+        for u in range(0,Nc):
+            for v in range(0,Nc):
+                my_act='act_'+str(u)+'_'+str(v)
+                if my_act in self.delta_name_2_ub and self.delta_name_2_ub[my_act]<0.001: #and my_act not in self.all_actions_inclumbent:# and u<Nc and v<Nc:
+                    my_vrp_copy.dist_mat_full[u,v]=np.inf
+                    #print('FOUND A REMOVE')
+                    num_remove=num_remove+1
+                    uv_remove.add(tuple([u,v]))
+                    acts_remove.add(my_act)
+        Debug_edges_forbidden=set()
+        Debug_time_rem=dict()
+        if hasattr(self,'ng_edges_converted'):
+            Debug_edges_forbidden=self.ng_edges_converted
+            Debug_time_rem=self.u_2_time_rem
+        my_new_ng_graph=ng_graph_fancy_slow(my_vrp_copy,self.full_input_dict['ng_neigh_by_cust'][0:-2],Debug_edges_forbidden,Debug_time_rem)
+        
+
+        
+        orig=self.ORIG_ng_graph_h_ijp.copy()
+        
+        
+        new_hijp_ng=dict()
+        DEBUG_my_key_2_e=dict()
+        for ij in  my_new_ng_graph.E:
+            i=ij[0]
+            j=ij[1]
+            u=i[0]
+            v=j[0]
+            x_name=[]
+            if u!=v:
+                x_name='act_'+str(u)+'_'+str(v)
+            else:
+                x_name='null_action'
+            if x_name not in self.all_actions and x_name!=self.null_action:
+                print('x_name')
+                print(x_name)
+                input('err') 
+            my_tup=tuple([str(i),str(j)])
+            if my_tup not in orig:
+                #print('orig')
+                #print(orig)
+                print('str(ij)')
+                print(str(ij))
+                input('error big')
+            new_hijp_ng[my_tup]=orig[my_tup]
+            DEBUG_my_key_2_e[my_tup]=ij
+        keys_remove=orig.keys()-new_hijp_ng.keys()
+        e_remove=set(old_ng_graph.E_after_removal)-set(my_new_ng_graph.E_after_removal)
+        self.D['hij2P']['ngGraph']=new_hijp_ng
+        if len(e_remove)>0:
+            for p in self.all_source_sink_actions:
+                self.all_actions_inclumbent.add(p)
+        print('len(keys_remove)')
+        print(len(keys_remove))
+        print('len(e_remove)')
+        print(len(e_remove))
+        print('----')
+
+        #if len()
+
+        if 1>0:#len(e_remove)!=len(keys_remove):
+            
+            for e in e_remove:
+
+                e_rep=tup_froz_2_str_key(e)
+                if e_rep not in self.ORIG_h_ijp['ngGraph']:
+                    print('e_rep')
+                    print(e_rep)
+                    input('really big error')
+            for k in keys_remove:
+                e_rep=str_ver_2_tup_froz_ver(k)
+                if e_rep not in old_ng_graph.E_after_removal:
+                    print('k')
+                    print(k)
+                    print('e_rep')
+                    print(e_rep)
+                    u=e_rep[0][0]
+                    v=e_rep[1][0]
+                    print('u,v')
+                    print([u,v])
+                    u_ng=old_ng_graph.ng_neigh_by_cust[u]
+                    v_ng=old_ng_graph.ng_neigh_by_cust[v]
+                    print('u_ng')
+                    print(u_ng)
+                    print('v_ng')
+                    print(v_ng)
+                    u_ng2=my_new_ng_graph.ng_neigh_by_cust[u]
+                    v_ng2=my_new_ng_graph.ng_neigh_by_cust[v]
+                    print('u_ng2')
+                    print(u_ng2)
+                    print('v_ng2')
+                    print(v_ng2)
+                    print('e_rep in my_new_ng_graph.DEBUG_E_after_removal')
+                    print(e_rep in my_new_ng_graph.E_after_removal)
+                    print('e_rep in my_new_ng_graph.DEBUG_E_prior_removal')
+                    print(e_rep in my_new_ng_graph.E_after_removal)
+                    
+                    print('e_rep in old_ng_graph.DEBUG_E_after_removal')
+                    print(e_rep in old_ng_graph.E_after_removal)
+                    print('e_rep in old_ng_graph.DEBUG_E_prior_removal')
+                    print(e_rep in old_ng_graph.E_after_removal)
+                   # i=[]
+                    print('dist_mat_full_copy[u,v]')
+                    print(dist_mat_full_copy[u,v])
+                    print('self.my_VRP.dist_mat_full[u,v]')
+                    print(self.my_VRP.dist_mat_full[u,v])
+                    input('bery giv')
+                #else:
+                #    print('k')
+                #    print(k)
+                #    print('e_rep')
+                #    print(e_rep)
+                #    print('KOOL')
+                    #input('KOOL')
+            #input('bigErrorOrSoIthink')
+        
+
+        for s in self.ng_edges_converted:#my_new_ng_graph:
+            if s not in old_ng_graph.E_before_removal:
+                input('wrong here orig')
+
+        for s in self.ng_edges_converted:#my_new_ng_graph:
+            if s not in old_ng_graph.E_after_removal:
+                input('wrong zere orig')
+
+        for s in self.ng_edges_converted:#my_new_ng_graph:
+            if s not in my_new_ng_graph.E_before_removal:
+                input('wrong here')
+
+        for s in self.ng_edges_converted:#my_new_ng_graph:
+            if s not in my_new_ng_graph.E_after_removal:
+                print('s')
+                print(s)
+                input('wrong zere')
+        for k in keys_remove:
+            e_rep=str_ver_2_tup_froz_ver(k)
+            i=e_rep[0]
+            j=e_rep[1]
+            u=e_rep[0][0]
+            v=e_rep[1][0]
+            if e_rep in self.ng_edges_converted:
+                print('e_rep')
+                print(e_rep)
+                input('BIG BIG HUGE PROBLEM')
+         #   u=i[0]
+         #   v=j[0]
+         #   Ni=i[1]
+         #   Nj=j[1]
+            #if tuple([u,v]) not in uv_remove:
+                #print('REM:  i,j')
+                #print([i,j])
+                #print('uv')
+                #print([u,v])
+                #print('j')
+                #print(j)
+               # if u>=Nc or v >=Nc:
+              #      input('ok no sense since ')
+                #input('Not an error but look')
+            #print('hihi')
+
+        self.D['hij2P']['ngGraph']=new_hijp_ng
+
+
+      

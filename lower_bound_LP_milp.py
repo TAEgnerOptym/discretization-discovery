@@ -643,7 +643,9 @@ class lower_bound_LP_milp:
         
         self.mapping_h_p_to_fg_vars_use=dict()
 
+    
         t1=time.time()
+        
         for h in self.graph_names:
             self.mapping_h_p_to_fg_vars_use[h]=defaultdict(list)
 

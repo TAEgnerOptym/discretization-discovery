@@ -2,7 +2,9 @@
 "num_cust_use":50,
 "LAB_MP_ON":1,
 "use_diving_ineq":1,
-"ub_use_remove":598.001,
+"ub_use_remove":598.1001,
+"BEND_MIN_LP_OBJECTIVE_CUT":0.02,
+"BEND_MAX_SIZE_CHOOSE_K":260,
 "maxVarsAdd_in_ITER":0,
 "use_ng_size_init":0,
 "use_packing_in_construction":1,
@@ -29,7 +31,7 @@
 "use_delta_in_milp":1,
 "use_delta_in_lp":1,
 "turn_off_non_active_fg_project":0,
-"max_iterations_loop_compress_project":40,
+"max_iterations_loop_compress_project":60,
 "use_ineq":1,
 
 
