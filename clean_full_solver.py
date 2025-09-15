@@ -680,7 +680,7 @@ class full_solver:
 
         def str_ver_2_tup_froz_ver(my_tup):
             i_str=my_tup[0]
-            j_str=my_tup[0]
+            j_str=my_tup[1]
             i = ast.literal_eval(i_str)
             j = ast.literal_eval(j_str)
             u=i[0]
@@ -691,7 +691,7 @@ class full_solver:
             Nj=frozenset(Nj)
             i_out=tuple([u,Ni])
             j_out=tuple([v,Nj])
-            out=tuple(i_out,j_out)
+            out=tuple([i_out,j_out])
             return out
         def tup_froz_2_str_key(my_froz_term):
             i=my_froz_term[0]
@@ -703,13 +703,13 @@ class full_solver:
             
             this_node_1_str=str(this_node_1)
             this_node_2_str=str(this_node_2)
-            this_node_1_str=this_node_1_str.replace(' ','_')
-            this_node_2_str=this_node_2_str.replace(' ','_')
+            #this_node_1_str=this_node_1_str.replace(' ','_')
+            #this_node_2_str=this_node_2_str.replace(' ','_')
             this_new_edge=tuple([this_node_1_str,this_node_2_str])
             return this_new_edge
         my_vrp_copy = copy.deepcopy(self.my_VRP)
         Nc=self.my_VRP.num_cust
-        dist_mat_full_copy=self.my_VRP.dist_mat_full
+        dist_mat_full_copy=my_vrp_copy.dist_mat_full.copy()
         num_remove=0
         uv_remove=set()
         acts_remove=set([])
@@ -718,15 +718,13 @@ class full_solver:
         for u in range(0,Nc):
             for v in range(0,Nc):
                 my_act='act_'+str(u)+'_'+str(v)
-                if my_act in self.delta_name_2_ub and self.delta_name_2_ub[my_act]<0.001 and my_act not in self.all_actions_inclumbent:# and u<Nc and v<Nc:
-                    dist_mat_full_copy[u,v]=np.inf
+                if my_act in self.delta_name_2_ub and self.delta_name_2_ub[my_act]<0.001: #and my_act not in self.all_actions_inclumbent:# and u<Nc and v<Nc:
+                    my_vrp_copy.dist_mat_full[u,v]=np.inf
                     #print('FOUND A REMOVE')
                     num_remove=num_remove+1
                     uv_remove.add(tuple([u,v]))
                     acts_remove.add(my_act)
-        my_vrp_copy.dist_mat_full=dist_mat_full_copy
-        #print(self.full_input_dict['ng_neigh_by_cust'])
-        #print(len(self.full_input_dict['ng_neigh_by_cust']))
+
         my_new_ng_graph=ng_graph_fancy_slow(my_vrp_copy,self.full_input_dict['ng_neigh_by_cust'][0:-2])
         
 
@@ -757,17 +755,23 @@ class full_solver:
                 print('str(ij)')
                 print(str(ij))
                 input('error big')
-            new_hijp_ng[my_tup]=[x_name]
+            new_hijp_ng[my_tup]=orig[my_tup]
             DEBUG_my_key_2_e[my_tup]=ij
         keys_remove=orig.keys()-new_hijp_ng.keys()
         e_remove=set(old_ng_graph.DEBUG_E_after_removal)-set(my_new_ng_graph.DEBUG_E_after_removal)
-
+        self.D['hij2P']['ngGraph']=new_hijp_ng
+        if len(e_remove)>0:
+            for p in self.all_source_sink_actions:
+                self.all_actions_inclumbent.add(p)
         print('len(keys_remove)')
         print(len(keys_remove))
         print('len(e_remove)')
         print(len(e_remove))
         print('----')
-        if len(e_remove)!=len(keys_remove):
+
+        #if len()
+
+        if 1>0:#len(e_remove)!=len(keys_remove):
             
             for e in e_remove:
 
@@ -779,23 +783,69 @@ class full_solver:
             for k in keys_remove:
                 e_rep=str_ver_2_tup_froz_ver(k)
                 if e_rep not in old_ng_graph.DEBUG_E_after_removal:
+                    print('k')
+                    print(k)
+                    print('e_rep')
+                    print(e_rep)
+                    u=e_rep[0][0]
+                    v=e_rep[1][0]
+                    print('u,v')
+                    print([u,v])
+                    u_ng=old_ng_graph.ng_neigh_by_cust[u]
+                    v_ng=old_ng_graph.ng_neigh_by_cust[v]
+                    print('u_ng')
+                    print(u_ng)
+                    print('v_ng')
+                    print(v_ng)
+                    u_ng2=my_new_ng_graph.ng_neigh_by_cust[u]
+                    v_ng2=my_new_ng_graph.ng_neigh_by_cust[v]
+                    print('u_ng2')
+                    print(u_ng2)
+                    print('v_ng2')
+                    print(v_ng2)
+                    print('e_rep in my_new_ng_graph.DEBUG_E_after_removal')
+                    print(e_rep in my_new_ng_graph.DEBUG_E_after_removal)
+                    print('e_rep in my_new_ng_graph.DEBUG_E_prior_removal')
+                    print(e_rep in my_new_ng_graph.DEBUG_E_prior_removal)
+                    
+                    print('e_rep in old_ng_graph.DEBUG_E_after_removal')
+                    print(e_rep in old_ng_graph.DEBUG_E_after_removal)
+                    print('e_rep in old_ng_graph.DEBUG_E_prior_removal')
+                    print(e_rep in old_ng_graph.DEBUG_E_prior_removal)
+                   # i=[]
+                    print('dist_mat_full_copy[u,v]')
+                    print(dist_mat_full_copy[u,v])
+                    print('self.my_VRP.dist_mat_full[u,v]')
+                    print(self.my_VRP.dist_mat_full[u,v])
                     input('bery giv')
-            input('bigErrorOrSoIthink')
+                #else:
+                #    print('k')
+                #    print(k)
+                #    print('e_rep')
+                #    print(e_rep)
+                #    print('KOOL')
+                    #input('KOOL')
+            #input('bigErrorOrSoIthink')
         for k in keys_remove:
-            iL=k[0]
-            jL=k[1]
-            i = ast.literal_eval(iL)
-            j = ast.literal_eval(jL)
-            u=i[0]
-            v=j[0]
-            Ni=i[1]
-            Nj=j[1]
+            e_rep=str_ver_2_tup_froz_ver(k)
+            i=e_rep[0]
+            j=e_rep[1]
+            u=e_rep[0][0]
+            v=e_rep[1][0]
+         #   u=i[0]
+         #   v=j[0]
+         #   Ni=i[1]
+         #   Nj=j[1]
             if tuple([u,v]) not in uv_remove:
-                print('i')
-                print(i)
-                print('j')
-                print(j)
-                input('Not an error but look')
+                print('REM:  i,j')
+                print([i,j])
+                print('uv')
+                print([u,v])
+                #print('j')
+                #print(j)
+                if u>=Nc or v >=Nc:
+                    input('ok no sense since ')
+                #input('Not an error but look')
             #print('hihi')
 
         self.D['hij2P']['ngGraph']=new_hijp_ng

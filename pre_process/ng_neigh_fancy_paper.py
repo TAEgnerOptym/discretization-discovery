@@ -269,7 +269,7 @@ class ng_graph_fancy_slow:
                 self.all_nodes_by_sz_exc_source_sink[sz_N_i].append(i)
 
     def compute_early_depart_from_v_given_pred_u(self,time_u,u,v):
-        dist_u_v=self.dist_serve_add=self.my_instance.dist_mat_full[u,v]
+        dist_u_v=self.my_instance.dist_mat_full[u,v]
 
         if dist_u_v==np.inf:
             print('[u,v]')
@@ -302,170 +302,7 @@ class ng_graph_fancy_slow:
     def compute_earliest_by_node(self):
         import numpy as np
         from collections import defaultdict
-
-        # ---------- locals & fast paths ----------
-        d2e = defaultdict(lambda: -np.inf)               # self.dict_node_2_early
-        d2e_pred = defaultdict(lambda: -np.inf)          # self.dict_node_early_j_given_pred_i (kept for parity)
-        self.dict_node_2_early = d2e
-        self.dict_node_early_j_given_pred_i = d2e_pred
-
-        dist = self.my_instance.dist_mat_full            # shape (Nc, Nc)
-        ES   = self.my_instance.early_start              # shape (Nc,)
-        LS   = self.my_instance.late_start               # shape (Nc,)
-        dem  = self.my_instance.dem_full                 # shape (Nc,)
-        veh_cap = self.my_instance.vehicle_capacity
-        Nc = self.Nc
-
-        # ---------- bitmask helpers (build once) ----------
-        # map cust -> bit (0..Nc-1)
-        if not hasattr(self, "_bit_for_cust") or self._bit_for_cust is None:
-            self._bit_for_cust = np.array([1 << c for c in range(Nc)], dtype=np.uint64)
-        bit_for = self._bit_for_cust
-
-        # neigh masks: nm[w] has 1-bits for all neighbors of w
-        if not hasattr(self, "_neigh_mask") or self._neigh_mask is None:
-            nm = np.zeros(Nc, dtype=np.uint64)
-            for w in range(Nc):
-                m = 0
-                for c in self.ng_neigh_by_cust[w]:
-                    m |= bit_for[c]
-                nm[w] = m
-            self._neigh_mask = nm
-        nm = self._neigh_mask
-
-        # fast “isfinite row mask” cache for dist
-        if not hasattr(self, "_finite_mask") or self._finite_mask is None:
-            self._finite_mask = np.isfinite(dist)
-        finite_mask = self._finite_mask
-
-        # valid node existence “my_nodes[w]” membership → set for O(1)
-        # Expect my_nodes[w] is an iterable of tuples j = (w, frozenset(Ni_plus_u))
-        if not hasattr(self, "_my_nodes_sets") or self._my_nodes_sets is None:
-            my_nodes_sets = []
-            for w in range(Nc):
-                # store as set for O(1) membership
-                my_nodes_sets.append(set(self.my_nodes[w]))
-            self._my_nodes_sets = my_nodes_sets
-        my_nodes_sets = self._my_nodes_sets
-
-        # ---------- initialize source layer ----------
-        # all_nodes_by_sz_exc_source_sink[0] contains tuples i=(u, frozenset(Ni))
-        for i in self.all_nodes_by_sz_exc_source_sink[0]:
-            u = i[0]
-            d2e[i] = ES[u]
-
-        max_sz = max(self.all_nodes_by_sz_exc_source_sink.keys())
-        ES_arr = ES  # alias
-
-        # small helpers
-        def mask_of_set(fs):
-            """frozenset of ints -> uint64 bitmask"""
-            m = np.uint64(0)
-            for c in fs:
-                m |= bit_for[c]
-            return m
-
-        # Optional cache for demand sums of a frozenset
-        if not hasattr(self, "_dem_sum_cache") or self._dem_sum_cache is None:
-            self._dem_sum_cache = {}
-        dem_sum_cache = self._dem_sum_cache
-
-        # ---------- main DP over size ----------
-        for k in range(0, max_sz):
-            nodes_k = self.all_nodes_by_sz_exc_source_sink[k]
-            for i in nodes_k:
-                u, Ni_fs = i[0], i[1]
-                time_u = d2e[i]
-                if time_u < -0.5:  # your sentinel skip
-                    continue
-
-                # demand sum of Ni (cached)
-                key_Ni = id(Ni_fs)  # frozenset is immutable; id() is stable in this run
-                tot_dem_Ni = dem_sum_cache.get(key_Ni)
-                if tot_dem_Ni is None:
-                    s = 0.0
-                    for w_ in Ni_fs:
-                        s += dem[w_]
-                    dem_sum_cache[key_Ni] = s
-                    tot_dem_Ni = s
-
-                tot_dem_i = dem[u] + tot_dem_Ni
-                cap_remaining = veh_cap - tot_dem_i
-                if cap_remaining <= 0:
-                    continue
-
-                # bitmask for Ni; cached by id as well
-                if not hasattr(self, "_Ni_mask_cache"):
-                    self._Ni_mask_cache = {}
-                Ni_mask_cache = self._Ni_mask_cache
-                Ni_mask = Ni_mask_cache.get(key_Ni)
-                if Ni_mask is None:
-                    Ni_mask = mask_of_set(Ni_fs)
-                    Ni_mask_cache[key_Ni] = Ni_mask
-
-                # vector prefilter for candidate w:
-                #  1) dist[u,w] finite
-                #  2) w not in Ni
-                #  3) dem[w] <= cap_remaining
-                #  4) u ∈ neigh[w]
-                #  5) Ni ⊆ neigh[w]  <=> (nm[w] & Ni_mask) == Ni_mask
-                # We’ll build boolean mask then take indices; reduces the Python loop size massively.
-                fin_row = finite_mask[u]                              # bool array shape (Nc,)
-                not_in_Ni = ( (Ni_mask & bit_for) == 0 )              # vector: for each w, is w ∉ Ni?
-                ok_dem = dem <= cap_remaining
-                u_bit = bit_for[u]
-                has_u = (nm & u_bit) == u_bit
-                superset_Ni = (nm & Ni_mask) == Ni_mask
-
-                cand_mask = fin_row & not_in_Ni & ok_dem & has_u & superset_Ni
-                if not np.any(cand_mask):
-                    continue
-
-                cand_ws = np.nonzero(cand_mask)[0]  # candidate w indices
-
-                # build set_NI_plus_u once (as frozenset)
-                # (Note: Ni does NOT include u per your code; we add it.)
-                if not hasattr(self, "_Ni_plus_u_cache"):
-                    self._Ni_plus_u_cache = {}
-                Ni_plus_u_cache = self._Ni_plus_u_cache
-                key_plus = (key_Ni, u)
-                set_add_u = Ni_plus_u_cache.get(key_plus)
-                if set_add_u is None:
-                    # frozenset union (reusing fs avoids new set allocs in loop)
-                    # Ni_fs | {u}
-                    set_add_u = frozenset((*Ni_fs, u))
-                    Ni_plus_u_cache[key_plus] = set_add_u
-
-                # Tight locals
-                d2e_local = d2e
-                dist_row = dist[u]
-                ES_local = ES_arr
-                LS_local = LS
-                time_u_local = time_u
-                my_nodes_for_w = my_nodes_sets  # list of sets
-
-                # now iterate only the filtered candidates
-                for w in cand_ws:
-                    j = (w, set_add_u)
-                    if j not in my_nodes_for_w[w]:
-                        continue
-
-                    dist_u_w = dist_row[w]
-                    arrival_time_w = time_u_local - dist_u_w
-                    candid = arrival_time_w
-                    if candid > ES_local[w]:
-                        candid = ES_local[w]
-                    if candid < LS_local[w]:
-                        candid = -np.inf
-
-                    # max update
-                    if candid > d2e_local[j]:
-                        d2e_local[j] = candid
-
-    def compute_earliest_by_node(self):
-        import numpy as np
-        from collections import defaultdict
-
+        #input('---v2-')
         # ---------- locals ----------
         d2e = defaultdict(lambda: -np.inf)
         d2e_pred = defaultdict(lambda: -np.inf)
@@ -610,9 +447,6 @@ class ng_graph_fancy_slow:
         #print('----')
         #print('----')
         #print('----')
-        #print('dict_node_2_early')
-        #print(self.dict_node_2_early)
-        #input('--')
         dist=self.my_instance.dist_mat_full
         for i in self.all_nodes_exc_source_sink:
             time_u=self.dict_node_2_early[i]
@@ -670,7 +504,6 @@ class ng_graph_fancy_slow:
 
     def eval_edges_keep(self):
         E_after_removal=[]
-        self.dict_e_2_i_hat=dict()
         for e in self.E:
             i=e[0]
             j=e[1]
@@ -678,7 +511,6 @@ class ng_graph_fancy_slow:
             Ni=i[1]
             v=j[0]
             Nj=j[1]
-            self.dict_e_2_i_hat[(i,j)]=None
             if u==v or u==self.Nc or v==self.Nc+1 or len(Ni)==0:
                 E_after_removal.append(e)
                 continue
@@ -691,15 +523,13 @@ class ng_graph_fancy_slow:
             in_tup=tuple([ihat,j])
             
             my_arrival_time=self.dict_node_early_j_given_pred_i[in_tup]
-            self.dict_e_2_i_hat[(i,j)]=ihat
+            
             if my_arrival_time>=-0.5:
                 E_after_removal.append(e)
-            
-        self.DEBUG_E_prior_removal=self.E.copy()
         self.E=E_after_removal
     def clean_order(self):
         self.node_list=dict()
-        self.DEBUG_ez_lookup_e_2_ihat=dict()
+
         for u in self.my_nodes:
             new_nodes=[]
             for n in self.my_nodes[u]:
@@ -708,11 +538,9 @@ class ng_graph_fancy_slow:
                 new_nodes.append(this_node)
             self.node_list[u]=new_nodes
         E_2=[]
-        self.DEBUG_E_after_removal=self.E.copy()
         for e in self.E:
             i=e[0]
             j=e[1]
-
             tmp1=sorted(list(i[1]))
             this_node_1=[i[0],tmp1]
             tmp2=sorted(list(j[1]))
@@ -724,10 +552,6 @@ class ng_graph_fancy_slow:
             this_node_2_str=this_node_2_str.replace(' ','_')
             this_new_edge=tuple([this_node_1,this_node_2])
             E_2.append(this_new_edge)
-            help1=tuple([e[0][0],frozenset(e[0][1])])
-            help2=tuple([e[1][0],frozenset(e[1][1])])
-            self.DEBUG_ez_lookup_e_2_ihat[tuple([help1,help2])]=self.dict_e_2_i_hat[e]
-            #self.DEBUG_e_to_str_ver[e]=this_new_edge
         self.E=E_2
 
     def make_edges_fast(self):
