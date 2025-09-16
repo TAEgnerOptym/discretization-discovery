@@ -99,10 +99,10 @@ class full_solver:
                 self.orig_init_graph_node_2_agg_node[h][i]=str(self.graph_node_2_agg_node[h][i])
         if init_disc!=None:
             self.graph_node_2_agg_node=init_disc
-        if all_actions_inclumbent==None:
-            self.all_actions_inclumbent=set(self.all_actions)-set(self.all_actions_not_source_sink_connected)
-        else:
-            self.all_actions_inclumbent=all_actions_inclumbent
+        #if all_actions_inclumbent==None:
+        #    self.all_actions_inclumbent=set(self.all_actions)-set(self.all_actions_not_source_sink_connected)
+        #else:
+        #    self.all_actions_inclumbent=all_actions_inclumbent
         if actions_ignore==None:
             self.actions_ignore=[]
         else:
@@ -112,13 +112,24 @@ class full_solver:
 
         self.all_source_sink_actions=set(self.all_actions)-set(self.all_actions_not_source_sink_connected)
         self.init_default_solution_is_empty=False
-        self.Actions_of_given_sol=Actions_of_given_sol
-        if self.Actions_of_given_sol==None:
+        self.Actions_of_given_sol=self.jy_opt['Actions_of_given_sol']
+        if len(self.Actions_of_given_sol)==0:
             self.Actions_of_given_sol=self.all_source_sink_actions
             self.init_default_solution_is_empty=False
         self.objective_of_initial_sol=0
         for my_act in self.Actions_of_given_sol:
             self.objective_of_initial_sol+=self.action_2_cost[my_act]
+        
+        self.all_actions_inclumbent=set(self.Actions_of_given_sol.copy())
+
+        if self.jy_opt['ub_use_remove']>self.objective_of_initial_sol:
+            self.jy_opt['ub_use_remove']=self.objective_of_initial_sol+0.001
+            
+            print('self.Actions_of_given_sol')
+            print(self.Actions_of_given_sol)
+            print('self.objective_of_initial_sol')
+            print(self.objective_of_initial_sol)
+            #input('ok im here not a problem just to flag me')
         self.delta_name_2_ub=full_input_dict['delta_name_2_ub']
         self.delta_name_2_lb=full_input_dict['delta_name_2_lb']
         self.ineq_replaced_by_lb_ub=full_input_dict['ineq_replaced_by_lb_ub']
@@ -206,11 +217,13 @@ class full_solver:
                     out_sol[my_delta]=my_ilp_sol[my_delta]
 
             tot_cost=0
+            actions_used=[]
             for my_act in self.all_actions:
                 #out_sol[my_act]=my_ilp_sol[my_act]
                 if my_ilp_sol[my_act]>0.5:
                     tot_cost=tot_cost+self.action_2_cost[my_act]
                     out_sol[my_act]=1#my_ilp_sol[my_act]
+                    actions_used.append(my_act)
             #for my_prim in self.all_primitive_vars:
             #    if my_prim in my_ilp_sol:
             #        if my_ilp_sol[my_prim]>0.01:
@@ -224,8 +237,12 @@ class full_solver:
             self.history_dict['output_ilp_solution']=out_sol
 
             self.history_dict['Actions_of_given_sol']=str(self.Actions_of_given_sol)
+            self.history_dict['actions_used']=actions_used
             
             self.generate_paths_from_actions(out_sol)
+            #print('ready')
+            self.check_feas_and_cost()
+
 
             self.history_dict['init_default_solution_is_empty']=self.init_default_solution_is_empty
             self.history_dict['Actions_of_given_sol']='none just used source and sink terms'#str(self.Actions_of_given_sol)
@@ -568,5 +585,48 @@ class full_solver:
         self.my_paths=routes
 
         
+    def check_feas_and_cost(self):
 
-
+        total_cost=0
+        target_cost=self.history_dict['OUR_ilp_objective']
+        num_cust=self.my_VRP.num_cust
+        dem_full=self.my_VRP.dem_full
+        early=self.my_VRP.early_start
+        late=self.my_VRP.late_start
+        dist_plus_service=self.my_VRP.dist_mat_full
+        covered_cust=np.zeros(num_cust)
+        for my_path in self.my_paths:
+                #cur_loc=path_in[0]
+            path_len=len(my_path)
+            cur_time_rem=np.inf
+            cur_cap_rem=self.my_VRP.vehicle_capacity
+            if my_path[0]!=num_cust:
+                input('error here does not start withdepot')
+            if my_path[path_len-1]!=num_cust+1:
+                input('error here does not end withdepot')
+            for i in range(0,path_len-1):
+                cur_loc=my_path[i]
+                next_loc=my_path[i+1]
+                my_act='act_'+str(cur_loc)+'_'+str(next_loc)
+                if my_act not in self.history_dict['output_ilp_solution']:
+                    input('error here not present in solution')
+                cur_cap_rem-=dem_full[cur_loc]
+                cur_time_rem-=dist_plus_service[cur_loc,next_loc]
+                if cur_cap_rem<dem_full[next_loc]-0.0001:
+                    input('error here capacity disobeyed in solution')
+                if next_loc<num_cust-0.5 and cur_time_rem<late[next_loc]-0.0001:
+                    input('error here time disobeyed in solution')
+                if  next_loc<num_cust-0.5 and cur_time_rem>early[next_loc]:
+                    cur_time_rem=early[next_loc]
+                if i>0 and cur_loc>num_cust-0.5:
+                    input('depot in wrong spot')
+                if cur_loc<num_cust-0.5 and covered_cust[cur_loc]==1:
+                    input('covered more than once')
+                if cur_loc<num_cust-0.5:
+                    covered_cust[cur_loc]=1
+                total_cost+=self.action_2_cost[my_act]
+        if np.min(covered_cust)<0.5:
+            input('not lining up')
+        if abs(total_cost-target_cost)>0.001:
+            input('error in cost')
+        print(' ALL CLEAN EVERYTHING MATCHES UP')

@@ -53,8 +53,8 @@ for k in range(0,9):
     output_file_path=all_out_files[k]
     print('input_file_path')
     print(input_file_path)
-    if  not os.path.exists(output_file_path):
-    #if   not os.path.exists(output_file_path):
+    #if   os.path.exists(output_file_path):
+    if   not os.path.exists(output_file_path):
         print("input_file_path")
         print(input_file_path)
         print("param_file_path")

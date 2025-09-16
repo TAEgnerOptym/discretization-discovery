@@ -1,0 +1,78 @@
+#!/usr/bin/env python3
+import argparse
+import json
+import os
+from pathlib import Path
+
+def process_file(src_path: Path, dst_path: Path) -> None:
+    with src_path.open("r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    # Pull jy_opt (must be a dict)
+    jy_opt = data.get("jy_opt", {})
+    if not isinstance(jy_opt, dict):
+        raise ValueError(f"{src_path}: 'jy_opt' is missing or not a dict")
+
+    # Pull output_ilp_solution (dict-like) and collect keys starting with "act"
+    out_ilp = data.get("output_ilp_solution", {})
+    if not isinstance(out_ilp, dict):
+        # If it's missing or not a dict, treat as empty
+        out_ilp = {}
+
+    actions = [k for k in out_ilp.keys() if isinstance(k, str) and k.startswith("act")]
+
+    # Build output JSON
+    out = dict(jy_opt)  # copy keys/values from jy_opt
+    out["Actions_of_given_sol"] = actions
+
+    # Write to destination
+    with dst_path.open("w", encoding="utf-8") as f:
+        json.dump(out, f, ensure_ascii=False, indent=2)
+def main():
+    ap = argparse.ArgumentParser(
+        description="Copy jy_opt and extract 'act*' keys from output_ilp_solution into new JSONs."
+    )
+    ap.add_argument(
+        "input_dir",
+        nargs="?",
+        default="../all_willem_rez_given_cut/WillemRez_c100_100_UB",
+        help="Folder containing input JSON files (default: ../all_willem_rez_given_cut/WillemRez_rc100_50_UB)",
+    )
+    ap.add_argument(
+        "output_dir",
+        nargs="?",
+        default="params_WW/params_c100_100_UB_given_cut_and_sol",
+        help="Folder for output JSONs (default: ../all_willem_rez_given_cut_sol/WillemRez_rc100_50_UB)",
+    )
+    ap.add_argument(
+        "--pattern",
+        default="*.txt",
+        help="Glob pattern for input files (default: *.json)",
+    )
+    args = ap.parse_args()
+
+    in_dir = Path(args.input_dir).expanduser().resolve()
+    out_dir = Path(args.output_dir).expanduser().resolve()
+
+    if not in_dir.exists() or not in_dir.is_dir():
+        raise SystemExit(f"Input directory does not exist or is not a directory: {in_dir}")
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    files = sorted(in_dir.glob(args.pattern))
+    if not files:
+        print(f"No files matched {args.pattern} in {in_dir}")
+        return
+
+    for src in files:
+        if not src.is_file():
+            continue
+        dst = out_dir / src.name
+        try:
+            process_file(src, dst)
+            print(f"Wrote: {dst}")
+        except Exception as e:
+            print(f"[ERROR] {src}: {e}")
+
+if __name__ == "__main__":
+    main()

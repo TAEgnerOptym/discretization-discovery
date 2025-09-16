@@ -85,5 +85,6 @@ def grab_default_params():
 	my_params['NO_PARETO_BEND_VAL_STOP_ADDING_CUTS']=1
 	my_params['NO_PARETO_EPSILON_MAX_VAL_CON']=0.01
 
+	my_params['Actions_of_given_sol']=[]
 
 	return my_params

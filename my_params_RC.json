@@ -3,7 +3,7 @@
 "NO_PARETO_BEND_VAL_STOP_ADDING_CUTS":20,
 "LAB_MP_ON":0,
 "use_diving_ineq":1,
-"ub_use_remove":461.1001,
+"ub_use_remove":11461.1001,
 "maxVarsAdd_in_ITER":10,
 "use_ng_size_init":0,
 "use_packing_in_construction":1,
@@ -31,7 +31,7 @@
 "use_delta_in_lp":1,
 "turn_off_non_active_fg_project":0,
 "max_iterations_loop_compress_project":100,
-"use_ineq":1,
+"use_ineq":0,
 
 
 "use_fancy_ng_graph":1,
@@ -53,5 +53,6 @@
 "in_demo_mode":0,
 "offset_cost_edge_project":0,
 "weight_slack_projector":0.00001,
-"max_ILP_time":1000
+"max_ILP_time":1000,
+"Actions_of_given_sol": ["act_0_3", "act_1_4", "act_2_0", "act_3_26", "act_4_6", "act_5_7", "act_6_5", "act_7_2", "act_8_9", "act_9_12", "act_10_21", "act_11_14", "act_12_16", "act_13_11", "act_14_15", "act_15_8", "act_16_26", "act_17_24", "act_18_17", "act_19_26", "act_20_18", "act_21_19", "act_22_20", "act_23_26", "act_24_23", "act_25_1", "act_25_10", "act_25_13", "act_25_22"]
 }
