@@ -27,19 +27,24 @@ model_path="R104_super_fine.mps"
 #model_path="../optym_gurobi_file_ILP/C_104_50_25_compress.mps"
 model_path="Z7_model_name.mps"
 model_path="model_name.mps"
+do_use_only_small_integ=False
 with gp.Env(params=options) as env:
     with gp.read(model_path, env=env) as model:
         model.setParam("DisplayInterval", 1)
         bin_set=[]
         counter=0
-        if 0>1:
-            for var in model.getVars():
+        for var in model.getVars():
 
-                if abs(var.Obj)<0.001:# and  == GRB.BINARY:
-                    var.VType = GRB.CONTINUOUS
-                    #print(var.Obj)
-                    counter=counter+1
-                    #bin_set.append(var)
+            if abs(var.Obj)<0.001:# and  == GRB.BINARY:
+
+                if do_use_only_small_integ==False:
+                    if var.VType != GRB.CONTINUOUS:
+                        var.VType = GRB.CONTINUOUS
+                    else:
+                        var.BranchPriority=0
+                #print(var.Obj)
+                counter=counter+1
+                #bin_set.append(var)
         #print('counter')
         #print(counter)
         #input('---')
@@ -48,16 +53,16 @@ with gp.Env(params=options) as env:
         model.update()
         if 1>0: 
             print('changing options')
-            model.setParam("Cuts", 0)                # Disable all cutting planes
+            #model.setParam("Cuts", 0)                # Disable all cutting planes
             #model.setParam("Heuristics", 0.2)          # Disable primal heuristics
-            model.setParam("CutPasses", 0)           # No passes even beyond root
-            #model.setParam("MIPFocus", 3)
+            #model.setParam("CutPasses", 0)           # No passes even beyond root
+            model.setParam("MIPFocus", 3)
            #model.setAttr("BranchDir", 1)
             #model.setParam("Method", 2)
             #for var in model.getVars():
             #    if var.VType != GRB.CONTINUOUS:
             #        var.setAttr("BranchDir", 1)
-            model.setParam("Presolve", 0)
+            #odel.setParam("Presolve", 0)
 
             #model.setParam("MIRCuts", 0)
            # model.setParam("FlowCoverCuts", 0)

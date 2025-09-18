@@ -35,13 +35,13 @@ def main():
     ap.add_argument(
         "input_dir",
         nargs="?",
-        default="../all_willem_rez_given_cut/WillemRez_c100_100_UB",
+        default="../all_willem_rez_given_cut/WillemRez_rc100_50_UB",
         help="Folder containing input JSON files (default: ../all_willem_rez_given_cut/WillemRez_rc100_50_UB)",
     )
     ap.add_argument(
         "output_dir",
         nargs="?",
-        default="params_WW/params_c100_100_UB_given_cut_and_sol",
+        default="params_WW/params_rc100_50_UB_given_cut_and_sol",
         help="Folder for output JSONs (default: ../all_willem_rez_given_cut_sol/WillemRez_rc100_50_UB)",
     )
     ap.add_argument(

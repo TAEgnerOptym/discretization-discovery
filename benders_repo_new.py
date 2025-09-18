@@ -235,8 +235,7 @@ class benders_repo_new:
                     self.MF.act_2_uv[act] = [int(u), int(v)]
                 except Exception as e:
                     raise ValueError(f"Not in 'act_u_v' format: {act!r}") from e
-        self.size_neigh_use_benders=9
-        L=self.size_neigh_use_benders
+        L=self.MF.jy_opt['BENDERS_NEIGH_SZ_USE']
         #self.m_sz_pairs=[]
         #self.m_sz_pairs.append(tuple([6,10]))
         #self.m_sz_pairs.append(tuple([6,9]))
@@ -289,7 +288,7 @@ class benders_repo_new:
         my_VRP=self.MF.D['my_VRP']
         self.Nc=self.MF.my_VRP.num_cust
 
-        [ng_neigh_by_cust_power,junk]=naive_get_LA_neigh(my_VRP,self.size_neigh_use_benders)
+        [ng_neigh_by_cust_power,junk]=naive_get_LA_neigh(my_VRP,self.MF.jy_opt['BENDERS_NEIGH_SZ_USE'])
         self.ng_neigh_by_cust_power=ng_neigh_by_cust_power
         all_sets=set()
         for u in range(0,self.Nc):

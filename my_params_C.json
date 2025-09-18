@@ -1,9 +1,9 @@
 {
-"num_cust_use":50,
+"num_cust_use":100,
 "do_remove_actions_from_incumbant":1,
 "use_diving_ineq":1,
 "use_packing_in_construction":1,
-"ub_use_remove":358.001,
+"ub_use_remove":822.9001,
 "do_presolve":0,
 "use_ineq":1,
 "maxVarsAdd_in_ITER":10,
