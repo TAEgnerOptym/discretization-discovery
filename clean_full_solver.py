@@ -111,8 +111,8 @@ class full_solver:
         self.graph_names=full_input_dict['allGraphNames']
 
         self.all_source_sink_actions=set(self.all_actions)-set(self.all_actions_not_source_sink_connected)
-        self.init_default_solution_is_empty=False
-        self.Actions_of_given_sol=self.jy_opt['Actions_of_given_sol']
+        self.init_default_solution_is_empty=True
+        self.Actions_of_given_sol=self.jy_opt['Actions_of_given_sol'].copy()
         if len(self.Actions_of_given_sol)==0:
             self.Actions_of_given_sol=self.all_source_sink_actions
             self.init_default_solution_is_empty=False

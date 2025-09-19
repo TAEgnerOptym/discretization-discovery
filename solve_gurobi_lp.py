@@ -271,7 +271,7 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
                       dict_var_con_2_lhs_eq,
                       dict_con_name_2_eq,
                       dict_var_name_2_LB,dict_var_name_2_UB,
-                      dict_binary_vars,dict_var_name_2_is_integer,max_ILP_time=1000,use_interior=False,extra_var_name_priority=dict()):
+                      dict_binary_vars,dict_var_name_2_is_integer,max_ILP_time=1000,use_interior=False,extra_var_name_priority=dict(),init_sol=dict()):
     #print('use_interior')
     #print(use_interior)
     #print('use_interior')
@@ -388,17 +388,31 @@ def solve_gurobi_milp_bounds(dict_var_name_2_obj,
                 vtype=[]
                 if name in safe_binary_set:
                     vtype = GRB.BINARY
+
+                   # my_orig_name=var_name_rev[name]
+                   # if my_orig_name in init_sol:
+                   #     use_start_val=True
+                   #     var_dict[name] = model.addVar(lb=lb, ub=ub, obj=obj_coeff, vtype=vtype, name=name,start=init_sol[my_orig_name])
+
                 elif name in safe_integer_set:
                     vtype = GRB.INTEGER
                 else:
                     vtype = GRB.CONTINUOUS
-                
+                #if use_start_val==False:
+                var_dict[name] = model.addVar(lb=lb, ub=ub, obj=obj_coeff, vtype=vtype, name=name)
+
                 #if vtype == GRB.CONTINUOUS:
                     #if 
                     #print('var_name_rev[name]')
                     #print(var_name_rev[name])
                     #input('--')
-                var_dict[name] = model.addVar(lb=lb, ub=ub, obj=obj_coeff, vtype=vtype, name=name)
+            model.update()
+            for name, var in var_dict.items():
+                my_name_rev=var_name_rev[name]
+                if my_name_rev in init_sol:         # incumbent_values is your dict of starts
+                    var.Start = init_sol[my_name_rev]
+            
+            model.update()
 
 
             if  any(not var_name_rev[v].startswith("act") for v in safe_binary_set | safe_integer_set):

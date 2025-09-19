@@ -1514,13 +1514,22 @@ class lower_bound_LP_milp:
 #        print('side_ineq_use_constraints')
 #        print(side_ineq_use_constraints)
 #
+        initial_sol_actions=dict()
+        if len(self.full_prob.jy_opt['Actions_of_given_sol'])>0.5:
+            
+            for var in self.dict_var_name_2_obj:
+                if var.startswith('act')==True:
+                    initial_sol_actions[var]=0    
+            for var in self.full_prob.jy_opt['Actions_of_given_sol']:
+                initial_sol_actions[var]=1
+            
         #input('JUST PRIOR')
         out_solution=solve_gurobi_milp_bounds(self.dict_var_name_2_obj,
             self.CLEAN_dict_var_con_2_lhs_exog,
             self.CLEAN_dict_con_name_2_LB,
             self.CLEAN_dict_var_con_2_lhs_eq,
             self.CLEAN_dict_con_name_2_eq,delta_name_2_lb,delta_name_2_ub,
-            self.dict_var_name_2_is_binary,self.dict_var_name_2_is_integer,self.full_prob.jy_opt['max_ILP_time'],use_interior=use_interior,extra_var_name_priority=self.extra_var_name_priority)
+            self.dict_var_name_2_is_binary,self.dict_var_name_2_is_integer,self.full_prob.jy_opt['max_ILP_time'],use_interior=use_interior,extra_var_name_priority=self.extra_var_name_priority,init_sol=initial_sol_actions)
 
 
         self.gurobi_MILP_str=out_solution['gurobi_log_string']
