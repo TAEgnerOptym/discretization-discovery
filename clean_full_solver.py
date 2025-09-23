@@ -152,8 +152,10 @@ class full_solver:
 
         #self.my_bender_repo=benders_repo_new(self)
         #input('---')
-        self.ORIG_ng_graph_h_ijp=self.D['hij2P']['ngGraph'].copy()
-        self.ORIG_h_ijp=copy.deepcopy(self.D['hij2P'])
+        if 'ngGraph' in self.D['hij2P']:
+            self.ORIG_ng_graph_h_ijp=self.D['hij2P']['ngGraph'].copy()
+            self.ORIG_h_ijp=copy.deepcopy(self.D['hij2P'])
+            
         self.apply_complete_algorithm()
         with open(self.output_file_path, 'w') as file:
             json.dump(self.history_dict, file)
@@ -404,8 +406,14 @@ class full_solver:
         #input('about to call ilp')
         if self.jy_opt['do_ilp']>0.5:
             self.call_ILP_solver()
-
+        
         if self.jy_opt['run_baseline']:
+            for act in self.all_non_null_action:
+            #if act in usedTerms:
+            #    num_used=num_used+1
+            #    continue
+                if act in self.delta_name_2_ub:#and self.full_prob.delta_name_2_ub[act]<0.001:
+                    del self.delta_name_2_ub[act]
             self.call_baseline()
         if self.jy_opt['do_ilp']>0.5:
 

@@ -13,10 +13,11 @@ import copy
 
 
 
-def call_and_run_code(input_file_path,my_params_path,my_json_file_path,my_output_path):
+def call_and_run_code(input_file_path,my_params_path,my_json_file_path,my_output_path,prempt_params=dict()):
 
     my_params=grab_params(my_params_path)
-
+    for my_alt in prempt_params:
+        my_params[my_alt]=prempt_params[my_alt]
     print('Reading file and creating input')
     my_instance=make_problem_instance(input_file_path,my_params,my_json_file_path)
     print('DONE Reading file and creating input')
