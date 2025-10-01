@@ -9,12 +9,12 @@ import os
 #option_use="cuts_off_graphs_on"
 #option_use="graphsOffCutsOn"
 #option_use="no_cuts_or_graphs"
-#option_use="no_ub_use_remove"
+option_use="normal"
 #no_cuts_or_graphs,
 
-option_use="no_ub_use_remove"
-dataSetUse="R1"
-num_cust_use=50
+option_use="cuts_off_graphs_on"
+dataSetUse="R2"
+num_cust_use=100
 
 
 #USER PARAMS ABOVE
@@ -126,7 +126,7 @@ if option_use=="no_ub_use_remove":
 
 my_json_input_path="../mid_jnk"
 data_fold='data/'
-output_file_fold='../WillRezAbl/'+dataSetUse+'_numCust_'+str(num_cust_use)+'/'+option_use+'/'
+output_file_fold='../WillRezAbl_split_based_on/'+dataSetUse+'_numCust_'+str(num_cust_use)+'/'+option_use+'/'
 param_file_path='params_WW/params_ablation/'+dataSetUse+'.json'
 for k in range(0,len(dataSetNums[dataSetUse])):
 

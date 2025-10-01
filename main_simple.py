@@ -3,7 +3,14 @@ from call_and_run_code import call_and_run_code
 import argparse
 
 default_input='data/jy_C104.txt'
+default_option_path='my_params_C.json'
 
+
+default_input='data/jy_R112.txt'
+default_option_path='my_params_R200.json'
+
+#default_input='data/jy_RC102.txt'
+#default_option_path='my_params_play_RC1.json'
 
 
 #
@@ -12,10 +19,12 @@ default_input='data/jy_C104.txt'
 #default_option_path='params_WW/params_r200_50_UB_given/r_209.json'
 #out_name='C104_100_cust.json'
 
-#default_input='data/jy_RC102.txt'
-default_option_path='my_params_C.json'
+#default_input='data/jy_RC203.txt'
+#default_option_path='my_params_play_RC2.json'
+
+#default_option_path='my_params_play_R1.json'
 #default_option_path='params_WW/params_rc100_50_UB_given_cut_and_sol/jy_rc102.txt'
-out_name='JNK.json'
+#out_name='JNK.json'
 
 #default_input='data/jy_R111.txt'
 #default_option_path='my_params_R200.json'

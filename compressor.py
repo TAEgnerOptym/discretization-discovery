@@ -118,14 +118,18 @@ class compressor:
             self.H_leaf_2_list_ell[h]=dict()
             this_sink=self.graph_node_2_agg_node[h][self.MF.h_2_sink_id[h]]
             this_source=self.graph_node_2_agg_node[h][self.MF.h_2_source_id[h]]
+            #print('this_sink')
+            #print(this_sink)
+            #print('this_source')
+            #print(this_source)
             nodes_use=set(self.myLBObj.agg_node_2_nodes[h])-set([this_sink,this_source])
             for n in nodes_use:
                 con_name='flow_in_out_h='+h+"_n="+n
                 h_node_2_dual_val[h][n]=dual_sol[con_name]
-            if self.jy_opt['allOneBig_init']>0.5:
-                self.get_agglomerative_dictionary(h_node_2_dual_val[h],h)
-            else:
-                self.get_agglomerative_dictionary_by_cust(h_node_2_dual_val[h],h)
+            #if self.jy_opt['allOneBig_init']>0.5:
+            self.get_agglomerative_dictionary(h_node_2_dual_val[h],h)
+            #else:
+            #    self.get_agglomerative_dictionary_by_cust(h_node_2_dual_val[h],h)
 
     def get_agglomerative_dictionary_by_cust(self,X_all,h):
         
@@ -176,6 +180,8 @@ class compressor:
                 continue
 
             # Compute the linkage matrix using SciPy's hierarchical clustering.
+            print('data')
+            print(data)
             Z = linkage(data, method="ward")
             
             cluster_id_2_member = {}
@@ -269,7 +275,7 @@ class compressor:
             return
 
         # Compute the linkage matrix using SciPy's hierarchical clustering.
-        Z = linkage(data, method="ward")
+        Z = linkage(data, method="average")
         
         cluster_id_2_member = {}
         for i in range(n):
@@ -286,16 +292,6 @@ class compressor:
             # The new cluster contains all leaves from the clusters idx1 and idx2.
             cluster_id_2_member[new_cluster_id] = cluster_id_2_member[idx1] + cluster_id_2_member[idx2]
         
-        if 1<0:
-            K=10
-            keys_to_remove = [key for key, members in cluster_id_2_member.items() if len(members) > K]
-            #print('before')
-            #print(len(cluster_id_2_member))
-            for key in keys_to_remove:
-                del cluster_id_2_member[key]
-            #print('after')
-            #print(len(cluster_id_2_member))
-            #input('--')
         member_2_cluster_id=dict()
         for my_node in X:
             member_2_cluster_id[my_node]=[]
@@ -315,14 +311,8 @@ class compressor:
                 out_member_2_cluster_id[i].append(tuple([h,j]))
 
 
-        out_cluster_id_2_member_all_2 = { (h, j): v for j, v in out_cluster_id_2_member_all.items() }
-
-        out_member_2_cluster_id_2=dict()
-        for k, vals in out_member_2_cluster_id.items():
-            out_member_2_cluster_id_2[k] = [(h, j) for j in vals]
-
-        self.H_ell_2_list_leaf[h]=out_cluster_id_2_member_all_2
-        self.H_leaf_2_list_ell[h]=out_member_2_cluster_id_2
+        self.H_ell_2_list_leaf[h]=out_cluster_id_2_member
+        self.H_leaf_2_list_ell[h]=out_member_2_cluster_id
 
 
     def copy_lp_terms(self):
@@ -602,14 +592,14 @@ class compressor:
             #    input('confused')
             #if len(con_name)>=len('Hier_flow_in_out') and con_name[0:len('Hier_flow_in_out')]=='Hier_flow_in_out':
             #    print('FOUND ONE')
-            #    print('con_name')
-            #    print(con_name)
-            #    print('constraint.pi')
-            #    print(constraint.pi)
+            print('con_name')
+            print(con_name)
+            print('constraint.pi')
+            print(constraint.pi)
             self.lp_dual_solution[con_name]=constraint.pi
         #print('LP obejctive of comrpessor self.lp_objective')
         #print(self.lp_objective)
-        #input('---')
+        input('---')
         self.time_compressor['lp_post']=time.time()-t3
 
     def make_gur_lp(self):
@@ -886,11 +876,18 @@ class compressor:
         self.h_f_2_dual=dict()
         self.h_f_2_dual_sig_fig=dict()
         self.h_val_2_id=dict()
+        #print('self.lp_dual_solution')
+        #print(self.lp_dual_solution)
+        #print('self.lp_dual_solution')
         for h in self.graph_names:
             self.h_f_2_dual[h]=dict()
             self.h_f_2_dual_sig_fig[h]=dict()
             self.h_val_2_id[h]=dict()
             counter_h=0
+            #print('self.lp_dual_solution.keys()')
+            #print('self.H_leaf_2_list_ell[h]')
+            #print(self.H_leaf_2_list_ell[h])
+            #input('---')
             for f in self.H_leaf_2_list_ell[h]:
                 self.h_f_2_dual[h][f]=0
                 for ell in self.H_leaf_2_list_ell[h][f]:
@@ -902,6 +899,11 @@ class compressor:
                     con_2= con_2.replace("(", "_")
                     con_1= con_1.replace(")", "_")
                     con_2= con_2.replace(")", "_")
+                    
+                    #print('con_1')
+                    #print(con_1)
+                    #p#rint('con_2')
+                    #p#rint(con_2)
                     
                     dual_1=self.lp_dual_solution[con_1]
                     dual_2=self.lp_dual_solution[con_2]

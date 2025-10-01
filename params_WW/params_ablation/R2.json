@@ -12,11 +12,11 @@
 "use_classic_compress":1,
 "use_classic_compress_last":1,
 "time_step_sz":1,
-"num_NG":7,
+"num_NG":9,
 "dem_step_sz":1,
 "add_all_ng_split_at_end":0,
 "all_vars_binary":1,
-"do_split_based_init":0,
+"do_split_based_init":1,
 "restore_after_each_step":1,
 "use_dem_graph":0,
 "use_time_graph":1,
@@ -52,5 +52,5 @@
 "in_demo_mode":0,
 "offset_cost_edge_project":0,
 "weight_slack_projector":0.00001,
-"max_ILP_time":1000
+"max_ILP_time":3000
 }

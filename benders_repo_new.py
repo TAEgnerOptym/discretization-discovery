@@ -74,7 +74,7 @@ class benders_cut_generator:
             #A_fast is a dict with elements A_fast[con_name] which is a dict with elements A_fast[con_name][var_name]
 
 
-    def call_lp(self,x):
+    def call_lp(self,x,add_pareto_term=1):
         phase1_time=time.time()
         dict_con_name_2_LB=self.rhs_ineq.copy()
         tot_add_by_con_name_no_eps=defaultdict(float)
@@ -100,7 +100,10 @@ class benders_cut_generator:
         for con_name in tot_add_by_con_name:
             #dict_con_name_2_LB[con_name]-=EPSILON_MAX_VAL_CON#max([-0.01,tot_add_by_con_name[con_name]])
             dict_con_name_2_LB[con_name]+=tot_add_by_con_name_no_eps[con_name]#tot_add_by_con_name[con_name]
-            dict_con_name_2_LB[con_name]-=self.MF.jy_opt['NO_PARETO_EPSILON_MAX_VAL_CON']#max([-0.01,tot_add_by_con_name[con_name]])
+            if add_pareto_term>0.5:
+                dict_con_name_2_LB[con_name]-=self.MF.jy_opt['NO_PARETO_EPSILON_MAX_VAL_CON']#max([-0.01,tot_add_by_con_name[con_name]])
+            #else:
+            #    input('--dd')
             #dict_con_name_2_LB[con_name]+=tot_add_by_con_name_only_eps[con_name]#tot_add_by_con_name[con_name]
             #print('con_name')
             #print(con_name)
@@ -128,7 +131,7 @@ class benders_cut_generator:
                     self.dict_var_con_2_lhs_exog,
                     self.dict_con_name_2_LB,
                     self.dict_var_con_2_lhs_eq,
-                    self.dict_con_name_2_eq,self.dict_var_name_2_LB,self.dict_var_name_2_UB)
+                    self.dict_con_name_2_eq,self.dict_var_name_2_LB,self.dict_var_name_2_UB,use_fast_interior=(add_pareto_term<0.5))
         dual_solution=out_solution['dual_solution']
         primal_solution=out_solution['primal_solution']
         lp_objective=out_solution['objective']
@@ -140,7 +143,22 @@ class benders_cut_generator:
         self.in_x=x
         self.OPT_X_input=OPT_X_input
         tot_cut_value=0
-        [primal_solution,dual_solution,lp_objective,time_opt]=self.call_lp(x)
+        if 1>0:
+            [primal_solution,dual_solution,lp_objective,time_opt]=self.call_lp(x)
+        else:
+            input('turning off for now')
+            [primal_solution,dual_solution,lp_objective,time_opt]=self.call_lp(x,0)
+            if lp_objective>self.MF.jy_opt['BEND_MIN_LP_OBJECTIVE_CUT']:
+                [primal_solution,dual_solution,lp_objective,time_opt_1]=self.call_lp(x)
+                print('[in re-run time_opt,time_opt_1]')
+                print([time_opt,time_opt_1])
+                input('--')
+                time_opt=time_opt+time_opt_1
+            else:
+                print('[time_opt not run 2]')
+                print([time_opt])
+                input('--')
+
         print('Done calling LP maker')
 
         self.primal_solution=primal_solution
@@ -235,7 +253,7 @@ class benders_repo_new:
                     self.MF.act_2_uv[act] = [int(u), int(v)]
                 except Exception as e:
                     raise ValueError(f"Not in 'act_u_v' format: {act!r}") from e
-        L=self.MF.jy_opt['BENDERS_NEIGH_SZ_USE']
+        #L=self.MF.jy_opt['BENDERS_NEIGH_SZ_USE']
         #self.m_sz_pairs=[]
         #self.m_sz_pairs.append(tuple([6,10]))
         #self.m_sz_pairs.append(tuple([6,9]))
@@ -287,14 +305,21 @@ class benders_repo_new:
         self.my_list_benders_cut_generator=[]
         my_VRP=self.MF.D['my_VRP']
         self.Nc=self.MF.my_VRP.num_cust
-
-        [ng_neigh_by_cust_power,junk]=naive_get_LA_neigh(my_VRP,self.MF.jy_opt['BENDERS_NEIGH_SZ_USE'])
-        self.ng_neigh_by_cust_power=ng_neigh_by_cust_power
+        #print('my sizes')
+        #print(self.MF.jy_opt['BEND_MY_SIZES_USE'])
+        #input('---')
         all_sets=set()
-        for u in range(0,self.Nc):
-            my_set=set(ng_neigh_by_cust_power[u]).union([u])
-            my_set=frozenset(my_set)
-            all_sets.add(my_set)
+
+        for my_sz in self.MF.jy_opt['BEND_MY_SIZES_USE']:
+            [ng_neigh_by_cust_power,junk]=naive_get_LA_neigh(my_VRP,my_sz)#self.MF.jy_opt['BENDERS_NEIGH_SZ_USE'])
+            #self.ng_neigh_by_cust_power=ng_neigh_by_cust_power
+            for u in range(0,self.Nc):
+                my_set=set(ng_neigh_by_cust_power[u]).union([u])
+                my_set=frozenset(my_set)
+                all_sets.add(my_set)
+        #print('all_sets')
+        #print(all_sets)
+        #input('---')
         counter=0
         num_sets=len(all_sets)
         for my_set in all_sets:

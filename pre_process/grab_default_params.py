@@ -74,7 +74,7 @@ def grab_default_params():
 
 	my_params['BEND_MIN_LP_OBJECTIVE_CUT']=0.1
 	my_params['BEND_USE_RAND']=0
-	my_params['BEND_MAX_SIZE_CHOOSE_K']=230
+	my_params['BEND_MAX_SIZE_CHOOSE_K']=500
 	my_params['BEND_VAL_STOP_ADDING_CUTS']=100000000
 	my_params['BEND_MY_SIZES_USE']=[9]
 

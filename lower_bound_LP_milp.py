@@ -1579,6 +1579,7 @@ class lower_bound_LP_milp:
                 
     def naive_compress_make_f_2_new_f(self):
         self.Naive_H_f_2_new_f=dict()
+        #self.lp_dual_solution_agg=dict()#self.lp_dual_solution.copy()
         for h in self.graph_names:
             self.Naive_H_f_2_new_f[h]=dict()
             this_fg_sink=self.graph_node_2_agg_node[h][self.h_2_sink_id[h]]
@@ -1590,11 +1591,18 @@ class lower_bound_LP_milp:
                 my_dual_id=self.Naive_h_val_2_id[h][tuple([h,my_dual_val])]
                 my_key=tuple([h,my_dual_id])
                 self.Naive_H_f_2_new_f[h][f]=my_key
-    
+                
+            #self.make_agg_node_2_nodes()
+            #self.make_agg_node_2_nodes()
+            #con_name_in_2='flow_in_out_h='+h+"_n=-1"
+            #self.lp_dual_solution[con_name_in_2]=0
+            #con_name_out_2='flow_in_out_h='+h+"_n=-2
+
     def Naive_make_i_2_new_f(self):
         self.NAIVE_graph_node_2_agg_node=dict()
         count_orig=dict()
         count_new=dict()
+        self.lp_dual_solution_agg=dict()
         for h in self.graph_names:
             self.NAIVE_graph_node_2_agg_node[h]=dict()
             count_orig[h]=len(set(self.graph_node_2_agg_node[h].values()))
@@ -1602,7 +1610,10 @@ class lower_bound_LP_milp:
             #print('[h,count_orig[h],count_new[h]]')
             #print([h,count_orig[h],count_new[h]])
             #print('---')
+            #agg_source=self.graph_node_2_agg_node[h][self.h_2_sink_id[h]]
+            #agg_sink=self.graph_node_2_agg_node[h][self.h_2_source_id[h]]
             for i in self.graph_node_2_agg_node[h]:
+                
                 f=self.graph_node_2_agg_node[h][i]
                 
                 
@@ -1615,6 +1626,28 @@ class lower_bound_LP_milp:
                 my_new_name=my_new_name.replace(" ", "_")
                 self.NAIVE_graph_node_2_agg_node[h][i]=my_new_name
 
+                #f f!=self. and f!=self.h_2_source_id[h]:
+                if 1>0:
+                    if i ==self.h_2_source_id[h] or i==self.h_2_sink_id[h]:
+                        continue
+                    #print('i')
+                    #print(i)
+                    #print('f')
+                    #print(f)
+                    #print('h')
+                    #print(h)
+                    #print('self.h_2_sink_id[h]')
+                    #print(self.h_2_sink_id[h])
+                    #print('self.h_2_source_id[h]')
+                    #print(self.h_2_source_id[h])
+                    
+                    this_con_name='flow_in_out_h='+h+"_n="+my_new_name
+                    my_dual_val=self.Naive_h_f_2_dual_sig_fig[h][f]
+                    self.lp_dual_solution_agg[this_con_name]=my_dual_val
+        
+        #print('self.lp_dual_solution_agg')
+        #print(self.lp_dual_solution_agg)
+        #print('self.lp_dual_solution_agg')
     def filter_constraints(self):
         self.ignore_set = set(self.full_prob.ineq_replaced_by_lb_ub)
 

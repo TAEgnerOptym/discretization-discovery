@@ -574,7 +574,7 @@ class projector_on_lb:
                     print('ddd')
                     input('hold')
                 i_2_dual[i_orig]=self.lp_dual_solution[con_name_1]#-self.lp_dual_solution[con_name_2]
-        
+                i_2_dual[i_orig]=round(i_2_dual[i_orig],self.full_prob.jy_opt['roundingDiscretization_num_digits_keep'])
             i_2_dual[compact_sink]=0
             i_2_dual[compact_source]=0
             

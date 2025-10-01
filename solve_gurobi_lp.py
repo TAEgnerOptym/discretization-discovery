@@ -599,7 +599,7 @@ def solve_gurobi_lp_bounds(dict_var_name_2_obj,
                     dict_var_con_2_lhs_exog,
                     dict_con_name_2_LB,
                     dict_var_con_2_lhs_eq,
-                    dict_con_name_2_eq,dict_var_name_2_LB,dict_var_name_2_UB,use_pareto=False):
+                    dict_con_name_2_eq,dict_var_name_2_LB,dict_var_name_2_UB,use_fast_interior=False):
 
     
 
@@ -644,11 +644,12 @@ def solve_gurobi_lp_bounds(dict_var_name_2_obj,
         with gp.Model("converted_LP", env=env) as model:
             sys.stdout =original_stdout
             model.setParam("OutputFlag", 0)  
-            if use_pareto==True:
-                model.setParam("OutputFlag", 0)  # Suppress solver output
-                model.setParam("Method" , 2)
-                model.setParam("Crossover" , 0)        # 2 = Barrier (interior-point)
-                #model.setParam("BarConvTol", 1e-2)
+            if use_fast_interior==True:
+                model.setParam("OutputFlag", 1)  
+                #model.setParam("OutputFlag", 0)  # Suppress solver output
+                #model.setParam("Method" , 2)
+                #model.setParam("Crossover" , 0)        # 2 = Barrier (interior-point)
+                model.setParam("BarConvTol", 1e-2)
             var_dict = {}
             time_pre_2=time.time()
             for name, obj_coeff in safe_var_obj.items():

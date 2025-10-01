@@ -186,6 +186,7 @@ class full_solver:
         #print(objective_gain)
         #print('my_proj.num_do_split')
         #print(my_proj.num_do_split)
+        #self.count_size(False)
         #input('---')
         self.my_proj=my_proj
         self.history_dict['ub_lp'].append(my_proj.lp_objective)
@@ -295,18 +296,41 @@ class full_solver:
             self.current_LP_solution=self.my_lower_bound_LP.lp_primal_solution#.copy()
             lblp_time=self.my_lower_bound_LP.lp_time
             new_lp_value=self.my_lower_bound_LP.lp_objective
+            if iter>2 and new_lp_value<-0.0001+max(self.history_dict['lblp_lower']):
+                print('old val list')
+                print(self.history_dict['lblp_lower'])
+                print('new_lp_value')
+                print(new_lp_value)
+                input('error here')
             if self.incumbant_lp<new_lp_value-self.jy_opt['min_inc_2_compress']: #and iter>0:
                 if self.jy_opt['use_classic_compress']>0.5:
                     self.graph_node_2_agg_node=self.my_lower_bound_LP.NAIVE_graph_node_2_agg_node
                     self.history_dict['time_compress'].append(0)
                 else:
                     print('starting comrpession fancy')
+                    time_add=0
+                    if 1>0:
+                        prob_sizes_after_compress=self.count_size()
+                        print('STGE 1=prob_sizes_after_compress')
+                        print(prob_sizes_after_compress)
+                        self.graph_node_2_agg_node=self.my_lower_bound_LP.NAIVE_graph_node_2_agg_node                    
+                        self.my_lower_bound_LP=lower_bound_LP_milp(self,self.graph_node_2_agg_node,False,False)            
+                        self.current_LP_solution=self.my_lower_bound_LP.lp_primal_solution#.copy()
+                        time_add=self.my_lower_bound_LP.lp_time
+                        if abs(self.my_lower_bound_LP.lp_objective-new_lp_value)>0.01:
+                            input('ERRR here')
                     self.my_compressor=compressor(self) 
-
+                    print('time_add')
+                    print(time_add)
+                    #self.my_compressor.lp_time+=time_add
                     print('done  comrpession fancy')
                     
                     self.history_dict['time_compress'].append(self.my_compressor.lp_time)
                     self.graph_node_2_agg_node=self.my_compressor.NEW_graph_node_2_agg_node
+                    prob_sizes_after_compress=self.count_size()
+                    print('STGE 2=prob_sizes_after_compress')
+                    print(prob_sizes_after_compress)
+                    print('---')
                 prob_sizes_after_compress=self.count_size()
                 did_compress_call=True
                 self.incumbant_lp=new_lp_value
@@ -315,9 +339,13 @@ class full_solver:
                     print('splitting up after')
                 else:
                     print('NOG SPLITTING up after')
-            
+                #print('003 just Before')
+                #self.count_size(False)
+            #print('002 just Before')
+            #self.count_size(False)
             [did_split,proj_objective_componentLps,proj_time_component_lps]=self.apply_splitting_2()
-            
+            #print('001 just Before')
+            #self.count_size(False)
             this_cutting_plane_info={'tot_cut_value':0,'TOT_gen_cut':0,'tot_time_opt':0,'max_time_opt':0}
             if did_ever_generate_cut==False:
                 self.history_dict['ROOT_LP_PRIOR_ADDING_CUTS']=new_lp_value
@@ -325,29 +353,7 @@ class full_solver:
                 
                 did_ever_generate_cut=True
                 #[did_add_ineq,new_exog_terms,new_action_contrib]=self.separate_zero_val_terms(self.my_lower_bound_LP.lp_primal_solution)
-                
-                if 1>0:#or False==hasattr(self,'my_bender_repo'):
-                    self.my_bender_repo=benders_repo_new(self)
-                    debug_on=False
-                    #
-                    #
-                    #
-                    #
-                    #
-                    if debug_on==True and self.OPT_SOL==None:
-                        self.call_ILP_solver()
-                        self.OPT_SOL=self.my_lower_bound_ILP.milp_solution
-#
-#
-#
-#
-#
-#
-#
-#
-#
-
-
+                self.my_bender_repo=benders_repo_new(self)
 
                 [tot_cut_value,TOT_gen_cut,tot_time_opt,max_time_opt]=self.my_bender_repo.generate_cuts(self.my_lower_bound_LP.lp_primal_solution,self.OPT_SOL)
                 this_cutting_plane_info={'tot_cut_value':tot_cut_value,'TOT_gen_cut':TOT_gen_cut,'tot_time_opt':tot_time_opt,'max_time_opt':max_time_opt}
@@ -360,11 +366,50 @@ class full_solver:
                 
                     #input('LOOK ME ')
                 num_calls_ineq=num_calls_ineq+1
-
+            #print('-001 just Before')
+            #self.count_size(False)
             prob_sizes_after_split=self.count_size()
 
-            if did_split==False and did_compress_call==False and did_add_ineq==False:
-                self.graph_node_2_agg_node=self.my_lower_bound_LP.NAIVE_graph_node_2_agg_node
+            if did_split==False  and did_add_ineq==False :
+                #input("AT DONE DONE")
+                if self.jy_opt['use_classic_compress_last']>0.5:
+                    #print('in here')
+                    #print('-002 just Before')
+                    self.count_size(False)
+                    self.graph_node_2_agg_node=self.my_lower_bound_LP.NAIVE_graph_node_2_agg_node
+                    #print('-003 just Before')
+                    #self.count_size(False)
+                else:
+                    print('FFINAL starting comrpession fancy')
+                    time_add=0
+                    if 1>0:
+                        prob_sizes_after_compress=self.count_size()
+                        print('FINAL STGE 1=prob_sizes_after_compress')
+                        print(prob_sizes_after_compress)
+                        self.graph_node_2_agg_node=self.my_lower_bound_LP.NAIVE_graph_node_2_agg_node
+                        self.my_lower_bound_LP.graph_node_2_agg_node=self.graph_node_2_agg_node#self.my_lower_bound_LP.NAIVE_graph_node_2_agg_node
+                    
+                        self.my_lower_bound_LP=lower_bound_LP_milp(self,self.graph_node_2_agg_node,False,False)            
+                        self.current_LP_solution=self.my_lower_bound_LP.lp_primal_solution#.copy()
+                        time_add=self.my_lower_bound_LP.lp_time
+                        if abs(self.my_lower_bound_LP.lp_objective-new_lp_value)>0.01:
+                            input('ERRR here')
+                    self.my_compressor=compressor(self) 
+                    self.my_compressor.lp_time+=time_add
+                    print('FIANL. done  comrpession fancy')
+                    
+                    self.history_dict['time_compressLAST']=(self.my_compressor.lp_time)
+                    self.graph_node_2_agg_node=self.my_compressor.NEW_graph_node_2_agg_node
+                    prob_sizes_after_compress=self.count_size()
+                    print('FINAL STGE 2=prob_sizes_after_compress')
+                    print(prob_sizes_after_compress)
+                    print('-FINAL--')
+                    print('---')
+                    print('---')
+                    print('-FINAL--')
+                    print('---')
+                    print('---')
+                    print('-FINAL--')
                 if self.jy_opt['do_split_based_init']>0.5:
                     self.split_based_init()
                     print('AT TERM splitting up after')
@@ -403,6 +448,10 @@ class full_solver:
             #print([did_add_ineq,did_split])
             
 
+        self.history_dict['FinalSizeBeforeILP']=self.count_size()
+        print('self.history_dict[FinalSizeBeforeILP]')
+        print(self.history_dict['FinalSizeBeforeILP'])
+        print('self.history_dict[FinalSizeBeforeILP]')
         #input('about to call ilp')
         if self.jy_opt['do_ilp']>0.5:
             self.call_ILP_solver()
@@ -431,7 +480,7 @@ class full_solver:
         if self.jy_opt['ub_use_remove']>0:
             if new_Ilp_value>0.001+self.jy_opt['ub_use_remove']:
                 print('WOrse that known optimal is generated')
-                input('error here ')
+                #input('error here ')
         self.history_dict['OUR_ilp_objective']=new_Ilp_value
         self.history_dict['OUR_MIP_Lower_Bound']=self.my_lower_bound_ILP.MIP_lower_bound
         self.history_dict['OUR_ilp_time']=self.my_lower_bound_ILP.milp_time
