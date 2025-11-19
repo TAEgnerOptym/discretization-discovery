@@ -6,8 +6,8 @@ default_input='data/jy_C104.txt'
 default_option_path='my_params_C.json'
 
 
-default_input='data/jy_R112.txt'
-default_option_path='my_params_R200.json'
+#default_input='data/jy_R112.txt'
+#default_option_path='my_params_R200.json'
 
 #default_input='data/jy_RC102.txt'
 #default_option_path='my_params_play_RC1.json'

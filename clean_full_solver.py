@@ -296,7 +296,7 @@ class full_solver:
             self.current_LP_solution=self.my_lower_bound_LP.lp_primal_solution#.copy()
             lblp_time=self.my_lower_bound_LP.lp_time
             new_lp_value=self.my_lower_bound_LP.lp_objective
-            if iter>2 and new_lp_value<-0.0001+max(self.history_dict['lblp_lower']):
+            if iter>2 and new_lp_value<-0.1+max(self.history_dict['lblp_lower']):
                 print('old val list')
                 print(self.history_dict['lblp_lower'])
                 print('new_lp_value')
@@ -314,10 +314,23 @@ class full_solver:
                         print('STGE 1=prob_sizes_after_compress')
                         print(prob_sizes_after_compress)
                         self.graph_node_2_agg_node=self.my_lower_bound_LP.NAIVE_graph_node_2_agg_node                    
+                        if self.jy_opt['restore_after_each_step']>0.5:
+                            print('doing split in here')
+                            self.split_based_init()
                         self.my_lower_bound_LP=lower_bound_LP_milp(self,self.graph_node_2_agg_node,False,False)            
+                        #self.graph_node_2_agg_node=self.my_lower_bound_LP.NAIVE_graph_node_2_agg_node                    
+                        #self.my_lower_bound_LP.make_agg_node_2_nodes()
+                        #if self.jy_opt['restore_after_each_step']>0.5:
+                        #    print('doing split in here')
+                        #    self.split_based_init()
+
                         self.current_LP_solution=self.my_lower_bound_LP.lp_primal_solution#.copy()
                         time_add=self.my_lower_bound_LP.lp_time
-                        if abs(self.my_lower_bound_LP.lp_objective-new_lp_value)>0.01:
+                        if abs(self.my_lower_bound_LP.lp_objective-new_lp_value)>0.1:
+                            print('self.my_lower_bound_LP.lp_objective')
+                            print(self.my_lower_bound_LP.lp_objective)
+                            print('new_lp_value')
+                            print(new_lp_value)
                             input('ERRR here')
                     self.my_compressor=compressor(self) 
                     print('time_add')
@@ -491,13 +504,13 @@ class full_solver:
         print('running baseline')
         if (self.jy_opt['in_demo_mode']==True):
             input('Press enter about to start the running of the baseline ILP')
-        self.jy_opt['max_ILP_time']=1000000
+        #self.jy_opt['max_ILP_time']=1000000
         my_base=baseline_solver(self,True,False)
         self.history_dict['BASE_ILP_sol_obj']=my_base.milp_solution_objective_value
         self.history_dict['BASE_milp_solution']=my_base.milp_solution
         self.history_dict['BASE_milp_time']=my_base.milp_time
         self.history_dict['BASE_MIP_lower_bound'] = my_base.MIP_lower_bound#model.ObjBound
-
+        self.history_dict['BASE_OUT_STR']=my_base.BASE_OUT_STR
 
 
     def split_based_init(self):

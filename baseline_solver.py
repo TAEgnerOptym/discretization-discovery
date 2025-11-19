@@ -14,9 +14,8 @@ import time
 
 from scipy.sparse import csr_matrix
 import pulp
-from solve_gurobi_lp import solve_gurobi_milp
-from solve_gurobi_lp import solve_gurobi_milp_bounds
-
+from solve_gurobi_lp_XPRESS import solve_gurobi_lp_bounds
+from solve_gurobi_lp_XPRESS import solve_gurobi_milp_bounds
 
 class baseline_solver:
 
@@ -261,6 +260,7 @@ class baseline_solver:
         self.BASE_times_lp_times['GUR_time_pre']=out_solution['time_pre']
         self.BASE_times_lp_times['GUR_time_opt']=out_solution['time_opt']
         self.BASE_times_lp_times['GUR_time_post']=out_solution['time_post']
+        self.BASE_OUT_STR=out_solution['gurobi_log_string']
         self.milp_time=out_solution['time_opt']
         self.new_actions_ignore=[]
 

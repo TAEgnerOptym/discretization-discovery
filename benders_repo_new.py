@@ -2,7 +2,7 @@ import random
 import math
 import re
 from collections import defaultdict
-from solve_gurobi_lp import solve_gurobi_lp_bounds
+from solve_gurobi_lp_XPRESS import solve_gurobi_lp_bounds
 import numpy as np
 import sys
 from itertools import chain, combinations
@@ -127,11 +127,19 @@ class benders_cut_generator:
         self.dict_con_name_2_LB=dict_con_name_2_LB
         #print('calling LP')
         phase1_time=time.time()-phase1_time
-        out_solution=solve_gurobi_lp_bounds(self.dict_var_name_2_obj,
-                    self.dict_var_con_2_lhs_exog,
-                    self.dict_con_name_2_LB,
-                    self.dict_var_con_2_lhs_eq,
-                    self.dict_con_name_2_eq,self.dict_var_name_2_LB,self.dict_var_name_2_UB,use_fast_interior=(add_pareto_term<0.5))
+        out_solution=[]
+        if add_pareto_term>0.5:
+            out_solution=solve_gurobi_lp_bounds(self.dict_var_name_2_obj,
+                        self.dict_var_con_2_lhs_exog,
+                        self.dict_con_name_2_LB,
+                        self.dict_var_con_2_lhs_eq,
+                        self.dict_con_name_2_eq,self.dict_var_name_2_LB,self.dict_var_name_2_UB,use_fast_interior=False)#=(add_pareto_term<0.5),)
+        else:
+            out_solution=solve_gurobi_lp_bounds(self.dict_var_name_2_obj,
+                        self.dict_var_con_2_lhs_exog,
+                        self.dict_con_name_2_LB,
+                        self.dict_var_con_2_lhs_eq,
+                        self.dict_con_name_2_eq,self.dict_var_name_2_LB,self.dict_var_name_2_UB,use_fast_interior=True,optTol=0.001)
         dual_solution=out_solution['dual_solution']
         primal_solution=out_solution['primal_solution']
         lp_objective=out_solution['objective']
@@ -146,12 +154,15 @@ class benders_cut_generator:
         if 1>0:
             [primal_solution,dual_solution,lp_objective,time_opt]=self.call_lp(x)
         else:
-            input('turning off for now')
+            #input('turning off for now')
             [primal_solution,dual_solution,lp_objective,time_opt]=self.call_lp(x,0)
             if lp_objective>self.MF.jy_opt['BEND_MIN_LP_OBJECTIVE_CUT']:
+                lp_objective_orig=lp_objective
                 [primal_solution,dual_solution,lp_objective,time_opt_1]=self.call_lp(x)
                 print('[in re-run time_opt,time_opt_1]')
                 print([time_opt,time_opt_1])
+                print('lp_objective,lp_objective_orig')
+                print([lp_objective,lp_objective_orig])
                 input('--')
                 time_opt=time_opt+time_opt_1
             else:

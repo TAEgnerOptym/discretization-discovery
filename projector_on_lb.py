@@ -30,10 +30,8 @@ from warm_start_lp import forbidden_variables_loop_dual
 from warm_start_lp import warm_start_lp_using_class
 from warm_start_lp import warm_start_lp_using_class_gurobi
 
-from solve_gurobi_lp import solve_gurobi_lp
-from solve_gurobi_lp import solve_gurobi_lp_bounds
-from solve_gurobi_lp import solve_gurobi_milp
-from solve_gurobi_lp import solve_gurobi_milp_bounds
+from solve_gurobi_lp_XPRESS import solve_gurobi_lp_bounds
+from solve_gurobi_lp_XPRESS import solve_gurobi_milp_bounds
 
 class projector_on_lb:
 

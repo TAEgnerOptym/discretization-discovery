@@ -14,7 +14,8 @@ from scipy.sparse import csr_matrix
 import pulp
 from scipy.cluster.hierarchy import linkage
 import xpress as xp
-from solve_gurobi_lp import solve_gurobi_lp
+from solve_gurobi_lp_XPRESS import solve_gurobi_lp_bounds
+from solve_gurobi_lp_XPRESS import solve_gurobi_milp_bounds
 
 class compressor:
     
@@ -90,6 +91,7 @@ class compressor:
             print('time_percentage_compressor')
             print(self.time_percentage_compressor)
             print('----')
+    
     def check_agg_nodes(self):
         for  h in self.graph_names:
             count_find=dict()
@@ -104,6 +106,18 @@ class compressor:
                     print('count_find[i]')
                     print(count_find[i])
                     input('error here')
+        if self.MF.jy_opt['restore_after_each_step']>0.5:
+            for h in self.graph_names:
+                for f in self.myLBObj.agg_node_2_nodes[h]:
+                    my_types=set([])
+                    for i in self.myLBObj.agg_node_2_nodes[h][f]:
+                        u=self.graphNameNode_2_cust[h][i]
+                        my_types.add(u)
+                    if len(my_types)!=1:
+                        print('my_types')
+                        print(my_types)
+                        input('error here')
+
     def get_dual_dict(self):
 
         self.check_agg_nodes()
@@ -126,10 +140,10 @@ class compressor:
             for n in nodes_use:
                 con_name='flow_in_out_h='+h+"_n="+n
                 h_node_2_dual_val[h][n]=dual_sol[con_name]
-            #if self.jy_opt['allOneBig_init']>0.5:
-            self.get_agglomerative_dictionary(h_node_2_dual_val[h],h)
-            #else:
-            #    self.get_agglomerative_dictionary_by_cust(h_node_2_dual_val[h],h)
+            if self.jy_opt['allOneBig_init']>0.5 or self.jy_opt['restore_after_each_step']<0.5:
+                self.get_agglomerative_dictionary(h_node_2_dual_val[h],h)
+            else:
+                self.get_agglomerative_dictionary_by_cust(h_node_2_dual_val[h],h)
 
     def get_agglomerative_dictionary_by_cust(self,X_all,h):
         
@@ -161,7 +175,8 @@ class compressor:
 
             # Create a 2-D array of scalar values (each value is a 1-D point).
             data = np.array([X[k] for k in keys]).reshape(-1, 1)
-
+            if n==0:
+                input('error here')
             if n == 1:
                 # Create the single node clustering information.
                 
@@ -180,8 +195,8 @@ class compressor:
                 continue
 
             # Compute the linkage matrix using SciPy's hierarchical clustering.
-            print('data')
-            print(data)
+            #print('data')
+            #print(data)
             Z = linkage(data, method="ward")
             
             cluster_id_2_member = {}
@@ -603,11 +618,13 @@ class compressor:
         self.time_compressor['lp_post']=time.time()-t3
 
     def make_gur_lp(self):
-        out_solution=solve_gurobi_lp(self.dict_var_name_2_obj,
+        out_solution=solve_gurobi_lp_bounds(self.dict_var_name_2_obj,
                    self.dict_var_con_2_lhs_exog,
                    self.dict_con_name_2_LB,
                    self.dict_var_con_2_lhs_eq,
-                   self.dict_con_name_2_eq)
+                   self.dict_con_name_2_eq,
+                   self.MF.delta_name_2_lb,
+                   self.MF.delta_name_2_ub)
         self.lp_dual_solution=out_solution['dual_solution']
         self.lp_primal_solution=out_solution['primal_solution']
         self.lp_objective=out_solution['objective']
@@ -916,7 +933,7 @@ class compressor:
                     #print('con_2')
                     #print(con_1)
                     self.h_f_2_dual[h][f]=self.h_f_2_dual[h][f]+dual_1-dual_2
-                new_val=round(self.h_f_2_dual[h][f],3)
+                new_val=round(self.h_f_2_dual[h][f],self.MF.jy_opt['roundingDiscretization_num_digits_keep'])
                 self.h_f_2_dual_sig_fig[h][f]=new_val
                 if tuple([h,new_val]) not in self.h_val_2_id[h]:
                     self.h_val_2_id[h][tuple([h,new_val])]=counter_h
