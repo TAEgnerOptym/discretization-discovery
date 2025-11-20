@@ -328,8 +328,8 @@ def solve_gurobi_lp_bounds(
     vars_in_order = list(var_dict.values())
     vals = p.getSolution(vars_in_order)
     primal_solution = {var_name_rev[v.name]: val for v, val in zip(vars_in_order, vals)}
-    dual_vals = p.getDuals(con_list)
-    rc_vals = p.getRedCosts(vars_in_order)
+    dual_vals = p.getDual(con_list)
+    rc_vals = p.getRCost(vars_in_order)
     dual_solution = { (con_name_rev.get(c.name, c.name)): dv for c, dv in zip(con_list, dual_vals) }
     reduced_costs = { var_name_rev[v.name]: rc for v, rc in zip(vars_in_order, rc_vals) }
 
