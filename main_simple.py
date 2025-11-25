@@ -1,5 +1,5 @@
 from call_and_run_code import call_and_run_code
-
+import json
 import argparse
 
 default_input='data/jy_C104.txt'
@@ -75,6 +75,39 @@ out_name='RC102_50_cust.json'
 #default_option_path='my_params.json'
 #speed up the inner LPs.  
 #speed up the projector LPs
+
+dataSetUse='C1'
+file_num='04'
+num_cust_use=25
+ 
+option_use='use_known_sol'
+#option_use='known_objective'
+ 
+default_option_path='my_params_C.json'
+ 
+ 
+default_input='data/jy_'+dataSetUse+file_num+'.txt'
+ 
+ 
+ 
+params_prempt=dict()
+params_prempt['num_cust_use']=num_cust_use
+params_prempt['ub_use_remove']=999999999999
+params_prempt['Actions_of_given_sol']=[]
+ 
+if option_use=='use_known_sol':
+    f_name=dataSetUse+file_num
+    sol = json.load(open("sols.json"))[f_name][str(num_cust_use)]['actions_used']
+    OptKnownSol = json.load(open("sols.json"))[f_name][str(num_cust_use)]['OptKnownSol']
+    params_prempt['Actions_of_given_sol']=sol
+    params_prempt['ub_use_remove']=OptKnownSol+0.0001
+if option_use=='known_objective':
+    f_name=dataSetUse+file_num
+    #sol = json.load(open("sols.json"))[f_name][str(num_cust_use)]['actions_used']
+    OptKnownSol = json.load(open("sols.json"))[f_name][str(num_cust_use)]['OptKnownSol']
+    params_prempt['Actions_of_given_sol']=[]
+    params_prempt['ub_use_remove']=OptKnownSol+0.0001
+out_name='MY_out.json'
 
 default_my_json='../ALL_JSON_BIG/sample_json_input_description.json'
 default_out_file_path='../ALL_JSON_BIG/'+out_name

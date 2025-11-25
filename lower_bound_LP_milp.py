@@ -525,7 +525,7 @@ class lower_bound_LP_milp:
             for tup_ij, tup_fg in h_ij_2_fg_h.items():
                 edge_group[tup_fg].add(tup_ij)
             self.h_fg_2_ij[h] = dict(edge_group)
-
+        print('here')
 
     def OLD_make_edge_fg_2_ij_reverse(self):
         self.h_fg_2_ij=dict()
